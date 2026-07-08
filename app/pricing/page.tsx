@@ -19,11 +19,18 @@ export default function PricingPage() {
         </div>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2">
-          {siteConfig.pricingPlans.map((plan) => (
+          {siteConfig.pricingPlans.map((plan, index) => (
             <div
               key={plan.name}
-              className="relative rounded-xl border bg-card p-6"
+              className={`relative rounded-xl border bg-card p-6 ${index === 1 ? 'border-[#AEF05A]/30' : ''}`}
             >
+              {index === 1 && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="rounded-full bg-[#AEF05A]/20 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-[#AEF05A]">
+                    Popular
+                  </span>
+                </div>
+              )}
               <div className="mb-4">
                 <h2 className="font-display text-xl font-semibold">
                   {plan.name}
@@ -46,13 +53,17 @@ export default function PricingPage() {
               <ul className="space-y-3">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-3">
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                    <Check className={`h-4 w-4 shrink-0 ${index === 1 ? 'text-[#AEF05A]' : 'text-primary'}`} />
                     <span className="font-display text-sm">{feature}</span>
                   </li>
                 ))}
               </ul>
 
-              <button className="mt-6 w-full rounded-lg bg-primary px-4 py-2 font-display text-sm font-medium text-primary-foreground hover:bg-primary/80 transition-colors cursor-pointer">
+              <button className={`mt-6 w-full rounded-lg px-4 py-2 font-display text-sm font-medium transition-colors cursor-pointer ${
+                index === 1
+                  ? 'bg-[#AEF05A] text-black hover:bg-[#AEF05A]/90'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/80'
+              }`}>
                 Get started
               </button>
             </div>
