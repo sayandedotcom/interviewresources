@@ -1,4 +1,5 @@
 import { ResearchExperience } from "./research-experience";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
   return (
@@ -11,9 +12,12 @@ export default function Home() {
               Scouting Report
             </span>
           </div>
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            Interview Question Guesser
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Interview Question Guesser
+            </span>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
