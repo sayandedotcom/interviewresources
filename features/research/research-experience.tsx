@@ -172,7 +172,7 @@ export function ResearchExperience() {
                       <span className="font-mono text-[10px] tracking-widest opacity-70">
                         {CATEGORY_META[cat].code}
                       </span>
-                      {CATEGORY_META[cat].label}
+                      <span className="font-display">{CATEGORY_META[cat].label}</span>
                     </Button>
                   );
                 })}
@@ -355,7 +355,7 @@ function ReportView({
                     <Card>
                     <CardContent>
                       <div className="flex items-start justify-between gap-3">
-                        <p className="text-[15px] font-medium leading-snug text-foreground">
+                        <p className="font-display text-[15px] font-medium leading-snug text-foreground">
                           {q.question}
                         </p>
                         <span
@@ -367,14 +367,14 @@ function ReportView({
                           {CONFIDENCE_META[q.confidence].signal}
                         </span>
                       </div>
-                      <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
+                      <p className="font-display mt-2 text-[13.5px] leading-relaxed text-muted-foreground">
                         {q.rationale}
                       </p>
                       <details className="mt-2">
                         <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground">
                           Prep note
                         </summary>
-                        <p className="mt-1.5 text-[13.5px] leading-relaxed text-foreground">
+                        <p className="font-display mt-1.5 text-[13.5px] leading-relaxed text-foreground">
                           {q.prepNote}
                         </p>
                       </details>
@@ -407,7 +407,7 @@ function ReportView({
                 <span className="font-mono text-[13px] text-muted-foreground">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                {step}
+                <span className="font-display">{step}</span>
               </li>
             ))}
           </ol>
