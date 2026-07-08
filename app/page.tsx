@@ -1,4 +1,4 @@
-import { ResearchExperience } from "./research-experience";
+import { ResearchExperience } from "@/features/research/research-experience";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
@@ -7,7 +7,10 @@ export default function Home() {
       <header className="border-b">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rotate-45 bg-primary" aria-hidden />
+            <span
+              className="inline-block h-3 w-3 rotate-45 bg-primary"
+              aria-hidden
+            />
             <span className="font-display text-sm font-semibold tracking-tight">
               Scouting Report
             </span>
@@ -30,11 +33,11 @@ export default function Home() {
           <br />
           before they ask them.
         </h1>
-        <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+        <p className="mt-4 max-w-xl font-display text-[15px] leading-relaxed text-muted-foreground">
           Paste a company. We research its product, stack, engineering culture,
-          reported interview loop, and — if you name one — the interviewer&rsquo;s
-          public work, then predict the questions you&rsquo;re likely to face.
-          Each one cites the evidence it came from.
+          reported interview loop, and — if you name one — the
+          interviewer&rsquo;s public work, then predict the questions
+          you&rsquo;re likely to face. Each one cites the evidence it came from.
         </p>
       </section>
 
