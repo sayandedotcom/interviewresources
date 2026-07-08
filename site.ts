@@ -2,6 +2,9 @@ import { pricingConfig } from "./config/pricing";
 import { testimonialsConfig } from "./config/testimonials";
 import { faqsConfig } from "./config/faqs";
 import { ctaConfig } from "./config/cta";
+import { statsConfig } from "./config/stats";
+import { companiesConfig } from "./config/companies";
+import { comparisonConfig } from "./config/comparison";
 
 export const siteConfig = {
   name: "Scouting Report",
@@ -26,4 +29,7 @@ export const siteConfig = {
   testimonials: testimonialsConfig,
   faqs: faqsConfig,
   cta: ctaConfig,
+  stats: statsConfig,
+  companies: companiesConfig,
+  comparison: comparisonConfig,
 };
