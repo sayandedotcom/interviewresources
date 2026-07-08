@@ -1,3 +1,8 @@
+import { pricingConfig } from "./config/pricing";
+import { testimonialsConfig } from "./config/testimonials";
+import { faqsConfig } from "./config/faqs";
+import { ctaConfig } from "./config/cta";
+
 export const siteConfig = {
   name: "Scouting Report",
   description: "Get the interview questions before they ask them.",
@@ -17,28 +22,8 @@ export const siteConfig = {
     "technical interview",
     "job interview",
   ],
-  pricingPlans: [
-    {
-      name: "Basic",
-      price: 1,
-      description: "Perfect for occasional prep",
-      features: [
-        "5 company reports per month",
-        "Basic question predictions",
-        "Email support",
-      ],
-    },
-    {
-      name: "Pro",
-      price: 5,
-      description: "For serious candidates",
-      features: [
-        "Unlimited company reports",
-        "Advanced question predictions",
-        "Interviewer research",
-        "Priority support",
-        "Export reports",
-      ],
-    },
-  ],
+  pricingPlans: pricingConfig.plans,
+  testimonials: testimonialsConfig,
+  faqs: faqsConfig,
+  cta: ctaConfig,
 };
