@@ -16,9 +16,14 @@ export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
 export const researchInputSchema = z.object({
   companyName: z.string().min(1),
   companyUrl: z.string().url().optional(),
-  interviewerName: z.string().optional(),
-  interviewerUrl: z.string().url().optional(),
-  interviewTypes: z.array(z.enum(INTERVIEW_CATEGORIES)).min(1),
+  jobDescription: z.string().optional(),
+  yearsExperience: z.string().optional(),
+  techStack: z.string().optional(),
+  interviewers: z.array(z.object({
+    name: z.string(),
+    url: z.string().url().optional(),
+  })).optional(),
+  interviewTypes: z.array(z.string()).min(1),
   roleContext: z.string().optional(),
   fullLoop: z.boolean().default(false),
 });
