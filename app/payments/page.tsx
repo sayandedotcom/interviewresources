@@ -35,7 +35,7 @@ export default function PaymentsPage() {
                 className="w-full"
                 onClick={() => {
                   const params = new URLSearchParams({ productId: plan.name });
-                  window.location.href = `/payments?${params}`;
+                  window.location.href = `/api/checkout?${params}`;
                 }}
               >
                 Buy {plan.name}

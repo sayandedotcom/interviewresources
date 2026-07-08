@@ -17,14 +17,14 @@ export function Header() {
           <Link href="/" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
             Home
           </Link>
+          <Link href="/how-it-works" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+            How it works
+          </Link>
           <Link href="/pricing" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
             Pricing
           </Link>
           <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
             About
-          </a>
-          <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Blog
           </a>
           <ThemeToggle />
         </nav>

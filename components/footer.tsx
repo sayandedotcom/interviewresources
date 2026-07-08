@@ -60,6 +60,11 @@ export function Footer() {
             <h3 className="font-display text-sm font-semibold">Resources</h3>
             <ul className="mt-3 space-y-2">
               <li>
+                <Link href="/how-it-works" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  How it works
+                </Link>
+              </li>
+              <li>
                 <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Documentation
                 </a>
@@ -72,11 +77,6 @@ export function Footer() {
               <li>
                 <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Guides
-                </a>
-              </li>
-              <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Community
                 </a>
               </li>
             </ul>
