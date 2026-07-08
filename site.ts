@@ -8,6 +8,8 @@ export const siteConfig = {
     github: "https://github.com/sayandedotcom/interview-questions",
   },
   waitlist: false,
+  activeAuth: false,
+  enablePayments: false,
   keywords: [
     "interview questions",
     "interview prep",
