@@ -1,0 +1,18 @@
+export const companiesConfig = [
+  "Stripe",
+  "Google",
+  "Meta",
+  "Amazon",
+  "Netflix",
+  "Airbnb",
+  "Uber",
+  "Lyft",
+  "Shopify",
+  "Square",
+  "Coinbase",
+  "Databricks",
+  "Figma",
+  "Notion",
+  "Slack",
+  "Dropbox",
+];
