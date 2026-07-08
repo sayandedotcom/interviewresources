@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Interview Question Guesser
 
-## Getting Started
+Predicts likely interview questions for a specific company (and, optionally,
+a specific interviewer) by researching the web and synthesizing a report
+with Gemini. Full product spec: [`PRD.md`](./PRD.md).
 
-First, run the development server:
+> ⚠️ This project uses **Next.js 16.2.10**, which has breaking changes vs.
+> older Next.js docs/training data (e.g. `middleware.ts` → `proxy.ts`). Read
+> `node_modules/next/dist/docs/` before changing framework-level code — see
+> [`AGENTS.md`](./AGENTS.md).
+
+## Current status
+
+We're between **M0 and M1** (PRD §13). What exists today:
+
+- ✅ A standalone research pipeline (`lib/research/`) — plan → gather →
+  compress → synthesize → budget guard — runnable via CLI.
+- ✅ A web UI (`app/`) — the "Scouting Report" research form, live SSE
+  progress feed, and the report page (PRD §5), wired to the pipeline
+  through `app/api/research`.
+- ✅ A Postgres schema (`lib/db/schema.ts`) matching PRD §9, not yet wired
+  into the app.
+- ⏳ Auth, credit purchases, and the job queue (M1/M2) are not built yet.
+  The research API runs the pipeline inline in the route handler for now;
+  on serverless this will hit platform timeouts for large companies, which
+  is exactly why the Inngest job queue is planned (PRD §8.1).
+
+## Prerequisites
+
+- Node.js 22+
+- pnpm 10+
+- A [Google AI Studio](https://aistudio.google.com/apikey) API key (Gemini)
+- A [Tavily](https://app.tavily.com) API key
+- Postgres (only needed once you go past the CLI — e.g. [Neon](https://neon.tech))
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Fill in `.env.local`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+GOOGLE_GENERATIVE_AI_API_KEY=...   # required — Gemini
+TAVILY_API_KEY=...                 # required — web research
+DATABASE_URL=...                   # only needed for db:* scripts
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Run the research pipeline (M0)
 
-## Learn More
+This is the core product logic today — a CLI that runs the full pipeline
+against a real company and prints the report plus an exact cost breakdown,
+so you can validate quality and the $1 budget cap (PRD §7) before anything
+else gets built.
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm research -- --company "Stripe" --url https://stripe.com --types system_design,dsa
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Options:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Flag | Required | Example |
+|---|---|---|
+| `--company` | yes | `"Stripe"` |
+| `--url` | no | `https://stripe.com` |
+| `--types` | no (default `dsa,system_design`) | `dsa,system_design,behavioral` — see valid values below |
+| `--interviewer` | no | `"Jane Doe"` |
+| `--interviewer-url` | no | a public profile/portfolio URL, **not** scraped LinkedIn (PRD §11) |
+| `--role` | no | free-text role/JD context |
 
-## Deploy on Vercel
+Valid `--types` values (PRD §5.3): `dsa`, `system_design`, `domain_quiz`,
+`take_home`, `pair_programming`, `behavioral`, `hr_culture`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The command prints live stage progress, the final report JSON, and a cost
+breakdown per stage with the total checked against the $1.00 cap:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+[plan] Building research plan...
+[gather] Searching: Stripe interview questions system design...
+[compress] Summarizing: Stripe Engineering Blog...
+[synthesize] Synthesizing final report...
+[done] Done. Total cost: $0.3421
+
+===== REPORT =====
+{ ... }
+
+===== COST BREAKDOWN =====
+  [plan] llm — gemini-3.1-flash-lite-preview (3021in/612out) — $0.0017
+  ...
+  TOTAL: $0.3421 (cap: $1.00)
+```
+
+## Database (optional right now)
+
+Only needed once you start wiring up the app beyond the CLI:
+
+```bash
+pnpm db:push      # push lib/db/schema.ts to DATABASE_URL
+pnpm db:studio    # browse the DB
+```
+
+## Web app
+
+```bash
+pnpm dev
+```
+
+Opens the app at [http://localhost:3000](http://localhost:3000): the
+Scouting Report research form. Fill it in, run reconnaissance, and watch
+the live progress feed as the pipeline works, then read the report inline.
+Requires `GOOGLE_GENERATIVE_AI_API_KEY` and `TAVILY_API_KEY` in
+`.env.local` — without them the run fails on the first stage with a clear
+message. `pnpm research` (CLI) does the same thing headless with a full
+cost breakdown.
+
+## Project structure
+
+```
+app/                   # web UI (PRD §5)
+  page.tsx              home — hero + research experience
+  research-experience.tsx  "use client" — form, SSE progress feed, report view
+  layout.tsx            fonts (Space Grotesk / Geist / Geist Mono) + metadata
+  api/research/route.ts POST — runs the pipeline, streams progress + report over SSE
+lib/research/          # the pipeline — plan, gather, compress, synthesize, budget guard
+  types.ts              interview category taxonomy + zod schemas (input/plan/report)
+  display.ts             UI labels/codes for categories + confidence
+  budget.ts               BudgetTracker — enforces the $1 cap, Gemini/Tavily pricing table
+  tavily.ts                direct Tavily REST client (search + extract)
+  gemini.ts                 AI SDK wrapper (generateObject + usage tracking)
+  pipeline.ts                the 4 stages, orchestrated
+scripts/research.ts    CLI entry point for the pipeline (M0)
+lib/db/                 Drizzle schema + client (PRD §9), not yet wired to routes
+drizzle.config.ts      drizzle-kit config
+PRD.md                 full product spec — read this first for the "why"
+AGENTS.md              Next.js 16 usage notes (read before touching app/ routing)
+```
+
+## Tech stack
+
+See [PRD §8](./PRD.md#8-tech-stack). In short: Next.js 16 + TypeScript +
+Tailwind/shadcn, Postgres via Drizzle, Gemini via the Vercel AI SDK
+(`ai` + `@ai-sdk/google`), Tavily for web research, Stripe for credit packs
+and Inngest for the long-running research job queue (both planned, not yet
+integrated).
