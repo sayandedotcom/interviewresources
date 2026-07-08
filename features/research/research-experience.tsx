@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,18 +26,52 @@ export function ResearchExperience() {
   const [phase, setPhase] = useState<Phase>("form");
   const [company, setCompany] = useState("");
   const [companyUrl, setCompanyUrl] = useState("");
-  const [interviewer, setInterviewer] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+  const [yearsExperience, setYearsExperience] = useState("");
+  const [techStack, setTechStack] = useState("");
+  const [interviewers, setInterviewers] = useState([{ name: "", url: "" }]);
   const [role, setRole] = useState("");
-  const [selected, setSelected] = useState<InterviewCategory[]>(["dsa", "system_design"]);
+  const [selected, setSelected] = useState<string[]>(["dsa", "system_design"]);
+  const [customRound, setCustomRound] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
   const [progress, setProgress] = useState<ProgressLine[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [costUsd, setCostUsd] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const progressId = useRef(0);
 
-  function toggleCategory(cat: InterviewCategory) {
+  function toggleCategory(cat: string) {
     setSelected((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
+    );
+  }
+
+  function addCustomRound() {
+    const trimmed = customRound.trim().toLowerCase().replace(/\s+/g, "_");
+    if (trimmed && !selected.includes(trimmed)) {
+      setSelected((prev) => [...prev, trimmed]);
+    }
+    setCustomRound("");
+    setShowCustomInput(false);
+  }
+
+  function removeCustomRound(round: string) {
+    if (!INTERVIEW_CATEGORIES.includes(round as InterviewCategory)) {
+      setSelected((prev) => prev.filter((c) => c !== round));
+    }
+  }
+
+  function addInterviewer() {
+    setInterviewers((prev) => [...prev, { name: "", url: "" }]);
+  }
+
+  function removeInterviewer(index: number) {
+    setInterviewers((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateInterviewer(index: number, field: "name" | "url", value: string) {
+    setInterviewers((prev) =>
+      prev.map((int, i) => (i === index ? { ...int, [field]: value } : int)),
     );
   }
 
@@ -57,7 +92,13 @@ export function ResearchExperience() {
         body: JSON.stringify({
           companyName: company.trim(),
           companyUrl: companyUrl.trim() || undefined,
-          interviewerName: interviewer.trim() || undefined,
+          jobDescription: jobDescription.trim() || undefined,
+          yearsExperience: yearsExperience.trim() || undefined,
+          techStack: techStack.trim() || undefined,
+          interviewers: interviewers.filter((i) => i.name.trim()).map((i) => ({
+            name: i.name.trim(),
+            url: i.url.trim() || undefined,
+          })),
           interviewTypes: selected,
           roleContext: role.trim() || undefined,
         }),
@@ -107,6 +148,8 @@ export function ResearchExperience() {
     setProgress([]);
     setReport(null);
     setError(null);
+    setShowCustomInput(false);
+    setCustomRound("");
   }
 
   return (
@@ -134,14 +177,6 @@ export function ResearchExperience() {
                     placeholder="https://stripe.com"
                   />
                 </Field>
-                <Field label="Interviewer" htmlFor="interviewer" hint="optional">
-                  <Input
-                    id="interviewer"
-                    value={interviewer}
-                    onChange={(e) => setInterviewer(e.target.value)}
-                    placeholder="Name (used only as a public-search seed)"
-                  />
-                </Field>
                 <Field label="Role / level" htmlFor="role" hint="optional">
                   <Input
                     id="role"
@@ -150,6 +185,71 @@ export function ResearchExperience() {
                     placeholder="Senior Backend Engineer"
                   />
                 </Field>
+                <Field label="Years of Experience" htmlFor="yearsExperience" hint="optional">
+                  <Input
+                    id="yearsExperience"
+                    value={yearsExperience}
+                    onChange={(e) => setYearsExperience(e.target.value)}
+                    placeholder="5"
+                  />
+                </Field>
+                <Field label="Tech Stack" htmlFor="techStack" hint="optional">
+                  <Input
+                    id="techStack"
+                    value={techStack}
+                    onChange={(e) => setTechStack(e.target.value)}
+                    placeholder="React, Node.js, PostgreSQL"
+                  />
+                </Field>
+              </div>
+
+              <div className="mt-4 space-y-1.5">
+                <Label htmlFor="jobDescription" className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Job Description <span className="opacity-60">· optional</span>
+                </Label>
+                <textarea
+                  id="jobDescription"
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  placeholder="Paste job posting or description"
+                  rows={4}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  Interviewers
+                </Label>
+                {interviewers.map((int, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      value={int.name}
+                      onChange={(e) => updateInterviewer(index, "name", e.target.value)}
+                      placeholder="Name (used only as a public-search seed)"
+                      className="flex-1"
+                    />
+                    <Input
+                      value={int.url}
+                      onChange={(e) => updateInterviewer(index, "url", e.target.value)}
+                      placeholder="LinkedIn or blog URL (optional)"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeInterviewer(index)}
+                      disabled={interviewers.length === 1}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={addInterviewer}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  Add interviewer
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -176,6 +276,49 @@ export function ResearchExperience() {
                     </Button>
                   );
                 })}
+                {selected
+                  .filter((s) => !INTERVIEW_CATEGORIES.includes(s as InterviewCategory))
+                  .map((custom) => (
+                    <Button
+                      type="button"
+                      key={custom}
+                      size="lg"
+                      variant="default"
+                      onClick={() => removeCustomRound(custom)}
+                      title="Click to remove"
+                    >
+                      <span className="font-display">{custom.replace(/_/g, " ")}</span>
+                      <X className="ml-1 h-4 w-4" />
+                    </Button>
+                  ))}
+                {showCustomInput ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={customRound}
+                      onChange={(e) => setCustomRound(e.target.value)}
+                      placeholder="Custom round name"
+                      className="h-9 w-40"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCustomRound();
+                        }
+                      }}
+                    />
+                    <Button type="button" size="sm" onClick={addCustomRound}>
+                      Add
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setShowCustomInput(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button type="button" variant="outline" size="lg" onClick={() => setShowCustomInput(true)}>
+                    <Plus className="mr-1 h-4 w-4" />
+                    Add round
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
