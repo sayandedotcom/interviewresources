@@ -82,14 +82,31 @@ export const questionSchema = z.object({
 
 export type PredictedQuestion = z.infer<typeof questionSchema>;
 
+export const importantLinkSchema = z.object({
+  title: z.string(),
+  url: z.string(),
+  why: z.string().describe("One sentence: why this is worth the candidate's time"),
+});
+
+export type ImportantLink = z.infer<typeof importantLinkSchema>;
+
 export const reportSchema = z.object({
   companySnapshot: z.string().describe("What the company does, stack, scale signals"),
+  companyExplainer: z
+    .string()
+    .describe(
+      "The company explained in plain, jargon-free language, ending with one concrete " +
+        "everyday example of the product in action"
+    ),
   likelyLoopStructure: z
     .string()
     .describe("The reported interview process/rounds for this company, if discoverable"),
   interviewerSummary: z.string().nullable().describe("Null if no interviewer was provided"),
   questions: z.array(questionSchema).min(1),
   prepPlan: z.array(z.string()).describe("Ordered list of prep priorities"),
+  importantLinks: z
+    .array(importantLinkSchema)
+    .describe("3-6 most valuable sources for the candidate to read, chosen from the evidence URLs"),
 });
 
 export type Report = z.infer<typeof reportSchema>;
