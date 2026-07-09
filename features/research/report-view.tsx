@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { Download, Loader2, Plus } from "lucide-react";
+import { Check, ClipboardCopy, Download, Loader2, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { CONFIDENCE_META, categoryCode, categoryLabel } from "@/lib/research/display";
+import { buildAnswerPrompt } from "@/lib/research/prompt";
 import { INTERVIEW_CATEGORIES, type InterviewCategory, type Report } from "@/lib/research/types";
 
 import { RoundPicker } from "@/features/research/round-picker";
@@ -58,6 +59,23 @@ export function ReportView({
   const [progress, setProgress] = useState<string | null>(null);
   const [extendError, setExtendError] = useState<string | null>(null);
   const [extraRounds, setExtraRounds] = useState<string[]>([]);
+
+  // "copied" reverts on a timer; "failed" covers a denied clipboard permission.
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => void (copyTimer.current && clearTimeout(copyTimer.current)), []);
+
+  async function copyAsPrompt() {
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    try {
+      await navigator.clipboard.writeText(buildAnswerPrompt(current, company));
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+    copyTimer.current = setTimeout(() => setCopyState("idle"), 2000);
+  }
 
   async function extend(interviewTypes: string[], token: string) {
     if (!researchId || busy) return;
@@ -125,6 +143,36 @@ export function ReportView({
               {creditsCharged} credits
             </span>
           )}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-label="Copy as prompt"
+                  onClick={copyAsPrompt}
+                />
+              }>
+              {copyState === "copied" ? (
+                <Check className="text-tertiary mr-1 h-4 w-4" />
+              ) : (
+                <ClipboardCopy className="mr-1 h-4 w-4" />
+              )}
+              <span className="font-display">
+                {copyState === "copied"
+                  ? "Copied"
+                  : copyState === "failed"
+                    ? "Copy failed"
+                    : "Copy as Prompt"}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              Copy the whole report as a prompt, to paste into ChatGPT or any assistant and get
+              every question answered
+            </TooltipContent>
+          </Tooltip>
+
           {canExport && (
             <Button variant="outline" size="sm" onClick={() => downloadReport(current, company)}>
               <Download className="mr-1 h-4 w-4" />
