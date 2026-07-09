@@ -168,6 +168,14 @@ async function synthesizeStage(
     .map((n, i) => `[${i + 1}] (${n.category}) ${n.sourceTitle} — ${n.sourceUrl}\n${n.summary}`)
     .join("\n\n");
 
+  // Only present on an extension run, where the caller wants fresh questions
+  // rather than the ones the report already shows.
+  const excludeBlock = input.excludeQuestions.length
+    ? `\n\nAlready predicted — do NOT repeat or rephrase any of these:\n${input.excludeQuestions
+        .map((q) => `- ${q}`)
+        .join("\n")}`
+    : "";
+
   const report = await generateStructured({
     model: "gemini-3.1-pro-preview",
     stage: "synthesize",
@@ -199,6 +207,8 @@ Rules:
 - Do not invent citations. Do not invent company facts not present in the notes.
 - Aim for 15-30 questions total across the requested rounds, prioritizing breadth
   across rounds over depth in one.
+- If an "Already predicted" list is present, treat those questions as taken: never repeat
+  one, and never restate one in different words. Cover different ground instead.
 - In importantLinks, pick the 3-6 highest-value sources for the candidate to read before
   the interview, using only URLs that appear in the evidence notes. Favour first-hand
   interview experiences, the company's engineering blog, and interviewer talks or writing
@@ -207,7 +217,7 @@ Rules:
     prompt: `${describeInput(input)}
 
 Evidence notes:
-${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everything low confidence)"}`,
+${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everything low confidence)"}${excludeBlock}`,
   });
 
   // A URL the notes never contained is a hallucination — strip it from both
