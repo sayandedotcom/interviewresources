@@ -17,8 +17,8 @@ export default function Home() {
           </p>
           <div className="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#AEF05A] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#AEF05A]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
             </span>
             <span className="font-mono text-[10px] text-muted-foreground">
               34,345 users
@@ -31,7 +31,7 @@ export default function Home() {
           before they ask{' '}
           <span className="relative inline-block">
             them.
-            <span className="absolute -bottom-1 left-0 h-3 w-full bg-[#AEF05A]/20" />
+            <span className="absolute -bottom-1 left-0 h-3 w-full bg-tertiary/20" />
           </span>
         </h1>
         <p className="mt-4 max-w-xl font-display text-[15px] leading-relaxed text-muted-foreground">
@@ -70,7 +70,7 @@ export default function Home() {
           {siteConfig.companies.map((company, i) => (
             <div
               key={i}
-              className="rounded-full border bg-card px-4 py-2 font-display text-sm text-muted-foreground hover:border-[#AEF05A]/30 hover:text-foreground transition-colors cursor-default"
+              className="rounded-full border bg-card px-4 py-2 font-display text-sm text-muted-foreground hover:border-tertiary/30 hover:text-foreground transition-colors cursor-default"
             >
               {company}
             </div>
@@ -94,8 +94,8 @@ export default function Home() {
           <div className="hidden sm:block absolute top-12 left-1/2 h-0.5 w-full -translate-x-1/2 bg-border" />
           <div className="grid gap-8 sm:grid-cols-3">
             <div className="relative text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#AEF05A]/10 ring-4 ring-background">
-                <span className="font-display text-lg font-bold text-[#AEF05A]">1</span>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-tertiary/10 ring-4 ring-background">
+                <span className="font-display text-lg font-bold text-tertiary">1</span>
               </div>
               <h3 className="mt-4 font-display text-sm font-semibold">Name your target</h3>
               <p className="mt-2 font-display text-xs text-muted-foreground">
@@ -103,8 +103,8 @@ export default function Home() {
               </p>
             </div>
             <div className="relative text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#AEF05A]/10 ring-4 ring-background">
-                <span className="font-display text-lg font-bold text-[#AEF05A]">2</span>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-tertiary/10 ring-4 ring-background">
+                <span className="font-display text-lg font-bold text-tertiary">2</span>
               </div>
               <h3 className="mt-4 font-display text-sm font-semibold">We research</h3>
               <p className="mt-2 font-display text-xs text-muted-foreground">
@@ -112,8 +112,8 @@ export default function Home() {
               </p>
             </div>
             <div className="relative text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#AEF05A]/10 ring-4 ring-background">
-                <span className="font-display text-lg font-bold text-[#AEF05A]">3</span>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-tertiary/10 ring-4 ring-background">
+                <span className="font-display text-lg font-bold text-tertiary">3</span>
               </div>
               <h3 className="mt-4 font-display text-sm font-semibold">Get your report</h3>
               <p className="mt-2 font-display text-xs text-muted-foreground">
@@ -125,7 +125,7 @@ export default function Home() {
         <div className="mt-8 text-center">
           <Link
             href="/how-it-works"
-            className="inline-flex items-center gap-2 font-display text-sm text-[#AEF05A] hover:underline"
+            className="inline-flex items-center gap-2 font-display text-sm text-tertiary hover:underline"
           >
             Learn more about how it works
             <ArrowRight className="h-4 w-4" />
@@ -159,12 +159,12 @@ export default function Home() {
                   <td className="p-4 text-center">
                     {typeof row.us === 'boolean' ? (
                       row.us ? (
-                        <Check className="mx-auto h-4 w-4 text-[#AEF05A]" />
+                        <Check className="mx-auto h-4 w-4 text-tertiary" />
                       ) : (
                         <span className="font-mono text-xs text-muted-foreground">—</span>
                       )
                     ) : (
-                      <span className="font-display text-xs font-medium text-[#AEF05A]">{row.us}</span>
+                      <span className="font-display text-xs font-medium text-tertiary">{row.us}</span>
                     )}
                   </td>
                   <td className="p-4 text-center">
@@ -242,7 +242,7 @@ export default function Home() {
           <div className="mt-6 flex justify-center gap-4">
             <Link
               href="/how-it-works"
-              className="inline-block rounded-lg bg-[#AEF05A] px-8 py-3 font-display text-sm font-medium text-black hover:bg-[#AEF05A]/90 transition-colors cursor-pointer"
+              className="inline-block rounded-lg bg-tertiary px-8 py-3 font-display text-sm font-medium text-tertiary-foreground hover:bg-tertiary/90 transition-colors cursor-pointer"
             >
               {siteConfig.cta.subtitle}
             </Link>
