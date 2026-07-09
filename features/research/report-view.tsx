@@ -1,14 +1,20 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { useState } from "react";
+
+import { Download, Loader2, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { CONFIDENCE_META, categoryCode, categoryLabel } from "@/lib/research/display";
 import { INTERVIEW_CATEGORIES, type InterviewCategory, type Report } from "@/lib/research/types";
+
+import { RoundPicker } from "@/features/research/round-picker";
+import { explainError, streamSse } from "@/features/research/stream";
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -25,6 +31,7 @@ export function ReportView({
   canExport,
   company,
   onReset,
+  researchId,
 }: {
   report: Report;
   costUsd: number | null;
@@ -32,10 +39,65 @@ export function ReportView({
   canExport: boolean;
   company: string;
   onReset?: () => void;
+  /** Enables the extend controls. Absent for a report not yet persisted. */
+  researchId?: string;
 }) {
+  // An extend run returns a merged report, so what's rendered has to be able to
+  // outgrow the prop. Re-sync during render (not in an effect) whenever the
+  // parent hands us a different report — React's adjust-state-on-prop-change idiom.
+  const [current, setCurrent] = useState(report);
+  const [seededFrom, setSeededFrom] = useState(report);
+  if (seededFrom !== report) {
+    setSeededFrom(report);
+    setCurrent(report);
+  }
+
+  // Which extend request is in flight: a category slug for a "More" click, or
+  // the sentinel "__rounds__" for the footer form. Only one runs at a time.
+  const [busy, setBusy] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
+  const [extendError, setExtendError] = useState<string | null>(null);
+  const [extraRounds, setExtraRounds] = useState<string[]>([]);
+
+  async function extend(interviewTypes: string[], token: string) {
+    if (!researchId || busy) return;
+    setBusy(token);
+    setProgress(null);
+    setExtendError(null);
+
+    try {
+      const res = await fetch(`/api/research/${researchId}/extend`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ interviewTypes }),
+      });
+
+      if (!res.ok || !res.body) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(explainError(res.status, body));
+      }
+
+      await streamSse(res.body, (msg) => {
+        if (msg.kind === "progress") {
+          setProgress(String(msg.message ?? ""));
+        } else if (msg.kind === "report") {
+          setCurrent(msg.report as Report);
+          setExtraRounds([]);
+        } else if (msg.kind === "error") {
+          setExtendError(String(msg.message ?? "Extend failed."));
+        }
+      });
+    } catch (err) {
+      setExtendError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+      setProgress(null);
+    }
+  }
+
   // Predefined categories in taxonomy order, then custom rounds as first seen. The model
   // can also return a round the user never asked for (surfaced by loop-format discovery).
-  const present = report.questions.map((q) => q.category);
+  const present = current.questions.map((q) => q.category);
   const order = [
     ...INTERVIEW_CATEGORIES.filter((cat) => present.includes(cat)),
     ...present.filter(
@@ -45,11 +107,11 @@ export function ReportView({
   ];
   const grouped = order.map((cat) => ({
     cat,
-    questions: report.questions.filter((q) => q.category === cat),
+    questions: current.questions.filter((q) => q.category === cat),
   }));
 
   // Reports generated before importantLinks existed are stored without the field.
-  const importantLinks = report.importantLinks ?? [];
+  const importantLinks = current.importantLinks ?? [];
 
   return (
     <div className="mt-6">
@@ -64,7 +126,7 @@ export function ReportView({
             </span>
           )}
           {canExport && (
-            <Button variant="outline" size="sm" onClick={() => downloadReport(report, company)}>
+            <Button variant="outline" size="sm" onClick={() => downloadReport(current, company)}>
               <Download className="mr-1 h-4 w-4" />
               <span className="font-display">Export</span>
             </Button>
@@ -81,34 +143,34 @@ export function ReportView({
       <section className="mt-5">
         <h2 className="font-display text-lg font-semibold tracking-tight">The company</h2>
         <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
-          {report.companySnapshot}
+          {current.companySnapshot}
         </p>
         {/* Reports generated before companyExplainer existed are stored without it. */}
-        {report.companyExplainer && (
+        {current.companyExplainer && (
           <div className="bg-tertiary/10 border-tertiary/40 mt-3 rounded-md border-l-2 px-4 py-3">
             <SectionLabel>In plain terms</SectionLabel>
             <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
-              {report.companyExplainer}
+              {current.companyExplainer}
             </p>
           </div>
         )}
       </section>
 
-      {report.likelyLoopStructure && (
+      {current.likelyLoopStructure && (
         <section className="mt-6">
           <SectionLabel>The loop</SectionLabel>
           <p className="font-display border-primary text-foreground mt-2 border-l-2 pl-3 text-[15px] leading-relaxed">
-            {report.likelyLoopStructure}
+            {current.likelyLoopStructure}
           </p>
         </section>
       )}
 
-      {report.interviewerSummary && (
+      {current.interviewerSummary && (
         <Card className="mt-6">
           <CardContent>
             <SectionLabel>The interviewer</SectionLabel>
             <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
-              {report.interviewerSummary}
+              {current.interviewerSummary}
             </p>
           </CardContent>
         </Card>
@@ -126,6 +188,37 @@ export function ReportView({
                 <h3 className="font-display text-sm font-semibold tracking-wide uppercase">
                   {categoryLabel(cat)}
                 </h3>
+                {researchId && (
+                  <div className="ml-auto flex items-center gap-2">
+                    {busy === cat && progress && (
+                      <span className="text-muted-foreground hidden max-w-[16rem] truncate font-mono text-[11px] sm:inline">
+                        {progress}
+                      </span>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            aria-label={`Add more ${categoryLabel(cat)} questions`}
+                            className="text-tertiary hover:bg-tertiary/10 hover:text-tertiary h-7 shrink-0 px-2"
+                            disabled={busy !== null}
+                            onClick={() => extend([cat], cat)}
+                          />
+                        }>
+                        {busy === cat ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Plus className="h-3.5 w-3.5" />
+                        )}
+                        <span className="font-display ml-1 text-xs">More</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Add more questions</TooltipContent>
+                    </Tooltip>
+                  </div>
+                )}
               </div>
               <ul className="mt-2 space-y-3">
                 {questions.map((q, i) => (
@@ -176,14 +269,17 @@ export function ReportView({
             </div>
           ))}
         </div>
+        {extendError && (
+          <p className="text-destructive mt-3 font-mono text-[11px]">{extendError}</p>
+        )}
       </section>
 
-      {report.prepPlan.length > 0 && (
+      {current.prepPlan.length > 0 && (
         <section className="mt-8">
           <Separator className="mb-5" />
           <h2 className="font-display text-lg font-semibold tracking-tight">Prep plan</h2>
           <ol className="mt-2 space-y-1.5">
-            {report.prepPlan.map((step, i) => (
+            {current.prepPlan.map((step, i) => (
               <li key={i} className="font-display text-foreground flex gap-3 text-[15px]">
                 <span className="text-muted-foreground font-mono text-[13px]">
                   {String(i + 1).padStart(2, "0")}
@@ -225,6 +321,54 @@ export function ReportView({
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {researchId && (
+        <section className="mt-8">
+          <Separator className="mb-5" />
+          <Card>
+            <CardContent>
+              <SectionLabel>Scout more rounds</SectionLabel>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Forgot a round? Pick or create one and we&apos;ll research it into this report.
+              </p>
+              <div className="mt-4">
+                <RoundPicker
+                  selected={extraRounds}
+                  exclude={order}
+                  disabled={busy !== null}
+                  onToggle={(cat) =>
+                    setExtraRounds((prev) =>
+                      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+                    )
+                  }
+                  onAddCustom={(round) =>
+                    setExtraRounds((prev) =>
+                      // A round the report already covers belongs to "More", not here.
+                      prev.includes(round) || order.includes(round) ? prev : [...prev, round]
+                    )
+                  }
+                  onRemoveCustom={(round) =>
+                    setExtraRounds((prev) => prev.filter((c) => c !== round))
+                  }
+                />
+              </div>
+
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <span className="text-muted-foreground truncate font-mono text-[11px]">
+                  {busy === "__rounds__" ? (progress ?? "Starting…") : ""}
+                </span>
+                <Button
+                  type="button"
+                  disabled={extraRounds.length === 0 || busy !== null}
+                  onClick={() => extend(extraRounds, "__rounds__")}>
+                  {busy === "__rounds__" && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+                  <span className="font-display">Scout these rounds →</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </section>
       )}
     </div>
