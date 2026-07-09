@@ -12,6 +12,8 @@ const sql = postgres(process.env.DATABASE_URL);
 const fakeReport = {
   companySnapshot:
     "Stripe is a financial infrastructure platform for internet businesses, processing payments at massive scale across 40+ countries. Known for a strong API-design culture and a heavily distributed systems stack (mostly Ruby, Scala, and Go services).",
+  companyExplainer:
+    "Stripe helps businesses take payments on the internet. When you buy shoes online and type in your card number, Stripe is the service behind the scenes that checks the card is real and moves the money from your bank to the store's bank.",
   likelyLoopStructure:
     "Recruiter screen (30m) → Technical phone screen (DSA, 45m) → Onsite loop: System Design (60m), Domain/Coding round (60m), Behavioral (45m), Bar-raiser (45m).",
   interviewerSummary: null,
