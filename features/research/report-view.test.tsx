@@ -342,3 +342,110 @@ describe("reset", () => {
     expect(onReset).toHaveBeenCalledOnce();
   });
 });
+
+describe("extend controls", () => {
+  /** An SSE body carrying one report event, as the extend route would stream it. */
+  function sseBody(merged: Report): ReadableStream<Uint8Array> {
+    const payload = `data: ${JSON.stringify({ kind: "report", report: merged })}\n\n`;
+    return new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(payload));
+        controller.close();
+      },
+    });
+  }
+
+  it("hides the extend UI for a report that has no id yet", () => {
+    render(<ReportView {...base} report={report()} />);
+
+    expect(screen.queryByText("Scout more rounds")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add more/i })).not.toBeInTheDocument();
+  });
+
+  it("shows a More button per section and the rounds footer once persisted", () => {
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+
+    expect(screen.getByText("Scout more rounds")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /add more algorithmic coding questions/i })
+    ).toBeInTheDocument();
+  });
+
+  it("asks the extend route for more questions in just that section's category", async () => {
+    const merged = report({ questions: [question(), question({ question: "Two sum" })] });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, body: sseBody(merged) } as unknown as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: /add more algorithmic coding questions/i })
+    );
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/research/r-1/extend");
+    expect(JSON.parse(init.body)).toEqual({ interviewTypes: ["dsa"] });
+
+    // The merged report replaces what was rendered.
+    expect(await screen.findByText("Two sum")).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("surfaces an extend failure without destroying the report on screen", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 402,
+      json: async () => ({ error: "insufficient_credits", balance: 3, required: 25 }),
+    } as unknown as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: /add more algorithmic coding questions/i })
+    );
+
+    expect(await screen.findByText(/not enough credits/i)).toBeInTheDocument();
+    expect(screen.getByText("Implement an LRU cache")).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("omits rounds the report already covers from the footer picker", () => {
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+    const footer = screen.getByText("Scout more rounds").parentElement!;
+
+    // dsa is already in the report, so only its "More" button offers it.
+    expect(
+      within(footer).queryByRole("button", { name: /Algorithmic Coding/ })
+    ).not.toBeInTheDocument();
+    expect(within(footer).getByRole("button", { name: /Behavioral/ })).toBeInTheDocument();
+  });
+
+  it("scouts the rounds picked in the footer", async () => {
+    const merged = report({
+      questions: [question(), question({ category: "behavioral", question: "Conflict story" })],
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, body: sseBody(merged) } as unknown as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+    const footer = screen.getByText("Scout more rounds").parentElement!;
+    await userEvent.click(within(footer).getByRole("button", { name: /Behavioral/ }));
+    await userEvent.click(screen.getByRole("button", { name: /scout these rounds/i }));
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      interviewTypes: ["behavioral"],
+    });
+    expect(await screen.findByText("Conflict story")).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps the scout button disabled until a round is picked", () => {
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+
+    expect(screen.getByRole("button", { name: /scout these rounds/i })).toBeDisabled();
+  });
+});

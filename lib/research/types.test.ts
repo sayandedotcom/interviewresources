@@ -25,6 +25,15 @@ describe("researchInputSchema", () => {
     expect(parsed.fullLoop).toBe(false);
   });
 
+  it("defaults excludeQuestions to empty, so a fresh run excludes nothing", () => {
+    expect(researchInputSchema.parse(validInput).excludeQuestions).toEqual([]);
+  });
+
+  it("carries excludeQuestions through for an extension run", () => {
+    const parsed = researchInputSchema.parse({ ...validInput, excludeQuestions: ["LRU cache"] });
+    expect(parsed.excludeQuestions).toEqual(["LRU cache"]);
+  });
+
   it("rejects a missing company name", () => {
     expect(() => researchInputSchema.parse({ interviewTypes: ["dsa"] })).toThrow();
   });

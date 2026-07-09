@@ -23,6 +23,7 @@ const input: ResearchInput = {
   interviewers: [],
   interviewTypes: ["dsa"],
   fullLoop: false,
+  excludeQuestions: [],
 };
 
 function plan(overrides: Partial<ResearchPlan> = {}): ResearchPlan {
@@ -365,6 +366,26 @@ describe("synthesize stage", () => {
     expect(prompt).toContain("Evidence notes:");
     expect(prompt).toContain("[1] (loop_format)");
     expect(prompt).toContain("https://a.dev");
+  });
+
+  it("tells the model not to repeat questions an earlier pass already predicted", async () => {
+    stubStages({});
+
+    await runResearchPipeline({ ...input, excludeQuestions: ["LRU cache", "Two sum"] });
+
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
+    expect(prompt).toContain("Already predicted");
+    expect(prompt).toContain("- LRU cache");
+    expect(prompt).toContain("- Two sum");
+  });
+
+  it("omits the exclusion block entirely on a fresh run", async () => {
+    stubStages({});
+
+    await runResearchPipeline(input);
+
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
+    expect(prompt).not.toContain("Already predicted");
   });
 
   it("tells the model to degrade gracefully when no evidence survived", async () => {
