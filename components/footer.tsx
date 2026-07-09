@@ -110,7 +110,7 @@ export function Footer() {
         <div className="mt-8 flex items-center justify-between border-t pt-6">
           <div className="flex items-center gap-2">
             <span className="inline-block h-2.5 w-2.5 rotate-45 bg-primary relative">
-              <span className="absolute inset-0 rounded-sm bg-[#AEF05A]/40 blur-md" />
+              <span className="absolute inset-0 rounded-sm bg-tertiary/40 blur-md" />
             </span>
             <span className="font-display text-sm font-semibold">Scouting Report</span>
           </div>
