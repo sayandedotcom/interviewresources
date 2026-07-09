@@ -1,3 +1,5 @@
+"use client";
+
 import { Download } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +48,9 @@ export function ReportView({
     questions: report.questions.filter((q) => q.category === cat),
   }));
 
+  // Reports generated before importantLinks existed are stored without the field.
+  const importantLinks = report.importantLinks ?? [];
+
   return (
     <div className="mt-6">
       <div className="flex items-center justify-between pb-3">
@@ -53,7 +58,7 @@ export function ReportView({
         <div className="flex items-center gap-4">
           {creditsCharged != null && (
             <span
-              className="text-muted-foreground font-mono text-[11px]"
+              className="font-display text-muted-foreground font-mono text-[11px]"
               title={costUsd != null ? `Metered cost $${costUsd.toFixed(4)}` : undefined}>
               {creditsCharged} credits
             </span>
@@ -61,12 +66,12 @@ export function ReportView({
           {canExport && (
             <Button variant="outline" size="sm" onClick={() => downloadReport(report, company)}>
               <Download className="mr-1 h-4 w-4" />
-              Export
+              <span className="font-display">Export</span>
             </Button>
           )}
           {onReset && (
             <Button variant="outline" size="sm" onClick={onReset}>
-              New report
+              <span className="font-display">New report</span>
             </Button>
           )}
         </div>
@@ -75,15 +80,24 @@ export function ReportView({
 
       <section className="mt-5">
         <h2 className="font-display text-lg font-semibold tracking-tight">The company</h2>
-        <p className="text-foreground mt-1.5 text-[15px] leading-relaxed">
+        <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
           {report.companySnapshot}
         </p>
+        {/* Reports generated before companyExplainer existed are stored without it. */}
+        {report.companyExplainer && (
+          <div className="bg-tertiary/10 border-tertiary/40 mt-3 rounded-md border-l-2 px-4 py-3">
+            <SectionLabel>In plain terms</SectionLabel>
+            <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
+              {report.companyExplainer}
+            </p>
+          </div>
+        )}
       </section>
 
       {report.likelyLoopStructure && (
         <section className="mt-6">
           <SectionLabel>The loop</SectionLabel>
-          <p className="border-primary text-foreground mt-2 border-l-2 pl-3 text-[15px] leading-relaxed">
+          <p className="font-display border-primary text-foreground mt-2 border-l-2 pl-3 text-[15px] leading-relaxed">
             {report.likelyLoopStructure}
           </p>
         </section>
@@ -93,7 +107,7 @@ export function ReportView({
         <Card className="mt-6">
           <CardContent>
             <SectionLabel>The interviewer</SectionLabel>
-            <p className="text-foreground mt-1.5 text-[15px] leading-relaxed">
+            <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
               {report.interviewerSummary}
             </p>
           </CardContent>
@@ -106,7 +120,7 @@ export function ReportView({
           {grouped.map(({ cat, questions }) => (
             <div key={cat}>
               <div className="flex items-baseline gap-2">
-                <span className="text-muted-foreground font-mono text-[10px] tracking-widest">
+                <span className="text-tertiary font-mono text-[10px] font-semibold tracking-widest">
                   {categoryCode(cat)}
                 </span>
                 <h3 className="font-display text-sm font-semibold tracking-wide uppercase">
@@ -147,6 +161,7 @@ export function ReportView({
                               <Badge
                                 key={j}
                                 variant="outline"
+                                className="hover:border-tertiary/50 hover:bg-tertiary/10 hover:text-tertiary transition-colors"
                                 render={<a href={url} target="_blank" rel="noopener noreferrer" />}>
                                 <span className="font-mono text-[10px]">{hostOf(url)}</span>
                               </Badge>
@@ -169,7 +184,7 @@ export function ReportView({
           <h2 className="font-display text-lg font-semibold tracking-tight">Prep plan</h2>
           <ol className="mt-2 space-y-1.5">
             {report.prepPlan.map((step, i) => (
-              <li key={i} className="text-foreground flex gap-3 text-[15px]">
+              <li key={i} className="font-display text-foreground flex gap-3 text-[15px]">
                 <span className="text-muted-foreground font-mono text-[13px]">
                   {String(i + 1).padStart(2, "0")}
                 </span>
@@ -177,6 +192,39 @@ export function ReportView({
               </li>
             ))}
           </ol>
+        </section>
+      )}
+
+      {importantLinks.length > 0 && (
+        <section className="mt-8">
+          <Separator className="mb-5" />
+          <h2 className="font-display text-lg font-semibold tracking-tight">Worth reading</h2>
+          <ul className="mt-3 space-y-3">
+            {importantLinks.map((link, i) => (
+              <li key={i}>
+                <Card>
+                  <CardContent>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-display text-foreground hover:text-tertiary flex items-baseline gap-2 text-[15px] leading-snug font-medium underline-offset-4 hover:underline">
+                        <span className="bg-tertiary inline-block h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full" />
+                        {link.title}
+                      </a>
+                      <span className="text-tertiary bg-tertiary/10 shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px]">
+                        {hostOf(link.url)}
+                      </span>
+                    </div>
+                    <p className="font-display text-muted-foreground mt-1.5 text-[13.5px] leading-relaxed">
+                      {link.why}
+                    </p>
+                  </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </div>
@@ -191,7 +239,10 @@ function downloadReport(report: Report, company: string) {
     company
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-") || "report";
+      .replace(/[^a-z0-9]+/g, "-")
+      // Strip the edge hyphens punctuation leaves behind, or "Acme Corp!" would
+      // download as `scouting-report-acme-corp-.json` and "!!!" as `--.json`.
+      .replace(/^-+|-+$/g, "") || "report";
 
   const a = document.createElement("a");
   a.href = url;
