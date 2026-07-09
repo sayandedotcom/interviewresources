@@ -14,15 +14,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
-import { CATEGORY_META, categoryLabel } from "@/lib/research/display";
-import {
-  INTERVIEW_CATEGORIES,
-  type InterviewCategory,
-  type PipelineProgressEvent,
-  type Report,
-} from "@/lib/research/types";
+import type { PipelineProgressEvent, Report } from "@/lib/research/types";
 
 import { ReportView, SectionLabel } from "@/features/research/report-view";
+import { RoundPicker, isCustomRound } from "@/features/research/round-picker";
+import { explainError, streamSse } from "@/features/research/stream";
 
 type Phase = "form" | "running" | "done" | "error";
 
@@ -52,10 +48,9 @@ export function ResearchExperience({
   const [interviewers, setInterviewers] = useState([{ name: "", url: "" }]);
   const [role, setRole] = useState("");
   const [selected, setSelected] = useState<string[]>(["dsa", "system_design"]);
-  const [customRound, setCustomRound] = useState("");
-  const [showCustomInput, setShowCustomInput] = useState(false);
   const [progress, setProgress] = useState<ProgressLine[]>([]);
   const [report, setReport] = useState<Report | null>(null);
+  const [researchId, setResearchId] = useState<string | null>(null);
   const [costUsd, setCostUsd] = useState<number | null>(null);
   const [creditsCharged, setCreditsCharged] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,16 +84,12 @@ export function ResearchExperience({
     setSelected((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   }
 
-  function addCustomRound() {
-    const trimmed = customRound.trim().toLowerCase().replace(/\s+/g, "_");
-    if (trimmed && !selected.includes(trimmed)) {
-      setSelected((prev) => [...prev, trimmed]);
-    }
-    setCustomRound("");
+  function addCustomRound(round: string) {
+    setSelected((prev) => (prev.includes(round) ? prev : [...prev, round]));
   }
 
   function removeCustomRound(round: string) {
-    if (!INTERVIEW_CATEGORIES.includes(round as InterviewCategory)) {
+    if (isCustomRound(round)) {
       setSelected((prev) => prev.filter((c) => c !== round));
     }
   }
@@ -124,6 +115,7 @@ export function ResearchExperience({
     setPhase("running");
     setProgress([]);
     setReport(null);
+    setResearchId(null);
     setError(null);
     setCostUsd(null);
     setCreditsCharged(null);
@@ -154,39 +146,30 @@ export function ResearchExperience({
         throw new Error(explainError(res.status, body));
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const chunks = buffer.split("\n\n");
-        buffer = chunks.pop() ?? "";
-        for (const chunk of chunks) {
-          const line = chunk.replace(/^data: /, "").trim();
-          if (!line) continue;
-          const msg = JSON.parse(line);
-
-          if (msg.kind === "progress") {
-            setProgress((prev) => [...prev, { ...msg, id: progressId.current++ }]);
-          } else if (msg.kind === "report") {
-            setReport(msg.report);
-            setCostUsd(msg.costUsd);
-            setCreditsCharged(msg.creditsCharged ?? null);
-            if (typeof msg.balanceAfter === "number") {
-              setMe((prev) => (prev ? { ...prev, balance: msg.balanceAfter } : prev));
-            }
-            setPhase("done");
-            if (msg.researchId) onComplete?.(msg.researchId);
-          } else if (msg.kind === "error") {
-            setError(msg.message);
-            setPhase("error");
+      await streamSse(res.body, (msg) => {
+        if (msg.kind === "progress") {
+          setProgress((prev) => [
+            ...prev,
+            { ...(msg as unknown as PipelineProgressEvent), id: progressId.current++ },
+          ]);
+        } else if (msg.kind === "report") {
+          setReport(msg.report as Report);
+          setCostUsd(msg.costUsd as number);
+          setCreditsCharged((msg.creditsCharged as number) ?? null);
+          if (typeof msg.balanceAfter === "number") {
+            const balanceAfter = msg.balanceAfter;
+            setMe((prev) => (prev ? { ...prev, balance: balanceAfter } : prev));
           }
+          setPhase("done");
+          if (msg.researchId) {
+            setResearchId(String(msg.researchId));
+            onComplete?.(String(msg.researchId));
+          }
+        } else if (msg.kind === "error") {
+          setError(String(msg.message));
+          setPhase("error");
         }
-      }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setPhase("error");
@@ -197,9 +180,8 @@ export function ResearchExperience({
     setPhase("form");
     setProgress([]);
     setReport(null);
+    setResearchId(null);
     setError(null);
-    setShowCustomInput(false);
-    setCustomRound("");
   }
 
   return (
@@ -333,74 +315,16 @@ export function ResearchExperience({
           <Card>
             <CardContent>
               <SectionLabel>Rounds to scout</SectionLabel>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {INTERVIEW_CATEGORIES.map((cat) => {
-                  const on = selected.includes(cat);
-                  return (
-                    <Button
-                      type="button"
-                      key={cat}
-                      size="lg"
-                      variant={on ? "default" : "outline"}
-                      onClick={() => toggleCategory(cat)}
-                      aria-pressed={on}>
-                      <span className="font-mono text-[10px] tracking-widest opacity-70">
-                        {CATEGORY_META[cat].code}
-                      </span>
-                      <span className="font-display">{CATEGORY_META[cat].label}</span>
-                    </Button>
-                  );
-                })}
-                {selected
-                  .filter((s) => !INTERVIEW_CATEGORIES.includes(s as InterviewCategory))
-                  .map((custom) => (
-                    <Button
-                      type="button"
-                      key={custom}
-                      size="lg"
-                      variant="default"
-                      onClick={() => removeCustomRound(custom)}
-                      title="Click to remove">
-                      <span className="font-display">{categoryLabel(custom)}</span>
-                      <X className="ml-1 h-4 w-4" />
-                    </Button>
-                  ))}
-                {showCustomInput ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={customRound}
-                      onChange={(e) => setCustomRound(e.target.value)}
-                      placeholder="Custom round name"
-                      className="h-9 w-40"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addCustomRound();
-                        }
-                      }}
-                    />
-                    <Button type="button" size="sm" onClick={addCustomRound}>
-                      Add
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowCustomInput(false)}>
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    onClick={() => setShowCustomInput(true)}>
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add round
-                  </Button>
-                )}
+              <p className="text-muted-foreground mt-1 text-xs">
+                You can add more rounds later, from the finished report.
+              </p>
+              <div className="mt-4">
+                <RoundPicker
+                  selected={selected}
+                  onToggle={toggleCategory}
+                  onAddCustom={addCustomRound}
+                  onRemoveCustom={removeCustomRound}
+                />
               </div>
             </CardContent>
           </Card>
@@ -469,27 +393,11 @@ export function ResearchExperience({
           canExport={isPro}
           company={company}
           onReset={reset}
+          researchId={researchId ?? undefined}
         />
       )}
     </div>
   );
-}
-
-/** Turns the route's error codes into something a person can act on. */
-function explainError(
-  status: number,
-  body: { error?: string; detail?: string; balance?: number; required?: number }
-): string {
-  switch (body.error) {
-    case "unauthenticated":
-      return "Please sign in before running a report.";
-    case "insufficient_credits":
-      return `Not enough credits: a report needs up to ${body.required}, and you have ${body.balance}. Buy more credits to continue.`;
-    case "pro_required":
-      return body.detail ?? "That feature requires Pro.";
-    default:
-      return body.detail ?? body.error ?? `Request failed (${status}).`;
-  }
 }
 
 function Field({
