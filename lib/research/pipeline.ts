@@ -25,6 +25,23 @@ function emit(onProgress: OnProgress, stage: PipelineProgressEvent["stage"], mes
   onProgress({ stage, message, at: new Date().toISOString() });
 }
 
+/** Shared context block so plan and synthesize see the same picture of the candidate. */
+function describeInput(input: ResearchInput): string {
+  const interviewers = input.interviewers.length
+    ? input.interviewers
+        .map((i) => `${i.name}${i.url ? ` (${i.url})` : ""}`)
+        .join("; ")
+    : "not provided";
+
+  return `Company: ${input.companyName}${input.companyUrl ? ` (${input.companyUrl})` : ""}
+Interviewers: ${interviewers}
+Rounds to scout: ${input.interviewTypes.join(", ")}
+Role context: ${input.roleContext ?? "not provided"}
+Candidate years of experience: ${input.yearsExperience || "not provided"}
+Candidate tech stack: ${input.techStack || "not provided"}
+Job description: ${input.jobDescription ? input.jobDescription.slice(0, 2000) : "not provided"}`;
+}
+
 /** Stage 1 — Plan. Cheap model, structured output. See PRD §6 stage 1 + §5.3 format discovery. */
 async function planStage(input: ResearchInput, budget: BudgetTracker): Promise<ResearchPlan> {
   return generateStructured({
@@ -32,18 +49,21 @@ async function planStage(input: ResearchInput, budget: BudgetTracker): Promise<R
     stage: "plan",
     schema: researchPlanSchema,
     budget,
-    system: `You are a research planner for an interview-prep tool. Given a company and
-requested interview categories, produce a compact search plan: 4-8 targeted web-search
+    system: `You are a research planner for an interview-prep tool. Given a company and the
+rounds the candidate wants scouted, produce a compact search plan: 4-8 targeted web-search
 queries. Always include exactly one query with category "loop_format" whose purpose is
 discovering the company's actual interview process/rounds (e.g. "<company> interview
-process rounds") — this may surface categories the user did not request. Prefer "basic"
-depth; reserve "advanced" for at most 2-3 of the highest-value queries (company tech
-stack, and the primary interview-experience query). Keep queries concrete and searchable,
-not vague.`,
-    prompt: `Company: ${input.companyName}${input.companyUrl ? ` (${input.companyUrl})` : ""}
-Interviewer: ${input.interviewerName ?? "not provided"}${input.interviewerUrl ? ` (${input.interviewerUrl})` : ""}
-Requested interview categories: ${input.interviewTypes.join(", ")}
-Role context: ${input.roleContext ?? "not provided"}`,
+process rounds") — this may surface rounds the user did not request. If interviewers are
+named, add one query per interviewer (max 2) with category "interviewer" seeking their
+public talks, writing, or open-source work — never target linkedin.com directly. Some
+rounds are custom identifiers rather than standard categories; plan a discovery query for
+each. Use the job description, tech stack, and years of experience to make queries
+specific: seniority and named technologies belong in the query text. Prefer "basic" depth;
+reserve "advanced" for at most 2-3 of the highest-value queries (company tech stack, and
+the primary interview-experience query). Set each query's "category" to the round
+identifier it serves, or "company" / "interviewer" / "loop_format". Keep queries concrete
+and searchable, not vague.`,
+    prompt: describeInput(input),
   });
 }
 
@@ -149,23 +169,27 @@ async function synthesizeStage(
     schema: reportSchema,
     budget,
     system: `You are an expert interview coach. Using ONLY the evidence notes provided,
-produce a report predicting likely interview questions for the given company and
-categories (see PRD §5.3 taxonomy: dsa, system_design, domain_quiz, take_home,
-pair_programming, behavioral, hr_culture).
+produce a report predicting likely interview questions for the given company and rounds.
+Standard rounds follow the PRD §5.3 taxonomy: dsa, system_design, domain_quiz, take_home,
+pair_programming, behavioral, hr_culture. The candidate may also have added custom rounds,
+which appear verbatim in the "Rounds to scout" list.
 
 Rules:
+- Set each question's "category" to one of the round identifiers from "Rounds to scout",
+  copied character-for-character. Never invent a new identifier or reformat an existing one.
 - Every question must cite at least one evidence URL from the notes it's grounded in.
-- If evidence for a requested category is thin, say so honestly in the rationale and
+- If evidence for a requested round is thin, say so honestly in the rationale and
   mark confidence "low" rather than fabricating specifics.
 - If the loop-format evidence reveals a round type the user didn't request, include it
   anyway and note in the rationale that it wasn't explicitly requested.
+- Calibrate difficulty to the candidate's years of experience, and bias question topics
+  toward their tech stack and the job description when those are provided.
+- Summarize each named interviewer in interviewerSummary using only public evidence in the
+  notes; if several were named, cover each briefly.
 - Do not invent citations. Do not invent company facts not present in the notes.
-- Aim for 15-30 questions total across the requested categories, prioritizing breadth
-  across categories over depth in one.`,
-    prompt: `Company: ${input.companyName}
-Interviewer: ${input.interviewerName ?? "not provided"}
-Requested categories: ${input.interviewTypes.join(", ")}
-Role context: ${input.roleContext ?? "not provided"}
+- Aim for 15-30 questions total across the requested rounds, prioritizing breadth
+  across rounds over depth in one.`,
+    prompt: `${describeInput(input)}
 
 Evidence notes:
 ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everything low confidence)"}`,
