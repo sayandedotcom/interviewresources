@@ -40,6 +40,7 @@ export default async function Page(props: PageProps<"/prepare/[id]">) {
         creditsCharged={row.creditsCharged}
         canExport={user.tier === "pro"}
         company={row.companyName}
+        researchId={id}
       />
     </div>
   );
