@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@/lib/db/index";
-import { reports, researches } from "@/lib/db/schema";
+
 import {
   MIN_RUN_CREDITS,
   chargeCredits,
@@ -8,6 +7,8 @@ import {
   getBalance,
   usdToCredits,
 } from "@/lib/credits";
+import { db } from "@/lib/db/index";
+import { reports, researches } from "@/lib/db/schema";
 import { BUDGET_CAP_USD, type CostEntry } from "@/lib/research/budget";
 import { runResearchPipeline } from "@/lib/research/pipeline";
 import { researchInputSchema } from "@/lib/research/types";
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
   } catch (err) {
     return Response.json(
       { error: "Invalid research request.", detail: String(err) },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
   if (input.interviewers.length > 0 && user.tier !== "pro") {
     return Response.json(
       { error: "pro_required", detail: "Interviewer research is a Pro feature." },
-      { status: 403 },
+      { status: 403 }
     );
   }
 
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
   if (balance < MIN_RUN_CREDITS) {
     return Response.json(
       { error: "insufficient_credits", balance, required: MIN_RUN_CREDITS },
-      { status: 402 },
+      { status: 402 }
     );
   }
   const capUsd = Math.min(BUDGET_CAP_USD, creditsToBudgetUsd(balance));
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
         const { report, budget } = await runResearchPipeline(
           input,
           (event) => controller.enqueue(sse({ kind: "progress", ...event })),
-          capUsd,
+          capUsd
         );
 
         const entries = budget.breakdown();
@@ -121,17 +122,14 @@ export async function POST(request: Request) {
             costUsd: Number(budget.totalUsd.toFixed(4)),
             creditsCharged,
             balanceAfter,
-          }),
+          })
         );
       } catch (err) {
         // A failed run costs us the API spend, but the user is not charged.
-        await db
-          .update(researches)
-          .set({ status: "failed" })
-          .where(eq(researches.id, research.id));
+        await db.update(researches).set({ status: "failed" }).where(eq(researches.id, research.id));
 
         controller.enqueue(
-          sse({ kind: "error", message: err instanceof Error ? err.message : String(err) }),
+          sse({ kind: "error", message: err instanceof Error ? err.message : String(err) })
         );
       } finally {
         controller.close();

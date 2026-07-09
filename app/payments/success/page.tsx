@@ -1,7 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+
+import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -54,19 +56,17 @@ export default function PaymentSuccessPage() {
         <CardContent className="py-8 text-center">
           <h1 className="font-display text-2xl font-semibold tracking-tight">Payment received</h1>
 
-          {!settled && (
-            <p className="mt-3 text-sm text-muted-foreground">Adding your credits…</p>
-          )}
+          {!settled && <p className="text-muted-foreground mt-3 text-sm">Adding your credits…</p>}
 
           {settled && balance !== null && balance > 0 && (
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-3 text-sm">
               Your balance is now{" "}
-              <span className="font-mono text-foreground">{balance} credits</span>.
+              <span className="text-foreground font-mono">{balance} credits</span>.
             </p>
           )}
 
           {settled && (balance === null || balance === 0) && (
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-3 text-sm">
               Your credits are still being applied. They should appear within a minute — refresh the
               page if they don&apos;t.
             </p>

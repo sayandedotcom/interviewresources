@@ -1,8 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
+
 import { siteConfig } from "@/site";
+
+import { ThemeProvider } from "@/components/theme-provider";
+
 import { organizationJsonLd, webApplicationJsonLd } from "@/lib/seo/json-ld";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -77,8 +81,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} min-h-full flex flex-col bg-background text-foreground`}
-      >
+        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} bg-background text-foreground flex min-h-full flex-col`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

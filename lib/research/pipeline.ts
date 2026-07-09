@@ -1,12 +1,8 @@
 import { z } from "zod";
+
 import { BudgetTracker } from "./budget";
 import { generateStructured } from "./gemini";
-import {
-  tavilyExtract,
-  tavilyExtractCredits,
-  tavilySearch,
-  tavilySearchCredits,
-} from "./tavily";
+import { tavilyExtract, tavilyExtractCredits, tavilySearch, tavilySearchCredits } from "./tavily";
 import {
   type CompressedNote,
   type PipelineProgressEvent,
@@ -28,9 +24,7 @@ function emit(onProgress: OnProgress, stage: PipelineProgressEvent["stage"], mes
 /** Shared context block so plan and synthesize see the same picture of the candidate. */
 function describeInput(input: ResearchInput): string {
   const interviewers = input.interviewers.length
-    ? input.interviewers
-        .map((i) => `${i.name}${i.url ? ` (${i.url})` : ""}`)
-        .join("; ")
+    ? input.interviewers.map((i) => `${i.name}${i.url ? ` (${i.url})` : ""}`).join("; ")
     : "not provided";
 
   return `Company: ${input.companyName}${input.companyUrl ? ` (${input.companyUrl})` : ""}
@@ -78,7 +72,7 @@ interface GatheredSource {
 async function gatherStage(
   plan: ResearchPlan,
   budget: BudgetTracker,
-  onProgress: OnProgress,
+  onProgress: OnProgress
 ): Promise<GatheredSource[]> {
   const sources: GatheredSource[] = [];
   const topUrlsForExtract: string[] = [];
@@ -107,7 +101,7 @@ async function gatherStage(
     budget.recordTavilyCredits(
       "gather",
       tavilyExtractCredits(topUrlsForExtract.length),
-      `extract ${topUrlsForExtract.length} urls`,
+      `extract ${topUrlsForExtract.length} urls`
     );
     for (const e of extracted) {
       const existing = sources.find((s) => s.url === e.url);
@@ -126,7 +120,7 @@ const compressedNoteSchema = z.object({
 async function compressStage(
   sources: GatheredSource[],
   budget: BudgetTracker,
-  onProgress: OnProgress,
+  onProgress: OnProgress
 ): Promise<CompressedNote[]> {
   const notes: CompressedNote[] = [];
 
@@ -147,7 +141,12 @@ named, round structure, difficulty signals, dates. Drop filler. Do not editorial
       prompt: `Source: ${source.title}\nURL: ${source.url}\nCategory: ${source.category}\n\nContent:\n${source.content.slice(0, 6000)}`,
     });
 
-    notes.push({ sourceUrl: source.url, sourceTitle: source.title, category: source.category, summary });
+    notes.push({
+      sourceUrl: source.url,
+      sourceTitle: source.title,
+      category: source.category,
+      summary,
+    });
   }
 
   return notes;
@@ -157,7 +156,7 @@ named, round structure, difficulty signals, dates. Drop filler. Do not editorial
 async function synthesizeStage(
   input: ResearchInput,
   notes: CompressedNote[],
-  budget: BudgetTracker,
+  budget: BudgetTracker
 ): Promise<Report> {
   const evidenceBlock = notes
     .map((n, i) => `[${i + 1}] (${n.category}) ${n.sourceTitle} — ${n.sourceUrl}\n${n.summary}`)
@@ -204,7 +203,7 @@ export interface PipelineResult {
 export async function runResearchPipeline(
   input: ResearchInput,
   onProgress: OnProgress = noopProgress,
-  capUsd?: number,
+  capUsd?: number
 ): Promise<PipelineResult> {
   const budget = new BudgetTracker(capUsd);
 

@@ -61,14 +61,14 @@ pnpm research -- --company "Stripe" --url https://stripe.com --types system_desi
 
 Options:
 
-| Flag | Required | Example |
-|---|---|---|
-| `--company` | yes | `"Stripe"` |
-| `--url` | no | `https://stripe.com` |
-| `--types` | no (default `dsa,system_design`) | `dsa,system_design,behavioral` — see valid values below |
-| `--interviewer` | no | `"Jane Doe"` |
-| `--interviewer-url` | no | a public profile/portfolio URL, **not** scraped LinkedIn (PRD §11) |
-| `--role` | no | free-text role/JD context |
+| Flag                | Required                         | Example                                                            |
+| ------------------- | -------------------------------- | ------------------------------------------------------------------ |
+| `--company`         | yes                              | `"Stripe"`                                                         |
+| `--url`             | no                               | `https://stripe.com`                                               |
+| `--types`           | no (default `dsa,system_design`) | `dsa,system_design,behavioral` — see valid values below            |
+| `--interviewer`     | no                               | `"Jane Doe"`                                                       |
+| `--interviewer-url` | no                               | a public profile/portfolio URL, **not** scraped LinkedIn (PRD §11) |
+| `--role`            | no                               | free-text role/JD context                                          |
 
 Valid `--types` values (PRD §5.3): `dsa`, `system_design`, `domain_quiz`,
 `take_home`, `pair_programming`, `behavioral`, `hr_culture`.

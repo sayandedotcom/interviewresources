@@ -1,5 +1,6 @@
-import { siteConfig } from "../site";
 import { env } from "@/env";
+
+import { siteConfig } from "../site";
 
 type DodoEnvironment = "test_mode" | "live_mode";
 

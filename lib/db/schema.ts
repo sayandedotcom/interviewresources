@@ -85,7 +85,7 @@ export const creditsLedger = pgTable(
     researchId: uuid("research_id").references(() => researches.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("credits_ledger_user_id_idx").on(table.userId)],
+  (table) => [index("credits_ledger_user_id_idx").on(table.userId)]
 );
 
 export const researchStatus = ["pending", "running", "degraded", "done", "failed"] as const;

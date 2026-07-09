@@ -17,8 +17,7 @@ export function OgImageContent() {
         padding: "80px",
         backgroundColor: "#171717",
         color: "#fafafa",
-      }}
-    >
+      }}>
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         <div
           style={{
@@ -33,8 +32,7 @@ export function OgImageContent() {
             fontSize: "32px",
             fontWeight: 600,
             letterSpacing: "-0.02em",
-          }}
-        >
+          }}>
           {siteConfig.name}
         </span>
       </div>
@@ -47,8 +45,7 @@ export function OgImageContent() {
           lineHeight: 1.1,
           letterSpacing: "-0.02em",
           maxWidth: "900px",
-        }}
-      >
+        }}>
         Get the questions before they ask them.
       </div>
       <div
@@ -58,8 +55,7 @@ export function OgImageContent() {
           fontSize: "28px",
           color: "#a1a1a1",
           maxWidth: "800px",
-        }}
-      >
+        }}>
         Reconnaissance before the interview, grounded in evidence.
       </div>
     </div>

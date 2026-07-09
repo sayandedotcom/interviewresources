@@ -1,4 +1,5 @@
 import Link from "next/link";
+
 import { siteConfig } from "@/site";
 
 export function Footer() {
@@ -10,22 +11,30 @@ export function Footer() {
             <h3 className="font-display text-sm font-semibold">Product</h3>
             <ul className="mt-3 space-y-2">
               <li>
-                <Link href="/" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link
+                  href="/"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link
+                  href="/pricing"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Pricing
                 </Link>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Changelog
                 </a>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Roadmap
                 </a>
               </li>
@@ -35,22 +44,30 @@ export function Footer() {
             <h3 className="font-display text-sm font-semibold">Company</h3>
             <ul className="mt-3 space-y-2">
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   About
                 </a>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Blog
                 </a>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Careers
                 </a>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Contact
                 </a>
               </li>
@@ -60,22 +77,30 @@ export function Footer() {
             <h3 className="font-display text-sm font-semibold">Resources</h3>
             <ul className="mt-3 space-y-2">
               <li>
-                <Link href="/how-it-works" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link
+                  href="/how-it-works"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   How it works
                 </Link>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Documentation
                 </a>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   API Reference
                 </a>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Guides
                 </a>
               </li>
@@ -85,22 +110,30 @@ export function Footer() {
             <h3 className="font-display text-sm font-semibold">Legal</h3>
             <ul className="mt-3 space-y-2">
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Terms of Service
                 </a>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Cookie Policy
                 </a>
               </li>
               <li>
-                <a href="#" className="font-display text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <a
+                  href="#"
+                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Security
                 </a>
               </li>
@@ -109,13 +142,13 @@ export function Footer() {
         </div>
         <div className="mt-8 flex items-center justify-between border-t pt-6">
           <div className="flex items-center gap-2">
-            <span className="inline-block h-2.5 w-2.5 rotate-45 bg-primary relative">
-              <span className="absolute inset-0 rounded-sm bg-tertiary/40 blur-md" />
+            <span className="bg-primary relative inline-block h-2.5 w-2.5 rotate-45">
+              <span className="bg-tertiary/40 absolute inset-0 rounded-sm blur-md" />
             </span>
             <span className="font-display text-sm font-semibold">Scouting Report</span>
           </div>
           <div className="flex items-center gap-4">
-            <p className="font-mono text-[10px] text-muted-foreground">
+            <p className="text-muted-foreground font-mono text-[10px]">
               Prep intelligence, not prophecy.
             </p>
             <div className="flex items-center gap-4">
@@ -123,16 +156,14 @@ export function Footer() {
                 href={siteConfig.links.twitter}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-display text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-              >
+                className="font-display text-muted-foreground hover:text-foreground text-[10px] tracking-widest uppercase transition-colors">
                 Twitter
               </a>
               <a
                 href={siteConfig.links.github}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-display text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-              >
+                className="font-display text-muted-foreground hover:text-foreground text-[10px] tracking-widest uppercase transition-colors">
                 GitHub
               </a>
             </div>

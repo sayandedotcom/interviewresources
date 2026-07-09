@@ -21,7 +21,7 @@ export interface TavilySearchResponse {
 
 export async function tavilySearch(
   query: string,
-  opts: { depth: "basic" | "advanced"; maxResults?: number } = { depth: "basic" },
+  opts: { depth: "basic" | "advanced"; maxResults?: number } = { depth: "basic" }
 ): Promise<TavilySearchResponse> {
   const apiKey = requireApiKey();
   const res = await fetch(`${TAVILY_API_BASE}/search`, {

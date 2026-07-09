@@ -11,6 +11,7 @@
  * --types accepts the predefined categories and any custom round identifier.
  */
 import "dotenv/config";
+
 import { runResearchPipeline } from "../lib/research/pipeline";
 import { INTERVIEW_CATEGORIES, researchInputSchema } from "../lib/research/types";
 
@@ -38,9 +39,7 @@ Valid --types values: ${INTERVIEW_CATEGORIES.join(", ")}`);
     process.exit(1);
   }
 
-  const types = (args.types ?? "dsa,system_design")
-    .split(",")
-    .map((t) => t.trim());
+  const types = (args.types ?? "dsa,system_design").split(",").map((t) => t.trim());
 
   const input = researchInputSchema.parse({
     companyName: args.company,
@@ -56,7 +55,9 @@ Valid --types values: ${INTERVIEW_CATEGORIES.join(", ")}`);
     fullLoop: args["full-loop"] === "true",
   });
 
-  console.log(`\nResearching ${input.companyName} — categories: ${input.interviewTypes.join(", ")}\n`);
+  console.log(
+    `\nResearching ${input.companyName} — categories: ${input.interviewTypes.join(", ")}\n`
+  );
 
   const { report, budget } = await runResearchPipeline(input, (event) => {
     console.log(`[${event.stage}] ${event.message}`);
@@ -70,7 +71,9 @@ Valid --types values: ${INTERVIEW_CATEGORIES.join(", ")}`);
 
   const capUsd = 1.0;
   if (budget.totalUsd > capUsd) {
-    console.error(`\n⚠️  OVER BUDGET: $${budget.totalUsd.toFixed(4)} exceeds the $${capUsd.toFixed(2)} cap.`);
+    console.error(
+      `\n⚠️  OVER BUDGET: $${budget.totalUsd.toFixed(4)} exceeds the $${capUsd.toFixed(2)} cap.`
+    );
     process.exitCode = 1;
   }
 }

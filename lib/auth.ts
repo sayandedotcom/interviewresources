@@ -1,10 +1,11 @@
+import { env } from "@/env";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+
+import { siteConfig } from "../site";
 import { db } from "./db/index";
 import * as schema from "./db/schema";
-import { siteConfig } from "../site";
-import { env } from "@/env";
 
 export const auth = siteConfig.activeAuth
   ? betterAuth({

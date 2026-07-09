@@ -1,6 +1,8 @@
-import { eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
+
 import { Webhooks } from "@dodopayments/nextjs";
-import { NextResponse, type NextRequest } from "next/server";
+import { eq } from "drizzle-orm";
+
 import { grantCredits } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { users } from "@/lib/db/schema";
@@ -14,7 +16,7 @@ import { dodoPaymentsConfig } from "@/lib/payments";
  */
 async function resolveUserId(
   metadata: Record<string, unknown>,
-  email: string | undefined,
+  email: string | undefined
 ): Promise<string | null> {
   const fromMetadata = metadata.userId;
   if (typeof fromMetadata === "string" && fromMetadata) return fromMetadata;

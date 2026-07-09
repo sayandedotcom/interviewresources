@@ -1,6 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { generateObject } from "ai";
 import type { z } from "zod";
+
 import { BudgetTracker, type GeminiModel } from "./budget";
 
 /**
@@ -31,7 +32,7 @@ export async function generateStructured<T>(opts: {
     opts.stage,
     opts.model,
     usage.inputTokens ?? 0,
-    usage.outputTokens ?? 0,
+    usage.outputTokens ?? 0
   );
 
   return object;

@@ -43,9 +43,15 @@ export class BudgetTracker {
    */
   constructor(readonly capUsd: number = BUDGET_CAP_USD) {}
 
-  recordLlmCall(stage: string, model: GeminiModel, inputTokens: number, outputTokens: number): number {
+  recordLlmCall(
+    stage: string,
+    model: GeminiModel,
+    inputTokens: number,
+    outputTokens: number
+  ): number {
     const price = GEMINI_PRICES[model];
-    const costUsd = (inputTokens / 1_000_000) * price.input + (outputTokens / 1_000_000) * price.output;
+    const costUsd =
+      (inputTokens / 1_000_000) * price.input + (outputTokens / 1_000_000) * price.output;
     this.entries.push({
       stage,
       kind: "llm",
@@ -79,7 +85,7 @@ export class BudgetTracker {
 
   summary(): string {
     const lines = this.entries.map(
-      (e) => `  [${e.stage}] ${e.kind} — ${e.detail} — $${e.costUsd.toFixed(4)}`,
+      (e) => `  [${e.stage}] ${e.kind} — ${e.detail} — $${e.costUsd.toFixed(4)}`
     );
     lines.push(`  TOTAL: $${this.totalUsd.toFixed(4)} (cap: $${this.capUsd.toFixed(2)})`);
     return lines.join("\n");

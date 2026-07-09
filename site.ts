@@ -1,10 +1,10 @@
-import { pricingConfig } from "./config/pricing";
-import { testimonialsConfig } from "./config/testimonials";
-import { faqsConfig } from "./config/faqs";
-import { ctaConfig } from "./config/cta";
-import { statsConfig } from "./config/stats";
 import { companiesConfig } from "./config/companies";
 import { comparisonConfig } from "./config/comparison";
+import { ctaConfig } from "./config/cta";
+import { faqsConfig } from "./config/faqs";
+import { pricingConfig } from "./config/pricing";
+import { statsConfig } from "./config/stats";
+import { testimonialsConfig } from "./config/testimonials";
 
 export const siteConfig = {
   name: "Scouting Report",

@@ -1,23 +1,28 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
 import Link from "next/link";
+
 import { Plus, X } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ReportView, SectionLabel } from "@/features/research/report-view";
-import { CATEGORY_META, categoryLabel } from "@/lib/research/display";
+
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
+import { CATEGORY_META, categoryLabel } from "@/lib/research/display";
 import {
   INTERVIEW_CATEGORIES,
   type InterviewCategory,
   type PipelineProgressEvent,
   type Report,
 } from "@/lib/research/types";
+
+import { ReportView, SectionLabel } from "@/features/research/report-view";
 
 type Phase = "form" | "running" | "done" | "error";
 
@@ -81,9 +86,7 @@ export function ResearchExperience({
   const canAfford = balance >= minRunCredits;
 
   function toggleCategory(cat: string) {
-    setSelected((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
-    );
+    setSelected((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   }
 
   function addCustomRound() {
@@ -110,7 +113,7 @@ export function ResearchExperience({
 
   function updateInterviewer(index: number, field: "name" | "url", value: string) {
     setInterviewers((prev) =>
-      prev.map((int, i) => (i === index ? { ...int, [field]: value } : int)),
+      prev.map((int, i) => (i === index ? { ...int, [field]: value } : int))
     );
   }
 
@@ -251,7 +254,9 @@ export function ResearchExperience({
               </div>
 
               <div className="mt-4 space-y-1.5">
-                <Label htmlFor="jobDescription" className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                <Label
+                  htmlFor="jobDescription"
+                  className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
                   Job Description <span className="opacity-60">· optional</span>
                 </Label>
                 <Textarea
@@ -266,7 +271,7 @@ export function ResearchExperience({
 
               <div className="mt-4 space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  <Label className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
                     Interviewers
                   </Label>
                   {!isPro && (
@@ -277,7 +282,7 @@ export function ResearchExperience({
                 </div>
 
                 {!isPro && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     Interviewer research is a Pro feature.{" "}
                     <Link href="/pricing" className="text-tertiary hover:underline">
                       Upgrade to unlock
@@ -307,8 +312,7 @@ export function ResearchExperience({
                       variant="ghost"
                       size="icon"
                       onClick={() => removeInterviewer(index)}
-                      disabled={!isPro || interviewers.length === 1}
-                    >
+                      disabled={!isPro || interviewers.length === 1}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -318,8 +322,7 @@ export function ResearchExperience({
                   variant="outline"
                   size="sm"
                   onClick={addInterviewer}
-                  disabled={!isPro}
-                >
+                  disabled={!isPro}>
                   <Plus className="mr-1 h-4 w-4" />
                   Add interviewer
                 </Button>
@@ -340,8 +343,7 @@ export function ResearchExperience({
                       size="lg"
                       variant={on ? "default" : "outline"}
                       onClick={() => toggleCategory(cat)}
-                      aria-pressed={on}
-                    >
+                      aria-pressed={on}>
                       <span className="font-mono text-[10px] tracking-widest opacity-70">
                         {CATEGORY_META[cat].code}
                       </span>
@@ -358,8 +360,7 @@ export function ResearchExperience({
                       size="lg"
                       variant="default"
                       onClick={() => removeCustomRound(custom)}
-                      title="Click to remove"
-                    >
+                      title="Click to remove">
                       <span className="font-display">{categoryLabel(custom)}</span>
                       <X className="ml-1 h-4 w-4" />
                     </Button>
@@ -382,12 +383,20 @@ export function ResearchExperience({
                     <Button type="button" size="sm" onClick={addCustomRound}>
                       Add
                     </Button>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setShowCustomInput(false)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCustomInput(false)}>
                       Cancel
                     </Button>
                   </div>
                 ) : (
-                  <Button type="button" variant="outline" size="lg" onClick={() => setShowCustomInput(true)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setShowCustomInput(true)}>
                     <Plus className="mr-1 h-4 w-4" />
                     Add round
                   </Button>
@@ -398,14 +407,14 @@ export function ResearchExperience({
 
           <div className="flex items-center justify-between pt-2">
             <div className="max-w-xs space-y-1">
-              <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-                Predictions are grounded in public evidence — not prophecy. Every
-                question cites its source.
+              <p className="text-muted-foreground font-mono text-[11px] leading-relaxed">
+                Predictions are grounded in public evidence — not prophecy. Every question cites its
+                source.
               </p>
               {signedIn && (
-                <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
-                  Typically ~46 credits. This run is capped at{" "}
-                  {Math.min(balance, maxRunCredits)}. Balance: {balance}.
+                <p className="text-muted-foreground font-mono text-[11px] leading-relaxed">
+                  Typically ~46 credits. This run is capped at {Math.min(balance, maxRunCredits)}.
+                  Balance: {balance}.
                 </p>
               )}
             </div>
@@ -425,11 +434,7 @@ export function ResearchExperience({
             )}
 
             {signedIn && canAfford && (
-              <Button
-                type="submit"
-                size="lg"
-                disabled={!company.trim() || selected.length === 0}
-              >
+              <Button type="submit" size="lg" disabled={!company.trim() || selected.length === 0}>
                 Run reconnaissance →
               </Button>
             )}
@@ -443,10 +448,10 @@ export function ResearchExperience({
           {phase === "error" && error && (
             <Card>
               <CardContent>
-                <p className="font-mono text-[11px] uppercase tracking-widest text-destructive">
+                <p className="text-destructive font-mono text-[11px] tracking-widest uppercase">
                   Reconnaissance failed
                 </p>
-                <p className="mt-1 text-sm text-foreground">{error}</p>
+                <p className="text-foreground mt-1 text-sm">{error}</p>
                 <Button variant="outline" size="sm" onClick={reset} className="mt-3">
                   Start over
                 </Button>
@@ -471,7 +476,10 @@ export function ResearchExperience({
 }
 
 /** Turns the route's error codes into something a person can act on. */
-function explainError(status: number, body: { error?: string; detail?: string; balance?: number; required?: number }): string {
+function explainError(
+  status: number,
+  body: { error?: string; detail?: string; balance?: number; required?: number }
+): string {
   switch (body.error) {
     case "unauthenticated":
       return "Please sign in before running a report.";
@@ -499,7 +507,9 @@ function Field({
 }) {
   return (
     <div className="grid gap-1.5">
-      <Label htmlFor={htmlFor} className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+      <Label
+        htmlFor={htmlFor}
+        className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
         {label}
         {required && <span className="text-foreground">*</span>}
         {hint && <span className="opacity-60">· {hint}</span>}
@@ -516,19 +526,18 @@ function ProgressLog({ lines }: { lines: ProgressLine[] }) {
         <SectionLabel>Live feed</SectionLabel>
         <ul className="mt-3 space-y-1.5">
           {lines.map((line) => (
-            <li key={line.id} className="flex gap-3 font-mono text-[13px] text-foreground">
-              <span className="shrink-0 uppercase tracking-widest text-muted-foreground">
+            <li key={line.id} className="text-foreground flex gap-3 font-mono text-[13px]">
+              <span className="text-muted-foreground shrink-0 tracking-widest uppercase">
                 {line.stage}
               </span>
               <span>{line.message}</span>
             </li>
           ))}
           {lines.length === 0 && (
-            <li className="font-mono text-[13px] text-muted-foreground">Establishing feed…</li>
+            <li className="text-muted-foreground font-mono text-[13px]">Establishing feed…</li>
           )}
         </ul>
       </CardContent>
     </Card>
   );
 }
-

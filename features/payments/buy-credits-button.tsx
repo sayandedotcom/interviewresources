@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
+
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
 
 /** Starts a Dodo checkout for a credit pack, or signs the user in first. */
@@ -50,7 +52,7 @@ export function BuyCreditsButton({
       <Button className={className} variant={variant} onClick={onClick} disabled={busy}>
         {busy ? "Opening checkout…" : children}
       </Button>
-      {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
+      {error && <p className="text-destructive mt-2 text-xs">{error}</p>}
     </div>
   );
 }

@@ -1,9 +1,12 @@
-import { ResearchExperience } from "@/features/research/research-experience";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
-import { siteConfig } from "@/site";
 import Link from "next/link";
-import { Check, ArrowRight } from "lucide-react";
+
+import { siteConfig } from "@/site";
+import { ArrowRight, Check } from "lucide-react";
+
+import { Footer } from "@/components/footer";
+import { Header } from "@/components/header";
+
+import { ResearchExperience } from "@/features/research/research-experience";
 
 export default function Home() {
   return (
@@ -12,44 +15,41 @@ export default function Home() {
 
       <section className="mx-auto w-full max-w-3xl px-5 pt-12 pb-2">
         <div className="flex items-center justify-between">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+          <p className="text-muted-foreground font-mono text-[11px] tracking-[0.22em] uppercase">
             Reconnaissance before the interview
           </p>
-          <div className="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5">
+          <div className="bg-card flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
+              <span className="bg-tertiary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"></span>
+              <span className="bg-tertiary relative inline-flex h-2 w-2 rounded-full"></span>
             </span>
-            <span className="font-mono text-[10px] text-muted-foreground">
-              34,345 users
-            </span>
+            <span className="text-muted-foreground font-mono text-[10px]">34,345 users</span>
           </div>
         </div>
-        <h1 className="mt-3 max-w-2xl font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
+        <h1 className="font-display mt-3 max-w-2xl text-4xl leading-[1.05] font-semibold tracking-tight sm:text-5xl">
           Get the questions
           <br />
-          before they ask{' '}
+          before they ask{" "}
           <span className="relative inline-block">
             them.
-            <span className="absolute -bottom-1 left-0 h-3 w-full bg-tertiary/20" />
+            <span className="bg-tertiary/20 absolute -bottom-1 left-0 h-3 w-full" />
           </span>
         </h1>
-        <p className="mt-4 max-w-xl font-display text-[15px] leading-relaxed text-muted-foreground">
-          Paste a company. We research its product, stack, engineering culture,
-          reported interview loop, and — if you name one — the
-          interviewer&rsquo;s public work, then predict the questions
-          you&rsquo;re likely to face. Each one cites the evidence it came from.
+        <p className="font-display text-muted-foreground mt-4 max-w-xl text-[15px] leading-relaxed">
+          Paste a company. We research its product, stack, engineering culture, reported interview
+          loop, and — if you name one — the interviewer&rsquo;s public work, then predict the
+          questions you&rsquo;re likely to face. Each one cites the evidence it came from.
         </p>
       </section>
 
       <ResearchExperience />
 
-      <section className="mx-auto w-full max-w-3xl px-5 py-12 border-t">
+      <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="grid gap-8 sm:grid-cols-4">
           {siteConfig.stats.map((stat, i) => (
             <div key={i} className="text-center">
               <p className="font-display text-3xl font-bold tracking-tight">{stat.value}</p>
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              <p className="text-muted-foreground mt-1 font-mono text-[10px] tracking-widest uppercase">
                 {stat.label}
               </p>
             </div>
@@ -57,9 +57,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl px-5 py-12 border-t">
-        <div className="text-center mb-8">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground mb-2">
+      <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
+        <div className="mb-8 text-center">
+          <p className="text-muted-foreground mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
             Trusted for
           </p>
           <h2 className="font-display text-xl font-semibold tracking-tight">
@@ -70,53 +70,52 @@ export default function Home() {
           {siteConfig.companies.map((company, i) => (
             <div
               key={i}
-              className="rounded-full border bg-card px-4 py-2 font-display text-sm text-muted-foreground hover:border-tertiary/30 hover:text-foreground transition-colors cursor-default"
-            >
+              className="bg-card font-display text-muted-foreground hover:border-tertiary/30 hover:text-foreground cursor-default rounded-full border px-4 py-2 text-sm transition-colors">
               {company}
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl px-5 py-12 border-t">
-        <div className="text-center mb-8">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground mb-2">
+      <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
+        <div className="mb-8 text-center">
+          <p className="text-muted-foreground mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
             How it works
           </p>
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             Three steps to interview prep
           </h2>
-          <p className="mt-2 font-display text-muted-foreground">
+          <p className="font-display text-muted-foreground mt-2">
             From company name to evidence-backed questions in minutes
           </p>
         </div>
         <div className="relative">
-          <div className="hidden sm:block absolute top-12 left-1/2 h-0.5 w-full -translate-x-1/2 bg-border" />
+          <div className="bg-border absolute top-12 left-1/2 hidden h-0.5 w-full -translate-x-1/2 sm:block" />
           <div className="grid gap-8 sm:grid-cols-3">
             <div className="relative text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-tertiary/10 ring-4 ring-background">
-                <span className="font-display text-lg font-bold text-tertiary">1</span>
+              <div className="bg-tertiary/10 ring-background mx-auto flex h-12 w-12 items-center justify-center rounded-full ring-4">
+                <span className="font-display text-tertiary text-lg font-bold">1</span>
               </div>
-              <h3 className="mt-4 font-display text-sm font-semibold">Name your target</h3>
-              <p className="mt-2 font-display text-xs text-muted-foreground">
+              <h3 className="font-display mt-4 text-sm font-semibold">Name your target</h3>
+              <p className="font-display text-muted-foreground mt-2 text-xs">
                 Enter the company, add an interviewer if you know them, select your rounds
               </p>
             </div>
             <div className="relative text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-tertiary/10 ring-4 ring-background">
-                <span className="font-display text-lg font-bold text-tertiary">2</span>
+              <div className="bg-tertiary/10 ring-background mx-auto flex h-12 w-12 items-center justify-center rounded-full ring-4">
+                <span className="font-display text-tertiary text-lg font-bold">2</span>
               </div>
-              <h3 className="mt-4 font-display text-sm font-semibold">We research</h3>
-              <p className="mt-2 font-display text-xs text-muted-foreground">
+              <h3 className="font-display mt-4 text-sm font-semibold">We research</h3>
+              <p className="font-display text-muted-foreground mt-2 text-xs">
                 Our AI searches engineering blogs, interview reviews, and public data
               </p>
             </div>
             <div className="relative text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-tertiary/10 ring-4 ring-background">
-                <span className="font-display text-lg font-bold text-tertiary">3</span>
+              <div className="bg-tertiary/10 ring-background mx-auto flex h-12 w-12 items-center justify-center rounded-full ring-4">
+                <span className="font-display text-tertiary text-lg font-bold">3</span>
               </div>
-              <h3 className="mt-4 font-display text-sm font-semibold">Get your report</h3>
-              <p className="mt-2 font-display text-xs text-muted-foreground">
+              <h3 className="font-display mt-4 text-sm font-semibold">Get your report</h3>
+              <p className="font-display text-muted-foreground mt-2 text-xs">
                 Questions with confidence scores, evidence links, and prep notes
               </p>
             </div>
@@ -125,68 +124,79 @@ export default function Home() {
         <div className="mt-8 text-center">
           <Link
             href="/how-it-works"
-            className="inline-flex items-center gap-2 font-display text-sm text-tertiary hover:underline"
-          >
+            className="font-display text-tertiary inline-flex items-center gap-2 text-sm hover:underline">
             Learn more about how it works
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl px-5 py-12 border-t">
-        <div className="text-center mb-8">
+      <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
+        <div className="mb-8 text-center">
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             Why Scouting Report?
           </h2>
-          <p className="mt-2 font-display text-muted-foreground">
+          <p className="font-display text-muted-foreground mt-2">
             The smarter way to prepare for technical interviews
           </p>
         </div>
         <div className="overflow-hidden rounded-xl border">
           <table className="w-full">
             <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="p-4 text-left font-display text-sm font-semibold">Feature</th>
-                <th className="p-4 text-center font-display text-sm font-semibold">Scouting Report</th>
-                <th className="p-4 text-center font-display text-sm font-semibold text-muted-foreground">Generic Prep</th>
-                <th className="p-4 text-center font-display text-sm font-semibold text-muted-foreground">Coaching</th>
+              <tr className="bg-muted/50 border-b">
+                <th className="font-display p-4 text-left text-sm font-semibold">Feature</th>
+                <th className="font-display p-4 text-center text-sm font-semibold">
+                  Scouting Report
+                </th>
+                <th className="font-display text-muted-foreground p-4 text-center text-sm font-semibold">
+                  Generic Prep
+                </th>
+                <th className="font-display text-muted-foreground p-4 text-center text-sm font-semibold">
+                  Coaching
+                </th>
               </tr>
             </thead>
             <tbody>
               {siteConfig.comparison.map((row, i) => (
                 <tr key={i} className="border-b last:border-0">
-                  <td className="p-4 font-display text-sm">{row.feature}</td>
+                  <td className="font-display p-4 text-sm">{row.feature}</td>
                   <td className="p-4 text-center">
-                    {typeof row.us === 'boolean' ? (
+                    {typeof row.us === "boolean" ? (
                       row.us ? (
-                        <Check className="mx-auto h-4 w-4 text-tertiary" />
+                        <Check className="text-tertiary mx-auto h-4 w-4" />
                       ) : (
-                        <span className="font-mono text-xs text-muted-foreground">—</span>
+                        <span className="text-muted-foreground font-mono text-xs">—</span>
                       )
                     ) : (
-                      <span className="font-display text-xs font-medium text-tertiary">{row.us}</span>
+                      <span className="font-display text-tertiary text-xs font-medium">
+                        {row.us}
+                      </span>
                     )}
                   </td>
                   <td className="p-4 text-center">
-                    {typeof row.genericPrep === 'boolean' ? (
+                    {typeof row.genericPrep === "boolean" ? (
                       row.genericPrep ? (
-                        <Check className="mx-auto h-4 w-4 text-muted-foreground" />
+                        <Check className="text-muted-foreground mx-auto h-4 w-4" />
                       ) : (
-                        <span className="font-mono text-xs text-muted-foreground">—</span>
+                        <span className="text-muted-foreground font-mono text-xs">—</span>
                       )
                     ) : (
-                      <span className="font-display text-xs text-muted-foreground">{row.genericPrep}</span>
+                      <span className="font-display text-muted-foreground text-xs">
+                        {row.genericPrep}
+                      </span>
                     )}
                   </td>
                   <td className="p-4 text-center">
-                    {typeof row.coaching === 'boolean' ? (
+                    {typeof row.coaching === "boolean" ? (
                       row.coaching ? (
-                        <Check className="mx-auto h-4 w-4 text-muted-foreground" />
+                        <Check className="text-muted-foreground mx-auto h-4 w-4" />
                       ) : (
-                        <span className="font-mono text-xs text-muted-foreground">—</span>
+                        <span className="text-muted-foreground font-mono text-xs">—</span>
                       )
                     ) : (
-                      <span className="font-display text-xs text-muted-foreground">{row.coaching}</span>
+                      <span className="font-display text-muted-foreground text-xs">
+                        {row.coaching}
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -196,30 +206,33 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl px-5 py-12 border-t">
-        <div className="text-center mb-8">
+      <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
+        <div className="mb-8 text-center">
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             What our users are saying
           </h2>
-          <p className="mt-2 font-display text-muted-foreground">
-            Don&apos;t just take our word for it. Here&apos;s what some of our users have to say about Scouting Report.
+          <p className="font-display text-muted-foreground mt-2">
+            Don&apos;t just take our word for it. Here&apos;s what some of our users have to say
+            about Scouting Report.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-3">
           {siteConfig.testimonials.map((testimonial, i) => (
-            <div key={i} className="rounded-xl border bg-card p-5">
-              <p className="font-display text-sm text-foreground">&ldquo;{testimonial.content}&rdquo;</p>
+            <div key={i} className="bg-card rounded-xl border p-5">
+              <p className="font-display text-foreground text-sm">
+                &ldquo;{testimonial.content}&rdquo;
+              </p>
               <div className="mt-4">
                 <p className="font-display text-sm font-semibold">{testimonial.name}</p>
-                <p className="font-mono text-[10px] text-muted-foreground">{testimonial.role}</p>
+                <p className="text-muted-foreground font-mono text-[10px]">{testimonial.role}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl px-5 py-12 border-t">
-        <div className="text-center mb-8">
+      <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
+        <div className="mb-8 text-center">
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             Frequently Asked Questions
           </h2>
@@ -228,13 +241,13 @@ export default function Home() {
           {siteConfig.faqs.map((faq, i) => (
             <div key={i} className="rounded-lg border p-4">
               <p className="font-display text-sm font-semibold">{faq.question}</p>
-              <p className="mt-2 font-display text-sm text-muted-foreground">{faq.answer}</p>
+              <p className="font-display text-muted-foreground mt-2 text-sm">{faq.answer}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl px-5 py-16 border-t">
+      <section className="mx-auto w-full max-w-3xl border-t px-5 py-16">
         <div className="text-center">
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             {siteConfig.cta.title}
@@ -242,14 +255,12 @@ export default function Home() {
           <div className="mt-6 flex justify-center gap-4">
             <Link
               href="/how-it-works"
-              className="inline-block rounded-lg bg-tertiary px-8 py-3 font-display text-sm font-medium text-tertiary-foreground hover:bg-tertiary/90 transition-colors cursor-pointer"
-            >
+              className="bg-tertiary font-display text-tertiary-foreground hover:bg-tertiary/90 inline-block cursor-pointer rounded-lg px-8 py-3 text-sm font-medium transition-colors">
               {siteConfig.cta.subtitle}
             </Link>
             <Link
               href="/pricing"
-              className="inline-block rounded-lg border border-border px-8 py-3 font-display text-sm font-medium hover:bg-muted transition-colors cursor-pointer"
-            >
+              className="border-border font-display hover:bg-muted inline-block cursor-pointer rounded-lg border px-8 py-3 text-sm font-medium transition-colors">
               View pricing
             </Link>
           </div>

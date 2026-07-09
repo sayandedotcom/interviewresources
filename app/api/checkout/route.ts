@@ -1,4 +1,5 @@
 import DodoPayments from "dodopayments";
+
 import { getPack } from "@/lib/packs";
 import { dodoPaymentsConfig } from "@/lib/payments";
 import { getSessionUser } from "@/lib/session";
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
   if (!pack.productId) {
     return Response.json(
       { error: "plan_unavailable", detail: `No Dodo product id configured for "${pack.slug}".` },
-      { status: 500 },
+      { status: 500 }
     );
   }
 

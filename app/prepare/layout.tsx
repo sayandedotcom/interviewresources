@@ -1,10 +1,6 @@
-import { AppSidebar } from "@/components/app-sidebar"
-import { Separator } from "@/components/ui/separator"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar";
+import { Separator } from "@/components/ui/separator";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function PrepareLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -18,13 +14,11 @@ export default function PrepareLayout({ children }: { children: React.ReactNode 
               orientation="vertical"
               className="mr-2 data-vertical:h-4 data-vertical:self-auto"
             />
-            <span className="font-display text-sm font-semibold tracking-tight">
-              Prepare
-            </span>
+            <span className="font-display text-sm font-semibold tracking-tight">Prepare</span>
           </div>
         </header>
         <div className="flex flex-1 flex-col p-4 pt-0">{children}</div>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

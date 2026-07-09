@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
+import { useEffect, useState } from "react";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import Link from "next/link";
+
+import { ChevronsUpDownIcon, CreditCardIcon, LogOutIcon, SparklesIcon } from "lucide-react";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,21 +16,20 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/dropdown-menu";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
-import { signInWithGoogle, signOut, useSession } from "@/lib/auth-client"
-import { ChevronsUpDownIcon, SparklesIcon, CreditCardIcon, LogOutIcon } from "lucide-react"
+} from "@/components/ui/sidebar";
+
+import { signInWithGoogle, signOut, useSession } from "@/lib/auth-client";
 
 interface Me {
-  signedIn: boolean
-  user: { name: string; email: string; image: string | null; tier: "free" | "pro" } | null
-  balance: number
+  signedIn: boolean;
+  user: { name: string; email: string; image: string | null; tier: "free" | "pro" } | null;
+  balance: number;
 }
 
 function initials(name: string): string {
@@ -42,26 +41,26 @@ function initials(name: string): string {
       .slice(0, 2)
       .join("")
       .toUpperCase() || "?"
-  )
+  );
 }
 
 export function NavUser() {
-  const { isMobile } = useSidebar()
-  const { data: session, isPending } = useSession()
-  const [me, setMe] = useState<Me | null>(null)
+  const { isMobile } = useSidebar();
+  const { data: session, isPending } = useSession();
+  const [me, setMe] = useState<Me | null>(null);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     fetch("/api/me")
       .then((r) => r.json())
       .then((data) => {
-        if (!cancelled) setMe(data)
+        if (!cancelled) setMe(data);
       })
-      .catch(() => {})
+      .catch(() => {});
     return () => {
-      cancelled = true
-    }
-  }, [session])
+      cancelled = true;
+    };
+  }, [session]);
 
   if (!isPending && !session) {
     return (
@@ -72,24 +71,21 @@ export function NavUser() {
           </Button>
         </SidebarMenuItem>
       </SidebarMenu>
-    )
+    );
   }
 
   if (!me?.user) {
-    return null
+    return null;
   }
 
-  const { user, balance } = me
+  const { user, balance } = me;
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={
-              <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
-            }
-          >
+            render={<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />}>
             <Avatar>
               <AvatarImage src={user.image ?? undefined} alt={user.name} />
               <AvatarFallback>{initials(user.name)}</AvatarFallback>
@@ -104,8 +100,7 @@ export function NavUser() {
             className="w-fit"
             side={isMobile ? "bottom" : "right"}
             align="end"
-            sideOffset={4}
-          >
+            sideOffset={4}>
             <DropdownMenuGroup>
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
@@ -142,5 +137,5 @@ export function NavUser() {
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }

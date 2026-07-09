@@ -37,7 +37,9 @@ export type ResearchInput = z.infer<typeof researchInputSchema>;
 
 /** Stage 1 output: the search plan. */
 export const researchPlanSchema = z.object({
-  resolvedCompanyDomain: z.string().describe("Best-guess primary domain for the company, e.g. stripe.com"),
+  resolvedCompanyDomain: z
+    .string()
+    .describe("Best-guess primary domain for the company, e.g. stripe.com"),
   companySummaryQuery: z.string(),
   queries: z
     .array(
@@ -48,9 +50,9 @@ export const researchPlanSchema = z.object({
         category: z
           .string()
           .describe(
-            'One of the round identifiers supplied in the prompt, or "company", "interviewer", or "loop_format"',
+            'One of the round identifiers supplied in the prompt, or "company", "interviewer", or "loop_format"'
           ),
-      }),
+      })
     )
     .min(3)
     .max(10),

@@ -21,14 +21,17 @@ function isKnown(cat: string): cat is InterviewCategory {
 /** Custom rounds arrive as free-form identifiers like `live_debugging`. */
 export function categoryLabel(cat: string): string {
   if (isKnown(cat)) return CATEGORY_META[cat].label;
-  return cat
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function categoryCode(cat: string): string {
   if (isKnown(cat)) return CATEGORY_META[cat].code;
-  return cat.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase() || "RND";
+  return (
+    cat
+      .replace(/[^a-z0-9]/gi, "")
+      .slice(0, 4)
+      .toUpperCase() || "RND"
+  );
 }
 
 export const CONFIDENCE_META: Record<
