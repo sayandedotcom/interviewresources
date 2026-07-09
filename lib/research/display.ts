@@ -14,6 +14,23 @@ export const CATEGORY_META: Record<
   hr_culture: { label: "HR / Culture", code: "HR", blurb: "Recruiter screen & fit" },
 };
 
+function isKnown(cat: string): cat is InterviewCategory {
+  return cat in CATEGORY_META;
+}
+
+/** Custom rounds arrive as free-form identifiers like `live_debugging`. */
+export function categoryLabel(cat: string): string {
+  if (isKnown(cat)) return CATEGORY_META[cat].label;
+  return cat
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function categoryCode(cat: string): string {
+  if (isKnown(cat)) return CATEGORY_META[cat].code;
+  return cat.replace(/[^a-z0-9]/gi, "").slice(0, 4).toUpperCase() || "RND";
+}
+
 export const CONFIDENCE_META: Record<
   "high" | "medium" | "low",
   { label: string; signal: "●●●" | "●●○" | "●○○" }
