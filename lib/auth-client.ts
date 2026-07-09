@@ -6,6 +6,6 @@ export const authClient = createAuthClient();
 
 export const { signIn, signOut, useSession } = authClient;
 
-export function signInWithGoogle() {
-  return authClient.signIn.social({ provider: "google" });
+export function signInWithGoogle(options?: { callbackURL?: string }) {
+  return authClient.signIn.social({ provider: "google", callbackURL: options?.callbackURL });
 }
