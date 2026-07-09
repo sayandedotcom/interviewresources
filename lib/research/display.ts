@@ -15,7 +15,9 @@ export const CATEGORY_META: Record<
 };
 
 function isKnown(cat: string): cat is InterviewCategory {
-  return cat in CATEGORY_META;
+  // hasOwn, not `in`: custom rounds are user-supplied, and `"toString" in
+  // CATEGORY_META` is true via the prototype chain.
+  return Object.hasOwn(CATEGORY_META, cat);
 }
 
 /** Custom rounds arrive as free-form identifiers like `live_debugging`. */

@@ -31,7 +31,11 @@ export const CREDIT_PACKS: Record<CreditPack["slug"], CreditPack> = {
 };
 
 export function getPack(slug: string): CreditPack | null {
-  return CREDIT_PACKS[slug as CreditPack["slug"]] ?? null;
+  // hasOwn, not a bare index: the checkout route passes `String(body.plan)`
+  // straight in, and `CREDIT_PACKS["constructor"]` resolves off the prototype
+  // to a truthy value that would sail past the caller's `if (!pack)` guard.
+  if (!Object.hasOwn(CREDIT_PACKS, slug)) return null;
+  return CREDIT_PACKS[slug as CreditPack["slug"]];
 }
 
 /** Reverse lookup for the webhook, which only sees Dodo product ids. */
