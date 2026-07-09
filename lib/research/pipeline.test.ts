@@ -30,7 +30,12 @@ function plan(overrides: Partial<ResearchPlan> = {}): ResearchPlan {
     resolvedCompanyDomain: "stripe.com",
     companySummaryQuery: "what does stripe do",
     queries: [
-      { query: "stripe interview process", purpose: "loop", depth: "advanced", category: "loop_format" },
+      {
+        query: "stripe interview process",
+        purpose: "loop",
+        depth: "advanced",
+        category: "loop_format",
+      },
       { query: "stripe dsa questions", purpose: "dsa", depth: "basic", category: "dsa" },
       { query: "stripe tech stack", purpose: "company", depth: "advanced", category: "company" },
     ],
@@ -41,6 +46,7 @@ function plan(overrides: Partial<ResearchPlan> = {}): ResearchPlan {
 function report(overrides: Partial<Report> = {}): Report {
   return {
     companySnapshot: "Payments",
+    companyExplainer: "Stripe moves money when you pay online.",
     likelyLoopStructure: "Phone screen then onsite",
     interviewerSummary: null,
     questions: [
@@ -234,6 +240,42 @@ describe("gather stage", () => {
     expect(prompts.every((c) => !c[0].prompt.includes("GGG"))).toBe(true);
   });
 
+  it("keeps a single copy of a url that ranks for several queries", async () => {
+    stubStages({});
+    // Every query returns the same overlapping url plus one unique to it.
+    searchMock.mockImplementation(async (q) => ({
+      query: q,
+      results: [
+        searchResult("https://shared.dev"),
+        searchResult(`https://${q.replaceAll(" ", "-")}.dev`),
+      ],
+    }));
+
+    await runResearchPipeline(input);
+
+    const compressed = genMock.mock.calls.filter((c) => c[0].stage === "compress");
+    const sharedMentions = compressed.filter((c) => c[0].prompt.includes("https://shared.dev"));
+    expect(sharedMentions).toHaveLength(1); // one compress call, not one per query
+    expect(compressed).toHaveLength(4); // shared + 3 uniques
+  });
+
+  it("never queues the same url for extraction twice", async () => {
+    stubStages({});
+    // The same page is the top hit for all three queries.
+    searchMock.mockResolvedValue({ query: "q", results: [searchResult("https://top.dev")] });
+    extractMock.mockResolvedValue([{ url: "https://top.dev", rawContent: "E".repeat(500) }]);
+
+    await runResearchPipeline(input);
+
+    expect(extractMock).toHaveBeenCalledOnce();
+    expect(extractMock.mock.calls[0][0]).toEqual(["https://top.dev"]);
+
+    // And the extracted text patches the (single) source that gets compressed.
+    const compressed = genMock.mock.calls.filter((c) => c[0].stage === "compress");
+    expect(compressed).toHaveLength(1);
+    expect(compressed[0][0].prompt).toContain("EEE");
+  });
+
   it("skips extraction entirely once the budget is exhausted", async () => {
     stubStages({ tokensByStage: { plan: [1_000_000, 0] } }); // $0.25 of a $0.25 cap
 
@@ -283,7 +325,10 @@ describe("compress stage", () => {
 
   it("skips a source whose content is exactly at the 40-character floor", async () => {
     stubStages({});
-    searchMock.mockResolvedValue({ query: "q", results: [searchResult("https://a.dev", "y".repeat(39))] });
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: [searchResult("https://a.dev", "y".repeat(39))],
+    });
 
     await runResearchPipeline(input);
 
@@ -373,6 +418,50 @@ describe("synthesize stage", () => {
     const { report: out } = await runResearchPipeline(input);
 
     expect(out.importantLinks).toHaveLength(6);
+  });
+
+  it("strips a hallucinated url from a question's citations but keeps the real one", async () => {
+    stubStages({
+      report: report({
+        questions: [
+          {
+            category: "dsa",
+            question: "LRU cache",
+            confidence: "high",
+            rationale: "reported",
+            prepNote: "O(1)",
+            evidenceUrls: ["https://a.dev", "https://invented.dev"],
+          },
+        ],
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.questions[0].evidenceUrls).toEqual(["https://a.dev"]);
+    expect(out.questions[0].confidence).toBe("high"); // still grounded
+  });
+
+  it("downgrades a question to low confidence when every citation was hallucinated", async () => {
+    stubStages({
+      report: report({
+        questions: [
+          {
+            category: "dsa",
+            question: "LRU cache",
+            confidence: "high",
+            rationale: "reported",
+            prepNote: "O(1)",
+            evidenceUrls: ["https://invented.dev", "https://also-fake.dev"],
+          },
+        ],
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.questions[0].evidenceUrls).toEqual([]);
+    expect(out.questions[0].confidence).toBe("low");
   });
 
   it("returns no links at all when the model cited only hallucinated urls", async () => {

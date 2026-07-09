@@ -40,6 +40,7 @@ const validBody = { companyName: "Stripe", interviewTypes: ["dsa"] };
 
 const report: Report = {
   companySnapshot: "Payments",
+  companyExplainer: "Stripe moves money when you pay online.",
   likelyLoopStructure: "Screen then onsite",
   interviewerSummary: null,
   questions: [
@@ -240,7 +241,11 @@ describe("the streaming response", () => {
 
   it("forwards each pipeline progress event as a progress frame", async () => {
     pipelineMock.mockImplementation(async (_input, onProgress) => {
-      onProgress?.({ stage: "plan", message: "Building research plan...", at: "2026-07-09T00:00:00Z" });
+      onProgress?.({
+        stage: "plan",
+        message: "Building research plan...",
+        at: "2026-07-09T00:00:00Z",
+      });
       onProgress?.({ stage: "gather", message: "Searching: stripe", at: "2026-07-09T00:00:01Z" });
       return { report, budget: budgetCosting(0.35) };
     });

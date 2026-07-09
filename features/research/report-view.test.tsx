@@ -27,6 +27,7 @@ function question(overrides: Partial<PredictedQuestion> = {}): PredictedQuestion
 function report(overrides: Partial<Report> = {}): Report {
   return {
     companySnapshot: "Stripe builds payments infrastructure.",
+    companyExplainer: "When you buy shoes online and pay by card, Stripe moves the money.",
     likelyLoopStructure: "Recruiter screen, then a four-round onsite.",
     interviewerSummary: null,
     questions: [question()],
@@ -46,6 +47,23 @@ describe("report body", () => {
     expect(screen.getByText("Recruiter screen, then a four-round onsite.")).toBeInTheDocument();
   });
 
+  it("renders the plain-terms company explainer", () => {
+    render(<ReportView {...base} report={report()} />);
+
+    expect(screen.getByText("In plain terms")).toBeInTheDocument();
+    expect(
+      screen.getByText("When you buy shoes online and pay by card, Stripe moves the money.")
+    ).toBeInTheDocument();
+  });
+
+  it("hides the explainer for legacy reports stored before the field existed", () => {
+    const legacy = report();
+    delete (legacy as Partial<Report>).companyExplainer;
+    render(<ReportView {...base} report={legacy} />);
+
+    expect(screen.queryByText("In plain terms")).not.toBeInTheDocument();
+  });
+
   it("hides the loop section when the model found no loop evidence", () => {
     render(<ReportView {...base} report={report({ likelyLoopStructure: "" })} />);
 
@@ -59,7 +77,9 @@ describe("report body", () => {
   });
 
   it("shows the interviewer card when there is a summary", () => {
-    render(<ReportView {...base} report={report({ interviewerSummary: "Ada writes about Rust." })} />);
+    render(
+      <ReportView {...base} report={report({ interviewerSummary: "Ada writes about Rust." })} />
+    );
 
     expect(screen.getByText("Ada writes about Rust.")).toBeInTheDocument();
   });
@@ -131,8 +151,9 @@ describe("question grouping", () => {
     });
     render(<ReportView {...base} report={r} />);
 
-    const dsa = screen.getByRole("heading", { level: 3, name: "Algorithmic Coding" }).closest("div")!
-      .parentElement!;
+    const dsa = screen
+      .getByRole("heading", { level: 3, name: "Algorithmic Coding" })
+      .closest("div")!.parentElement!;
     expect(within(dsa).getByText("LRU")).toBeInTheDocument();
     expect(within(dsa).getByText("Two sum")).toBeInTheDocument();
   });
@@ -140,7 +161,9 @@ describe("question grouping", () => {
   it("renders a category whose identifier collides with an Object prototype key", () => {
     // A user can name a custom round "toString". The label helper must not read
     // off the prototype and render `undefined`.
-    render(<ReportView {...base} report={report({ questions: [question({ category: "toString" })] })} />);
+    render(
+      <ReportView {...base} report={report({ questions: [question({ category: "toString" })] })} />
+    );
 
     expect(screen.getByRole("heading", { level: 3, name: "ToString" })).toBeInTheDocument();
     expect(screen.queryByText("undefined")).not.toBeInTheDocument();
@@ -180,13 +203,20 @@ describe("evidence links", () => {
   });
 
   it("falls back to 'source' for a url it cannot parse", () => {
-    render(<ReportView {...base} report={report({ questions: [question({ evidenceUrls: ["nonsense"] })] })} />);
+    render(
+      <ReportView
+        {...base}
+        report={report({ questions: [question({ evidenceUrls: ["nonsense"] })] })}
+      />
+    );
 
     expect(screen.getByText("source")).toBeInTheDocument();
   });
 
   it("renders no evidence row when the model cited nothing", () => {
-    render(<ReportView {...base} report={report({ questions: [question({ evidenceUrls: [] })] })} />);
+    render(
+      <ReportView {...base} report={report({ questions: [question({ evidenceUrls: [] })] })} />
+    );
 
     expect(screen.queryByText("blind.com")).not.toBeInTheDocument();
   });
@@ -196,7 +226,11 @@ describe("worth reading", () => {
   it("renders each important link with its title, host, and reason", () => {
     const r = report({
       importantLinks: [
-        { title: "A full loop breakdown", url: "https://www.reddit.com/r/x", why: "Round by round" },
+        {
+          title: "A full loop breakdown",
+          url: "https://www.reddit.com/r/x",
+          why: "Round by round",
+        },
       ],
     });
     render(<ReportView {...base} report={r} />);
@@ -278,7 +312,10 @@ describe("cost and export", () => {
   });
 
   it("falls back to a generic filename when the company name has no usable characters", async () => {
-    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() }));
+    vi.stubGlobal(
+      "URL",
+      Object.assign(URL, { createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() })
+    );
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
     render(<ReportView {...base} canExport company="!!!" report={report()} />);

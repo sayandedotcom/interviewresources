@@ -140,6 +140,7 @@ describe("reportSchema", () => {
 
   const validReport = {
     companySnapshot: "Payments infrastructure",
+    companyExplainer: "Stripe moves money when you pay online.",
     likelyLoopStructure: "Phone screen, then onsite",
     interviewerSummary: null,
     questions: [question],
