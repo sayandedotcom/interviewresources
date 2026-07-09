@@ -24,6 +24,14 @@ export const MAX_RUN_CREDITS = Math.ceil((BUDGET_CAP_USD * CREDIT_MARKUP) / USD_
 export const MIN_RUN_CREDITS = 50;
 
 /**
+ * Extensions ("more questions", "scout another round") reuse the same pipeline
+ * but produce a fraction of a full report, so they get a smaller floor and a
+ * tighter dollar cap than a fresh run.
+ */
+export const MIN_EXTEND_CREDITS = 25;
+export const EXTEND_CAP_USD = 0.5;
+
+/**
  * A typical run lands near $0.35 → ~46 credits. Rounded to 6dp before ceil:
  * the round-trip through creditsToBudgetUsd otherwise lands on values like
  * 56.00000000000001, and a bare ceil would overcharge by a credit.

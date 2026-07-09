@@ -31,6 +31,8 @@ export const researchInputSchema = z.object({
   interviewTypes: z.array(z.string().min(1)).min(1),
   roleContext: z.string().optional(),
   fullLoop: z.boolean().default(false),
+  /** Question text already predicted by an earlier pass, which synthesis must not repeat. */
+  excludeQuestions: z.array(z.string()).default([]),
 });
 
 export type ResearchInput = z.infer<typeof researchInputSchema>;
