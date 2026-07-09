@@ -3,6 +3,8 @@
  * Kept out of config/pricing.ts because that file is imported by client pages
  * and these product ids come from the environment.
  */
+import { env } from "@/env";
+
 export interface CreditPack {
   slug: "basic" | "pro";
   name: string;
@@ -17,14 +19,14 @@ export const CREDIT_PACKS: Record<CreditPack["slug"], CreditPack> = {
     name: "Basic",
     credits: 100,
     tier: "free",
-    productId: process.env.DODO_PRODUCT_ID_BASIC,
+    productId: env.DODO_PRODUCT_ID_BASIC,
   },
   pro: {
     slug: "pro",
     name: "Pro",
     credits: 500,
     tier: "pro",
-    productId: process.env.DODO_PRODUCT_ID_PRO,
+    productId: env.DODO_PRODUCT_ID_PRO,
   },
 };
 

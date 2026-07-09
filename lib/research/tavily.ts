@@ -3,6 +3,7 @@
  * as raw fetch calls means the BudgetTracker knows the exact credit cost of
  * every call before it's made.
  */
+import { env } from "@/env";
 
 const TAVILY_API_BASE = "https://api.tavily.com";
 
@@ -75,7 +76,7 @@ export function tavilyExtractCredits(urlCount: number): number {
 }
 
 function requireApiKey(): string {
-  const key = process.env.TAVILY_API_KEY;
+  const key = env.TAVILY_API_KEY;
   if (!key) {
     throw new Error("TAVILY_API_KEY is not set — copy .env.example to .env.local and fill it in.");
   }
