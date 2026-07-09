@@ -25,18 +25,18 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/changelog"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Changelog
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/help"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Roadmap
-                </a>
+                  Help
+                </Link>
               </li>
             </ul>
           </div>
@@ -44,32 +44,25 @@ export function Footer() {
             <h3 className="font-display text-sm font-semibold">Company</h3>
             <ul className="mt-3 space-y-2">
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/about"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   About
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/blog"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Blog
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Careers
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
+                <Link
+                  href="/contact"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -84,25 +77,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/licenses"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Documentation
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  API Reference
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Guides
-                </a>
+                  Open Source
+                </Link>
               </li>
             </ul>
           </div>
@@ -110,32 +89,32 @@ export function Footer() {
             <h3 className="font-display text-sm font-semibold">Legal</h3>
             <ul className="mt-3 space-y-2">
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/privacy-policy"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/terms-of-service"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Terms of Service
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/cookies"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Cookie Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/security"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Security
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
