@@ -68,14 +68,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 <PlusIcon className="size-4" />
               </div>
-              <span className="font-medium">New session</span>
+              <span className="font-display font-medium">New session</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Sessions</SidebarGroupLabel>
+          <SidebarGroupLabel className="font-display">Sessions</SidebarGroupLabel>
           <SidebarMenu>
             {sessions === null &&
               Array.from({ length: 3 }).map((_, i) => (
@@ -85,7 +85,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               ))}
             {sessions?.length === 0 && (
               <SidebarMenuItem>
-                <span className="px-2 py-1.5 text-xs text-sidebar-foreground/70">
+                <span className="px-2 py-1.5 font-display text-xs text-sidebar-foreground/70">
                   {session ? "No sessions yet" : "Sign in to save sessions"}
                 </span>
               </SidebarMenuItem>
