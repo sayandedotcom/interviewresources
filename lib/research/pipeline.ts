@@ -75,6 +75,7 @@ async function gatherStage(
   onProgress: OnProgress
 ): Promise<GatheredSource[]> {
   const sources: GatheredSource[] = [];
+  const seenUrls = new Set<string>();
   const topUrlsForExtract: string[] = [];
 
   for (const q of plan.queries) {
@@ -86,12 +87,17 @@ async function gatherStage(
     budget.recordTavilyCredits("gather", tavilySearchCredits(depth), q.query);
 
     for (const r of result.results) {
+      // The same page often ranks for several queries; a duplicate would get
+      // its own compress call and double-weight the source at synthesis.
+      if (seenUrls.has(r.url)) continue;
+      seenUrls.add(r.url);
       sources.push({ url: r.url, title: r.title, category: q.category, content: r.content });
     }
 
     // Reserve the single most relevant result per query as an extract candidate.
-    if (result.results[0] && topUrlsForExtract.length < 5) {
-      topUrlsForExtract.push(result.results[0].url);
+    const top = result.results[0];
+    if (top && topUrlsForExtract.length < 5 && !topUrlsForExtract.includes(top.url)) {
+      topUrlsForExtract.push(top.url);
     }
   }
 
@@ -162,7 +168,7 @@ async function synthesizeStage(
     .map((n, i) => `[${i + 1}] (${n.category}) ${n.sourceTitle} — ${n.sourceUrl}\n${n.summary}`)
     .join("\n\n");
 
-  return generateStructured({
+  const report = await generateStructured({
     model: "gemini-3.1-pro-preview",
     stage: "synthesize",
     schema: reportSchema,
@@ -174,6 +180,11 @@ pair_programming, behavioral, hr_culture. The candidate may also have added cust
 which appear verbatim in the "Rounds to scout" list.
 
 Rules:
+- Write companyExplainer for someone who has never heard of the company: 2-3 sentences,
+  no jargon, no buzzwords, ending with one concrete everyday example of the product in
+  action (e.g. "When you buy shoes online and pay by card, Stripe is the service that
+  checks the card and moves the money to the store."). companySnapshot stays the
+  technical view: stack, scale signals, engineering culture.
 - Set each question's "category" to one of the round identifiers from "Rounds to scout",
   copied character-for-character. Never invent a new identifier or reformat an existing one.
 - Every question must cite at least one evidence URL from the notes it's grounded in.
@@ -187,12 +198,39 @@ Rules:
   notes; if several were named, cover each briefly.
 - Do not invent citations. Do not invent company facts not present in the notes.
 - Aim for 15-30 questions total across the requested rounds, prioritizing breadth
-  across rounds over depth in one.`,
+  across rounds over depth in one.
+- In importantLinks, pick the 3-6 highest-value sources for the candidate to read before
+  the interview, using only URLs that appear in the evidence notes. Favour first-hand
+  interview experiences, the company's engineering blog, and interviewer talks or writing
+  over generic listicles. Write each "why" for the candidate, naming what they will get
+  from it (e.g. "A recent E5 candidate's full loop breakdown, round by round").`,
     prompt: `${describeInput(input)}
 
 Evidence notes:
 ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everything low confidence)"}`,
   });
+
+  // A URL the notes never contained is a hallucination — strip it from both
+  // question citations and importantLinks before it reaches the UI as a link.
+  const known = new Set(notes.map((n) => n.sourceUrl));
+
+  for (const q of report.questions) {
+    q.evidenceUrls = q.evidenceUrls.filter((url) => known.has(url));
+    // The prompt requires every question to cite evidence; one that lost all
+    // of its citations is ungrounded, so its confidence claim is too.
+    if (q.evidenceUrls.length === 0) q.confidence = "low";
+  }
+
+  const seen = new Set<string>();
+  report.importantLinks = report.importantLinks
+    .filter((l) => {
+      if (!known.has(l.url) || seen.has(l.url)) return false;
+      seen.add(l.url);
+      return true;
+    })
+    .slice(0, 6);
+
+  return report;
 }
 
 export interface PipelineResult {
