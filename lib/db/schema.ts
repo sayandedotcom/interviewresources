@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const sessions = pgTable("sessions", {
-  id: text("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   expiresAt: timestamp("expires_at").notNull(),
   token: text("token").notNull().unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
