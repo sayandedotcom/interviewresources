@@ -117,6 +117,7 @@ export async function POST(request: Request) {
           sse({
             kind: "report",
             report,
+            researchId: research.id,
             costUsd: Number(budget.totalUsd.toFixed(4)),
             creditsCharged,
             balanceAfter,
