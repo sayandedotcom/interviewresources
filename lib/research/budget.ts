@@ -22,7 +22,9 @@ export type GeminiModel = keyof typeof GEMINI_PRICES;
 const TAVILY_CREDIT_COST_USD = 0.008;
 
 export const BUDGET_CAP_USD = 1.0;
-export const BUDGET_DEGRADE_USD = 0.85;
+/** Degrade once 85% of the run's cap is spent. */
+export const BUDGET_DEGRADE_RATIO = 0.85;
+export const BUDGET_DEGRADE_USD = BUDGET_CAP_USD * BUDGET_DEGRADE_RATIO;
 
 export interface CostEntry {
   stage: string;
@@ -33,6 +35,13 @@ export interface CostEntry {
 
 export class BudgetTracker {
   private entries: CostEntry[] = [];
+
+  /**
+   * `capUsd` defaults to the PRD's $1 ceiling, but a run is also capped by what
+   * the user's credit balance can actually pay for — the route passes the
+   * smaller of the two so a run can never cost more than the user can afford.
+   */
+  constructor(readonly capUsd: number = BUDGET_CAP_USD) {}
 
   recordLlmCall(stage: string, model: GeminiModel, inputTokens: number, outputTokens: number): number {
     const price = GEMINI_PRICES[model];
@@ -57,11 +66,11 @@ export class BudgetTracker {
   }
 
   shouldDegrade(): boolean {
-    return this.totalUsd >= BUDGET_DEGRADE_USD;
+    return this.totalUsd >= this.capUsd * BUDGET_DEGRADE_RATIO;
   }
 
   shouldStop(): boolean {
-    return this.totalUsd >= BUDGET_CAP_USD;
+    return this.totalUsd >= this.capUsd;
   }
 
   breakdown(): CostEntry[] {
@@ -72,7 +81,7 @@ export class BudgetTracker {
     const lines = this.entries.map(
       (e) => `  [${e.stage}] ${e.kind} — ${e.detail} — $${e.costUsd.toFixed(4)}`,
     );
-    lines.push(`  TOTAL: $${this.totalUsd.toFixed(4)} (cap: $${BUDGET_CAP_USD.toFixed(2)})`);
+    lines.push(`  TOTAL: $${this.totalUsd.toFixed(4)} (cap: $${this.capUsd.toFixed(2)})`);
     return lines.join("\n");
   }
 }

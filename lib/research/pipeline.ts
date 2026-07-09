@@ -204,8 +204,9 @@ export interface PipelineResult {
 export async function runResearchPipeline(
   input: ResearchInput,
   onProgress: OnProgress = noopProgress,
+  capUsd?: number,
 ): Promise<PipelineResult> {
-  const budget = new BudgetTracker();
+  const budget = new BudgetTracker(capUsd);
 
   emit(onProgress, "plan", "Building research plan...");
   const plan = await planStage(input, budget);
