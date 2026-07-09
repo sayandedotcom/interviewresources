@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -447,5 +447,81 @@ describe("extend controls", () => {
     render(<ReportView {...base} report={report()} researchId="r-1" />);
 
     expect(screen.getByRole("button", { name: /scout these rounds/i })).toBeDisabled();
+  });
+});
+
+describe("copy as prompt", () => {
+  function stubClipboard(writeText: ReturnType<typeof vi.fn>) {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+  }
+
+  it("copies a prompt built from the report to the clipboard", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard(writeText);
+
+    render(<ReportView {...base} report={report()} />);
+    await userEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+
+    expect(writeText).toHaveBeenCalledOnce();
+    const prompt = writeText.mock.calls[0][0] as string;
+    expect(prompt).toContain("technical interview at Stripe");
+    expect(prompt).toContain("Implement an LRU cache");
+  });
+
+  it("copies the extended report, not the one it first rendered", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard(writeText);
+
+    const { rerender } = render(<ReportView {...base} report={report()} />);
+    rerender(
+      <ReportView
+        {...base}
+        report={report({ questions: [question({ question: "Design a rate limiter" })] })}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+
+    expect(writeText.mock.calls[0][0]).toContain("Design a rate limiter");
+  });
+
+  it("confirms with Copied, then reverts", async () => {
+    stubClipboard(vi.fn().mockResolvedValue(undefined));
+    vi.useFakeTimers();
+
+    try {
+      render(<ReportView {...base} report={report()} />);
+      // fireEvent, not userEvent: userEvent's own timers deadlock against fake ones.
+      fireEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+
+      // Let the clipboard promise settle before the state flips to "copied".
+      await act(async () => {});
+      expect(screen.getByText("Copied")).toBeInTheDocument();
+
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(screen.getByText("Copy as Prompt")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("tells the user when the browser denied clipboard access", async () => {
+    stubClipboard(vi.fn().mockRejectedValue(new Error("denied")));
+
+    render(<ReportView {...base} report={report()} />);
+    await userEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+
+    expect(await screen.findByText("Copy failed")).toBeInTheDocument();
+  });
+
+  it("offers the button even to a free user who cannot export", () => {
+    render(<ReportView {...base} canExport={false} report={report()} />);
+
+    expect(screen.getByRole("button", { name: /copy as prompt/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
   });
 });
