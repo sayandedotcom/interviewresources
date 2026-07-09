@@ -6,6 +6,7 @@ export const env = createEnv({
     DATABASE_URL: z.string().url().optional(),
     BETTER_AUTH_SECRET: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     TAVILY_API_KEY: z.string().min(1).optional(),
     DODO_PAYMENTS_API_KEY: z.string().min(1).optional(),
     DODO_PAYMENTS_WEBHOOK_KEY: z.string().min(1).optional(),
@@ -17,7 +18,6 @@ export const env = createEnv({
   },
   client: {
     NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
-    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     NEXT_PUBLIC_GA_ID: z.string().min(1).optional(),
   },
   runtimeEnv: {
