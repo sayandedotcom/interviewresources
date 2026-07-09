@@ -5,8 +5,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+
+import { CreditsBadge } from "@/components/credits-badge";
 
 import { signInWithGoogle, signOut, useSession } from "@/lib/auth-client";
 
@@ -65,12 +67,14 @@ export function Header() {
             </Link>
           ))}
 
-          {!isPending && session && (
+          {!isPending && session?.user && (
             <>
+              <Avatar size="sm">
+                <AvatarImage src={session.user.image ?? undefined} />
+                <AvatarFallback>{session.user.name?.[0] ?? "?"}</AvatarFallback>
+              </Avatar>
               <Link href="/payments">
-                <Badge variant="secondary" className="font-mono text-[10px] tracking-widest">
-                  {balance === null ? "—" : `${balance} CR`}
-                </Badge>
+                <CreditsBadge balance={balance} />
               </Link>
               <Button variant="ghost" size="sm" onClick={() => signOut()}>
                 Sign out
@@ -78,7 +82,7 @@ export function Header() {
             </>
           )}
           {!isPending && !session && (
-            <Button size="sm" onClick={() => signInWithGoogle()}>
+            <Button size="sm" onClick={() => signInWithGoogle({ callbackURL: "/prepare" })}>
               Sign in
             </Button>
           )}

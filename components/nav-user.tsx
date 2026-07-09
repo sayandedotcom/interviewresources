@@ -66,7 +66,7 @@ export function NavUser() {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <Button size="sm" className="w-full" onClick={() => signInWithGoogle()}>
+          <Button size="sm" className="w-full" onClick={() => signInWithGoogle({ callbackURL: "/prepare" })}>
             Sign in
           </Button>
         </SidebarMenuItem>
@@ -91,8 +91,8 @@ export function NavUser() {
               <AvatarFallback>{initials(user.name)}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.name}</span>
-              <span className="truncate text-xs">{user.email}</span>
+              <span className="font-display truncate font-medium">{user.name}</span>
+              <span className="font-display truncate text-xs">{user.email}</span>
             </div>
             <ChevronsUpDownIcon className="ml-auto size-4" />
           </DropdownMenuTrigger>
@@ -109,8 +109,8 @@ export function NavUser() {
                     <AvatarFallback>{initials(user.name)}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
-                    <span className="truncate text-xs">{user.email}</span>
+                    <span className="font-display truncate font-medium">{user.name}</span>
+                    <span className="font-display truncate text-xs">{user.email}</span>
                   </div>
                 </div>
               </DropdownMenuLabel>
@@ -119,19 +119,19 @@ export function NavUser() {
             <DropdownMenuGroup>
               <DropdownMenuItem render={<Link href="/payments" />}>
                 <CreditCardIcon />
-                {balance} credits
+                <span className="font-display">{balance} credits</span>
               </DropdownMenuItem>
               {user.tier !== "pro" && (
                 <DropdownMenuItem render={<Link href="/pricing" />}>
                   <SparklesIcon />
-                  Upgrade to Pro
+                  <span className="font-display">Upgrade to Pro</span>
                 </DropdownMenuItem>
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut()}>
               <LogOutIcon />
-              Log out
+              <span className="font-display">Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

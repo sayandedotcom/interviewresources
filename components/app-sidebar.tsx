@@ -78,11 +78,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="font-display">Sessions</SidebarGroupLabel>
-          <SidebarMenu>
+          <SidebarMenu className="gap-1">
             {sessions === null &&
               Array.from({ length: 3 }).map((_, i) => (
                 <SidebarMenuItem key={i}>
-                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-12 w-full" />
                 </SidebarMenuItem>
               ))}
             {sessions?.length === 0 && (
@@ -95,11 +95,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {sessions?.map((s) => (
               <SidebarMenuItem key={s.id}>
                 <SidebarMenuButton
+                  size="lg"
                   isActive={pathname === `/prepare/${s.id}`}
                   render={<Link href={`/prepare/${s.id}`} />}>
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate">{s.companyName}</span>
-                    <span className="text-sidebar-foreground/60 truncate text-xs">
+                  <div className="flex min-w-0 flex-col gap-0.5 py-1">
+                    <span className="font-display truncate">{s.companyName}</span>
+                    <span className="font-display text-sidebar-foreground/60 truncate text-xs">
                       {s.interviewType
                         .split(",")
                         .map((c) => categoryLabel(c))
