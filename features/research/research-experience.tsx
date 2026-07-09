@@ -8,7 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { CATEGORY_META, CONFIDENCE_META } from "@/lib/research/display";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  CATEGORY_META,
+  CONFIDENCE_META,
+  categoryCode,
+  categoryLabel,
+} from "@/lib/research/display";
 import {
   INTERVIEW_CATEGORIES,
   type InterviewCategory,
@@ -52,7 +58,6 @@ export function ResearchExperience() {
       setSelected((prev) => [...prev, trimmed]);
     }
     setCustomRound("");
-    setShowCustomInput(false);
   }
 
   function removeCustomRound(round: string) {
@@ -207,13 +212,13 @@ export function ResearchExperience() {
                 <Label htmlFor="jobDescription" className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                   Job Description <span className="opacity-60">· optional</span>
                 </Label>
-                <textarea
+                <Textarea
                   id="jobDescription"
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
                   placeholder="Paste job posting or description"
                   rows={4}
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:font-display placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="placeholder:font-display"
                 />
               </div>
 
@@ -287,7 +292,7 @@ export function ResearchExperience() {
                       onClick={() => removeCustomRound(custom)}
                       title="Click to remove"
                     >
-                      <span className="font-display">{custom.replace(/_/g, " ")}</span>
+                      <span className="font-display">{categoryLabel(custom)}</span>
                       <X className="ml-1 h-4 w-4" />
                     </Button>
                   ))}
@@ -430,10 +435,21 @@ function ReportView({
   costUsd: number | null;
   onReset: () => void;
 }) {
-  const grouped = INTERVIEW_CATEGORIES.map((cat) => ({
+  // Predefined categories in taxonomy order, then custom rounds as first seen. The model
+  // can also return a round the user never asked for (surfaced by loop-format discovery).
+  const present = report.questions.map((q) => q.category);
+  const order = [
+    ...INTERVIEW_CATEGORIES.filter((cat) => present.includes(cat)),
+    ...present.filter(
+      (cat, i) =>
+        !INTERVIEW_CATEGORIES.includes(cat as InterviewCategory) &&
+        present.indexOf(cat) === i,
+    ),
+  ];
+  const grouped = order.map((cat) => ({
     cat,
     questions: report.questions.filter((q) => q.category === cat),
-  })).filter((g) => g.questions.length > 0);
+  }));
 
   return (
     <div className="mt-6">
@@ -486,10 +502,10 @@ function ReportView({
             <div key={cat}>
               <div className="flex items-baseline gap-2">
                 <span className="font-mono text-[10px] tracking-widest text-muted-foreground">
-                  {CATEGORY_META[cat].code}
+                  {categoryCode(cat)}
                 </span>
                 <h3 className="font-display text-sm font-semibold uppercase tracking-wide">
-                  {CATEGORY_META[cat].label}
+                  {categoryLabel(cat)}
                 </h3>
               </div>
               <ul className="mt-2 space-y-3">
