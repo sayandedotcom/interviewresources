@@ -1,6 +1,7 @@
 import { siteConfig } from "@/site";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BuyCreditsButton } from "@/features/payments/buy-credits-button";
+import { MAX_RUN_CREDITS, MIN_RUN_CREDITS } from "@/lib/credits";
 
 export default function PaymentsPage() {
   if (!siteConfig.enablePayments) {
@@ -14,10 +15,15 @@ export default function PaymentsPage() {
 
   return (
     <div className="container py-16">
-      <h1 className="text-3xl font-bold text-center mb-8">Credits</h1>
+      <h1 className="text-3xl font-bold text-center mb-2">Credits</h1>
+      <p className="mb-8 text-center text-sm text-muted-foreground">
+        A report is billed at what it actually costs to research — typically about 46 credits, and
+        never more than {MAX_RUN_CREDITS} or your remaining balance, whichever is lower. You need at
+        least {MIN_RUN_CREDITS} credits to start one.
+      </p>
       <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
         {siteConfig.pricingPlans.map((plan) => (
-          <Card key={plan.name}>
+          <Card key={plan.slug}>
             <CardHeader>
               <CardTitle>{plan.name}</CardTitle>
               <CardDescription>{plan.description}</CardDescription>
@@ -31,15 +37,9 @@ export default function PaymentsPage() {
                   </li>
                 ))}
               </ul>
-              <Button
-                className="w-full"
-                onClick={() => {
-                  const params = new URLSearchParams({ productId: plan.name });
-                  window.location.href = `/api/checkout?${params}`;
-                }}
-              >
+              <BuyCreditsButton plan={plan.slug} className="w-full">
                 Buy {plan.name}
-              </Button>
+              </BuyCreditsButton>
             </CardContent>
           </Card>
         ))}
