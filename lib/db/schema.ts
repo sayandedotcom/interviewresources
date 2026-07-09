@@ -1,5 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -39,33 +41,52 @@ export const accounts = pgTable("accounts", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const verificationTokens = pgTable("verification_tokens", {
+/** better-auth's `verification` model: the value column is `value`, not `token`. */
+export const verifications = pgTable("verifications", {
   id: uuid("id").primaryKey().defaultRandom(),
   identifier: text("identifier").notNull(),
-  token: text("token").notNull().unique(),
+  value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-/** PRD §9 data model. Not yet wired to the app — schema-only for now. */
+/** PRD §9 data model. */
+
+export const userTiers = ["free", "pro"] as const;
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
-  name: text("name"),
+  name: text("name").notNull().default(""),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  image: text("image"),
+  /** Bumped to "pro" when a Pro credit pack is purchased. Gates interviewer research + export. */
+  tier: text("tier", { enum: userTiers }).notNull().default("free"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const creditsLedger = pgTable("credits_ledger", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  delta: integer("delta").notNull(),
-  reason: text("reason").notNull(),
-  stripeRef: text("stripe_ref"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+/**
+ * Append-only ledger. A user's balance is SUM(delta) — grants are positive,
+ * research spends negative. `paymentRef` is the idempotency key for webhook
+ * grants: a redelivered Dodo payment hits the unique constraint and no-ops.
+ */
+export const creditsLedger = pgTable(
+  "credits_ledger",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    delta: integer("delta").notNull(),
+    reason: text("reason").notNull(),
+    paymentRef: text("payment_ref").unique(),
+    researchId: uuid("research_id").references(() => researches.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("credits_ledger_user_id_idx").on(table.userId)],
+);
 
 export const researchStatus = ["pending", "running", "degraded", "done", "failed"] as const;
 
@@ -76,13 +97,14 @@ export const researches = pgTable("researches", {
     .references(() => users.id),
   companyDomain: text("company_domain"),
   companyName: text("company_name").notNull(),
-  interviewerName: text("interviewer_name"),
-  interviewerUrl: text("interviewer_url"),
+  interviewers: jsonb("interviewers").$type<{ name: string; url?: string }[]>(),
   interviewType: text("interview_type").notNull(), // comma-joined categories, or "full_loop"
   roleContext: text("role_context"),
   status: text("status", { enum: researchStatus }).notNull().default("pending"),
   costCentsLlm: integer("cost_cents_llm").notNull().default(0),
   costCentsSearch: integer("cost_cents_search").notNull().default(0),
+  /** Null until the run settles. Only successful runs are charged. */
+  creditsCharged: integer("credits_charged"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -120,6 +142,11 @@ export const usersRelations = relations(users, ({ many }) => ({
   creditsLedger: many(creditsLedger),
   sessions: many(sessions),
   accounts: many(accounts),
+}));
+
+export const creditsLedgerRelations = relations(creditsLedger, ({ one }) => ({
+  user: one(users, { fields: [creditsLedger.userId], references: [users.id] }),
+  research: one(researches, { fields: [creditsLedger.researchId], references: [researches.id] }),
 }));
 
 export const researchesRelations = relations(researches, ({ one, many }) => ({

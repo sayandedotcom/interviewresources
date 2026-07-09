@@ -1,7 +1,10 @@
 import { auth } from "@/lib/auth";
+import { toNextJsHandler } from "better-auth/next-js";
 import { NextResponse } from "next/server";
 
 const disabledHandler = () => NextResponse.json({ enabled: false });
 
-export const GET = auth ? auth.handler : disabledHandler;
-export const POST = auth ? auth.handler : disabledHandler;
+const handlers = auth ? toNextJsHandler(auth) : null;
+
+export const GET = handlers ? handlers.GET : disabledHandler;
+export const POST = handlers ? handlers.POST : disabledHandler;
