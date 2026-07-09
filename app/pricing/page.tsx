@@ -2,6 +2,8 @@ import { siteConfig } from "@/site";
 import { Check } from "lucide-react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { BuyCreditsButton } from "@/features/payments/buy-credits-button";
+import { MAX_RUN_CREDITS } from "@/lib/credits";
 
 export default function PricingPage() {
   return (
@@ -14,19 +16,20 @@ export default function PricingPage() {
             Simple, transparent pricing
           </h1>
           <p className="mt-4 font-display text-muted-foreground">
-            Choose the plan that fits your interview prep needs
+            Buy credits, spend them on reports. A report costs what it costs to research —
+            typically about 46 credits, and never more than {MAX_RUN_CREDITS}.
           </p>
         </div>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2">
           {siteConfig.pricingPlans.map((plan, index) => (
             <div
-              key={plan.name}
-              className={`relative rounded-xl border bg-card p-6 ${index === 1 ? 'border-[#AEF05A]/30' : ''}`}
+              key={plan.slug}
+              className={`relative rounded-xl border bg-card p-6 ${index === 1 ? "border-tertiary/30" : ""}`}
             >
               {index === 1 && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="rounded-full bg-[#AEF05A]/20 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-[#AEF05A]">
+                  <span className="rounded-full bg-tertiary/20 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-tertiary">
                     Popular
                   </span>
                 </div>
@@ -46,26 +49,27 @@ export default function PricingPage() {
                 </span>
                 <span className="font-display text-muted-foreground">
                   {" "}
-                  worth credits
+                  for {plan.credits} credits
                 </span>
               </div>
 
               <ul className="space-y-3">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-3">
-                    <Check className={`h-4 w-4 shrink-0 ${index === 1 ? 'text-[#AEF05A]' : 'text-primary'}`} />
+                    <Check className={`h-4 w-4 shrink-0 ${index === 1 ? "text-tertiary" : "text-primary"}`} />
                     <span className="font-display text-sm">{feature}</span>
                   </li>
                 ))}
               </ul>
 
-              <button className={`mt-6 w-full rounded-lg px-4 py-2 font-display text-sm font-medium transition-colors cursor-pointer ${
-                index === 1
-                  ? 'bg-[#AEF05A] text-black hover:bg-[#AEF05A]/90'
-                  : 'bg-primary text-primary-foreground hover:bg-primary/80'
-              }`}>
+              <BuyCreditsButton
+                plan={plan.slug}
+                className={`mt-6 w-full ${
+                  index === 1 ? "bg-tertiary text-tertiary-foreground hover:bg-tertiary/90" : ""
+                }`}
+              >
                 Get started
-              </button>
+              </BuyCreditsButton>
             </div>
           ))}
         </div>
