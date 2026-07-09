@@ -6,6 +6,9 @@
  * Usage:
  *   pnpm research -- --company "Stripe" --url https://stripe.com --types system_design,dsa
  *   pnpm research -- --company "Anthropic" --types behavioral --interviewer "Jane Doe"
+ *   pnpm research -- --company "Vercel" --years 5 --stack "React, Node.js" --jd "$(cat jd.txt)"
+ *
+ * --types accepts the predefined categories and any custom round identifier.
  */
 import "dotenv/config";
 import { runResearchPipeline } from "../lib/research/pipeline";
@@ -42,8 +45,12 @@ Valid --types values: ${INTERVIEW_CATEGORIES.join(", ")}`);
   const input = researchInputSchema.parse({
     companyName: args.company,
     companyUrl: args.url,
-    interviewerName: args.interviewer,
-    interviewerUrl: args["interviewer-url"],
+    jobDescription: args.jd,
+    yearsExperience: args.years,
+    techStack: args.stack,
+    interviewers: args.interviewer
+      ? [{ name: args.interviewer, url: args["interviewer-url"] }]
+      : [],
     interviewTypes: types,
     roleContext: args.role,
     fullLoop: args["full-loop"] === "true",
