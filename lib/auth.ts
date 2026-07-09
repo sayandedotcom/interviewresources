@@ -11,7 +11,7 @@ export const auth = siteConfig.activeAuth
   ? betterAuth({
       database: drizzleAdapter(db, { provider: "pg", schema, usePlural: true }),
       secret: env.BETTER_AUTH_SECRET,
-      baseURL: env.NEXT_PUBLIC_SITE_URL,
+      baseURL: env.BETTER_AUTH_URL ?? env.NEXT_PUBLIC_SITE_URL,
       emailAndPassword: {
         enabled: false,
       },
