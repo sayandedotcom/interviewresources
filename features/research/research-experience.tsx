@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { Download, Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import {
   categoryCode,
   categoryLabel,
 } from "@/lib/research/display";
+import { signInWithGoogle, useSession } from "@/lib/auth-client";
 import {
   INTERVIEW_CATEGORIES,
   type InterviewCategory,
@@ -26,6 +28,14 @@ type Phase = "form" | "running" | "done" | "error";
 
 interface ProgressLine extends PipelineProgressEvent {
   id: number;
+}
+
+interface Me {
+  signedIn: boolean;
+  user: { name: string; email: string; image: string | null; tier: "free" | "pro" } | null;
+  balance: number;
+  maxRunCredits: number;
+  minRunCredits: number;
 }
 
 export function ResearchExperience() {
@@ -43,8 +53,33 @@ export function ResearchExperience() {
   const [progress, setProgress] = useState<ProgressLine[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [costUsd, setCostUsd] = useState<number | null>(null);
+  const [creditsCharged, setCreditsCharged] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const progressId = useRef(0);
+
+  const { data: session, isPending: sessionPending } = useSession();
+  const [me, setMe] = useState<Me | null>(null);
+
+  // Advisory only — every gate below is also enforced server-side.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setMe(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  const isPro = me?.user?.tier === "pro";
+  const maxRunCredits = me?.maxRunCredits ?? 130;
+  const minRunCredits = me?.minRunCredits ?? 50;
+  const balance = me?.balance ?? 0;
+  const signedIn = Boolean(session);
+  const canAfford = balance >= minRunCredits;
 
   function toggleCategory(cat: string) {
     setSelected((prev) =>
@@ -89,6 +124,7 @@ export function ResearchExperience() {
     setReport(null);
     setError(null);
     setCostUsd(null);
+    setCreditsCharged(null);
 
     try {
       const res = await fetch("/api/research", {
@@ -100,10 +136,12 @@ export function ResearchExperience() {
           jobDescription: jobDescription.trim() || undefined,
           yearsExperience: yearsExperience.trim() || undefined,
           techStack: techStack.trim() || undefined,
-          interviewers: interviewers.filter((i) => i.name.trim()).map((i) => ({
-            name: i.name.trim(),
-            url: i.url.trim() || undefined,
-          })),
+          // Interviewer research is Pro-only; the server rejects it otherwise.
+          interviewers: isPro
+            ? interviewers
+                .filter((i) => i.name.trim())
+                .map((i) => ({ name: i.name.trim(), url: i.url.trim() || undefined }))
+            : [],
           interviewTypes: selected,
           roleContext: role.trim() || undefined,
         }),
@@ -111,7 +149,7 @@ export function ResearchExperience() {
 
       if (!res.ok || !res.body) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `Request failed (${res.status}).`);
+        throw new Error(explainError(res.status, body));
       }
 
       const reader = res.body.getReader();
@@ -135,6 +173,10 @@ export function ResearchExperience() {
           } else if (msg.kind === "report") {
             setReport(msg.report);
             setCostUsd(msg.costUsd);
+            setCreditsCharged(msg.creditsCharged ?? null);
+            if (typeof msg.balanceAfter === "number") {
+              setMe((prev) => (prev ? { ...prev, balance: msg.balanceAfter } : prev));
+            }
             setPhase("done");
           } else if (msg.kind === "error") {
             setError(msg.message);
@@ -223,9 +265,27 @@ export function ResearchExperience() {
               </div>
 
               <div className="mt-4 space-y-2">
-                <Label className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  Interviewers
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Interviewers
+                  </Label>
+                  {!isPro && (
+                    <Badge variant="outline" className="font-mono text-[10px] tracking-widest">
+                      Pro
+                    </Badge>
+                  )}
+                </div>
+
+                {!isPro && (
+                  <p className="text-xs text-muted-foreground">
+                    Interviewer research is a Pro feature.{" "}
+                    <Link href="/pricing" className="text-tertiary hover:underline">
+                      Upgrade to unlock
+                    </Link>
+                    .
+                  </p>
+                )}
+
                 {interviewers.map((int, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <Input
@@ -233,25 +293,33 @@ export function ResearchExperience() {
                       onChange={(e) => updateInterviewer(index, "name", e.target.value)}
                       placeholder="Name (used only as a public-search seed)"
                       className="flex-1"
+                      disabled={!isPro}
                     />
                     <Input
                       value={int.url}
                       onChange={(e) => updateInterviewer(index, "url", e.target.value)}
                       placeholder="LinkedIn or blog URL (optional)"
                       className="flex-1"
+                      disabled={!isPro}
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       onClick={() => removeInterviewer(index)}
-                      disabled={interviewers.length === 1}
+                      disabled={!isPro || interviewers.length === 1}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
-                <Button type="button" variant="outline" size="sm" onClick={addInterviewer}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addInterviewer}
+                  disabled={!isPro}
+                >
                   <Plus className="mr-1 h-4 w-4" />
                   Add interviewer
                 </Button>
@@ -329,17 +397,42 @@ export function ResearchExperience() {
           </Card>
 
           <div className="flex items-center justify-between pt-2">
-            <p className="max-w-xs font-mono text-[11px] leading-relaxed text-muted-foreground">
-              Predictions are grounded in public evidence — not prophecy. Every
-              question cites its source.
-            </p>
-            <Button
-              type="submit"
-              size="lg"
-              disabled={!company.trim() || selected.length === 0}
-            >
-              Run reconnaissance →
-            </Button>
+            <div className="max-w-xs space-y-1">
+              <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
+                Predictions are grounded in public evidence — not prophecy. Every
+                question cites its source.
+              </p>
+              {signedIn && (
+                <p className="font-mono text-[11px] leading-relaxed text-muted-foreground">
+                  Typically ~46 credits. This run is capped at{" "}
+                  {Math.min(balance, maxRunCredits)}. Balance: {balance}.
+                </p>
+              )}
+            </div>
+
+            {!sessionPending && !signedIn && (
+              <Button type="button" size="lg" onClick={() => signInWithGoogle()}>
+                Sign in to run →
+              </Button>
+            )}
+
+            {signedIn && !canAfford && (
+              <Link href="/payments">
+                <Button type="button" size="lg">
+                  Buy credits →
+                </Button>
+              </Link>
+            )}
+
+            {signedIn && canAfford && (
+              <Button
+                type="submit"
+                size="lg"
+                disabled={!company.trim() || selected.length === 0}
+              >
+                Run reconnaissance →
+              </Button>
+            )}
           </div>
         </form>
       )}
@@ -364,10 +457,31 @@ export function ResearchExperience() {
       )}
 
       {phase === "done" && report && (
-        <ReportView report={report} costUsd={costUsd} onReset={reset} />
+        <ReportView
+          report={report}
+          costUsd={costUsd}
+          creditsCharged={creditsCharged}
+          canExport={isPro}
+          company={company}
+          onReset={reset}
+        />
       )}
     </div>
   );
+}
+
+/** Turns the route's error codes into something a person can act on. */
+function explainError(status: number, body: { error?: string; detail?: string; balance?: number; required?: number }): string {
+  switch (body.error) {
+    case "unauthenticated":
+      return "Please sign in before running a report.";
+    case "insufficient_credits":
+      return `Not enough credits: a report needs up to ${body.required}, and you have ${body.balance}. Buy more credits to continue.`;
+    case "pro_required":
+      return body.detail ?? "That feature requires Pro.";
+    default:
+      return body.detail ?? body.error ?? `Request failed (${status}).`;
+  }
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -429,10 +543,16 @@ function ProgressLog({ lines }: { lines: ProgressLine[] }) {
 function ReportView({
   report,
   costUsd,
+  creditsCharged,
+  canExport,
+  company,
   onReset,
 }: {
   report: Report;
   costUsd: number | null;
+  creditsCharged: number | null;
+  canExport: boolean;
+  company: string;
   onReset: () => void;
 }) {
   // Predefined categories in taxonomy order, then custom rounds as first seen. The model
@@ -456,10 +576,23 @@ function ReportView({
       <div className="flex items-center justify-between pb-3">
         <SectionLabel>Scouting report</SectionLabel>
         <div className="flex items-center gap-4">
-          {costUsd != null && (
-            <span className="font-mono text-[11px] text-muted-foreground">
-              cost ${costUsd.toFixed(2)}
+          {creditsCharged != null && (
+            <span
+              className="font-mono text-[11px] text-muted-foreground"
+              title={costUsd != null ? `Metered cost $${costUsd.toFixed(4)}` : undefined}
+            >
+              {creditsCharged} credits
             </span>
+          )}
+          {canExport && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => downloadReport(report, company)}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              Export
+            </Button>
           )}
           <Button variant="outline" size="sm" onClick={onReset}>
             New report
@@ -574,6 +707,20 @@ function ReportView({
       )}
     </div>
   );
+}
+
+/** Pro-only export. Client-side download, no round trip. */
+function downloadReport(report: Report, company: string) {
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const slug = company.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || "report";
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `scouting-report-${slug}.json`;
+  a.click();
+
+  URL.revokeObjectURL(url);
 }
 
 function hostOf(url: string): string {
