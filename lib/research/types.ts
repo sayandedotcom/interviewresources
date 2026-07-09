@@ -13,17 +13,22 @@ export const INTERVIEW_CATEGORIES = [
 
 export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
 
+export const interviewerSchema = z.object({
+  name: z.string().min(1),
+  url: z.string().url().optional(),
+});
+
+export type Interviewer = z.infer<typeof interviewerSchema>;
+
 export const researchInputSchema = z.object({
   companyName: z.string().min(1),
   companyUrl: z.string().url().optional(),
   jobDescription: z.string().optional(),
   yearsExperience: z.string().optional(),
   techStack: z.string().optional(),
-  interviewers: z.array(z.object({
-    name: z.string(),
-    url: z.string().url().optional(),
-  })).optional(),
-  interviewTypes: z.array(z.string()).min(1),
+  interviewers: z.array(interviewerSchema).default([]),
+  /** Predefined categories plus any custom round identifiers the user added. */
+  interviewTypes: z.array(z.string().min(1)).min(1),
   roleContext: z.string().optional(),
   fullLoop: z.boolean().default(false),
 });
@@ -40,7 +45,11 @@ export const researchPlanSchema = z.object({
         query: z.string(),
         purpose: z.string().describe("Why this query — which evidence it targets"),
         depth: z.enum(["basic", "advanced"]),
-        category: z.enum(INTERVIEW_CATEGORIES).or(z.literal("company")).or(z.literal("loop_format")),
+        category: z
+          .string()
+          .describe(
+            'One of the round identifiers supplied in the prompt, or "company", "interviewer", or "loop_format"',
+          ),
       }),
     )
     .min(3)
@@ -59,7 +68,9 @@ export interface CompressedNote {
 
 /** Stage 4 output: the final report, per PRD §5.2 / §5.3. */
 export const questionSchema = z.object({
-  category: z.enum(INTERVIEW_CATEGORIES),
+  category: z
+    .string()
+    .describe("Exactly one of the round identifiers supplied in the prompt — copied verbatim"),
   question: z.string(),
   confidence: z.enum(["high", "medium", "low"]),
   rationale: z.string().describe("Why we predict this — grounded in evidence, not vibes"),
