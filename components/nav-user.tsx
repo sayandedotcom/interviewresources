@@ -24,7 +24,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-import { signInWithGoogle, signOut, useSession } from "@/lib/auth-client";
+import { signOut, useSession } from "@/lib/auth-client";
 import type { SessionUser } from "@/lib/session";
 
 function initials(name: string): string {
@@ -70,12 +70,11 @@ export function NavUser({ initialUser }: { initialUser: SessionUser | null }) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <Button
-            size="sm"
-            className="w-full"
-            onClick={() => signInWithGoogle({ callbackURL: "/prepare" })}>
+          <Link
+            href="/signin"
+            className="inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-[min(12px,var(--radius-md))] bg-primary px-2.5 text-[0.8rem] font-medium text-primary-foreground hover:bg-primary/80">
             Sign in
-          </Button>
+          </Link>
         </SidebarMenuItem>
       </SidebarMenu>
     );

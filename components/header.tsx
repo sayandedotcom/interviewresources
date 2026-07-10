@@ -12,7 +12,7 @@ import { LogoMark } from "@/components/logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
-import { signInWithGoogle, signOut, useSession } from "@/lib/auth-client";
+import { signOut, useSession } from "@/lib/auth-client";
 
 import { ThemeToggle } from "./theme-toggle";
 
@@ -82,9 +82,11 @@ export function Header() {
             </>
           )}
           {!isPending && !session && (
-            <Button size="sm" onClick={() => signInWithGoogle({ callbackURL: "/prepare" })}>
+            <Link
+              href="/signin"
+              className="inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-[min(12px,var(--radius-md))] bg-primary px-2.5 text-[0.8rem] font-medium text-primary-foreground hover:bg-primary/80">
               Sign in
-            </Button>
+            </Link>
           )}
 
           <ThemeToggle />
