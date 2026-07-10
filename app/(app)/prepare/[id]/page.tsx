@@ -38,7 +38,6 @@ export default async function Page(props: PageProps<"/prepare/[id]">) {
         report={row.jsonPayload as Report}
         costUsd={costUsd}
         creditsCharged={row.creditsCharged}
-        canExport={user.tier === "pro"}
         company={row.companyName}
         researchId={id}
       />

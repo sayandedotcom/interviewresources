@@ -24,7 +24,7 @@ export default function PaymentsPage() {
         never more than {MAX_RUN_CREDITS} or your remaining balance, whichever is lower. You need at
         least {MIN_RUN_CREDITS} credits to start one.
       </p>
-      <div className="mx-auto grid max-w-2xl gap-6 md:grid-cols-2">
+      <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {siteConfig.pricingPlans.map((plan) => (
           <Card key={plan.slug}>
             <CardHeader>

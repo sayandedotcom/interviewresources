@@ -19,12 +19,13 @@ export default function PricingPage() {
             Simple, transparent pricing
           </h1>
           <p className="font-display text-muted-foreground mt-4">
-            Buy credits, spend them on reports. A report costs what it costs to research — typically
-            about 46 credits, and never more than {MAX_RUN_CREDITS}.
+            No plans, no subscription — just credits. Every feature is included in every pack. A
+            report costs what it costs to research: typically about 46 credits, and never more than{" "}
+            {MAX_RUN_CREDITS}.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2">
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {siteConfig.pricingPlans.map((plan, index) => (
             <div
               key={plan.slug}
@@ -32,7 +33,7 @@ export default function PricingPage() {
               {index === 1 && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-tertiary/20 text-tertiary rounded-full px-3 py-1 font-mono text-[10px] tracking-widest uppercase">
-                    Popular
+                    Most popular
                   </span>
                 </div>
               )}
