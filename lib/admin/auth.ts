@@ -2,7 +2,8 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { env } from "@/env";
-import { getSessionUser, type SessionUser } from "@/lib/session";
+
+import { type SessionUser, getSessionUser } from "@/lib/session";
 
 /** Parsed once per call — ADMIN_EMAILS is small and this runs on the server only. */
 function adminEmails(): Set<string> {

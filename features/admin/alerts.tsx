@@ -35,8 +35,8 @@ export function Alerts({ stuckRuns, negativeBalances }: AlertsProps) {
       {negativeBalances.length > 0 && (
         <div className="text-sm">
           <p className="text-muted-foreground">
-            {negativeBalances.length} user{negativeBalances.length === 1 ? "" : "s"} with a
-            negative credit balance:
+            {negativeBalances.length} user{negativeBalances.length === 1 ? "" : "s"} with a negative
+            credit balance:
           </p>
           <ul className="mt-1 list-inside list-disc">
             {negativeBalances.map((u) => (

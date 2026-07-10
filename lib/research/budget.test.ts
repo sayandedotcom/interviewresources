@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  BUDGET_CAP_USD,
-  BUDGET_DEGRADE_RATIO,
-  BUDGET_DEGRADE_USD,
-  BudgetTracker,
-} from "./budget";
+import { BUDGET_CAP_USD, BUDGET_DEGRADE_RATIO, BUDGET_DEGRADE_USD, BudgetTracker } from "./budget";
 
 /** $/1M tokens for the two models the pipeline actually uses. */
 const FLASH_LITE_IN = 0.25;

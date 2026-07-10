@@ -37,7 +37,9 @@ const grantMock = vi.mocked(grantCredits);
 
 /** Runs the route once so `Webhooks()` is constructed and the handler captured. */
 async function handler(): Promise<PaymentHandler> {
-  await POST(new Request("https://test.local/api/webhook/dodo-payments", { method: "POST" }) as never);
+  await POST(
+    new Request("https://test.local/api/webhook/dodo-payments", { method: "POST" }) as never
+  );
   return captured;
 }
 
@@ -63,7 +65,9 @@ beforeEach(() => {
 
 describe("payment status", () => {
   it("ignores a payload whose status is not succeeded", async () => {
-    await (await handler())(payment({ status: "failed" }));
+    await (
+      await handler()
+    )(payment({ status: "failed" }));
 
     expect(grantMock).not.toHaveBeenCalled();
   });
@@ -71,7 +75,9 @@ describe("payment status", () => {
 
 describe("attribution", () => {
   it("credits the userId from server-set metadata", async () => {
-    await (await handler())(payment());
+    await (
+      await handler()
+    )(payment());
 
     expect(grantMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: "user-1", paymentRef: "pay_123" })
@@ -83,7 +89,9 @@ describe("attribution", () => {
     // Metadata is set by our own checkout route and must win.
     selectWhere.mockResolvedValue([{ id: "someone-else" }]);
 
-    await (await handler())(payment());
+    await (
+      await handler()
+    )(payment());
 
     expect(grantMock.mock.calls[0][0].userId).toBe("user-1");
   });
@@ -91,7 +99,9 @@ describe("attribution", () => {
   it("falls back to the customer email when metadata carries no userId", async () => {
     selectWhere.mockResolvedValue([{ id: "user-by-email" }]);
 
-    await (await handler())(payment({ metadata: {} }));
+    await (
+      await handler()
+    )(payment({ metadata: {} }));
 
     expect(grantMock.mock.calls[0][0].userId).toBe("user-by-email");
   });
@@ -99,7 +109,9 @@ describe("attribution", () => {
   it("ignores a non-string userId in metadata rather than crediting it", async () => {
     selectWhere.mockResolvedValue([{ id: "user-by-email" }]);
 
-    await (await handler())(payment({ metadata: { userId: 42 } }));
+    await (
+      await handler()
+    )(payment({ metadata: { userId: 42 } }));
 
     expect(grantMock.mock.calls[0][0].userId).toBe("user-by-email");
   });
@@ -107,7 +119,9 @@ describe("attribution", () => {
   it("ignores an empty-string userId in metadata", async () => {
     selectWhere.mockResolvedValue([{ id: "user-by-email" }]);
 
-    await (await handler())(payment({ metadata: { userId: "" } }));
+    await (
+      await handler()
+    )(payment({ metadata: { userId: "" } }));
 
     expect(grantMock.mock.calls[0][0].userId).toBe("user-by-email");
   });
@@ -115,7 +129,9 @@ describe("attribution", () => {
   it("grants nothing when the payment cannot be attributed to anyone", async () => {
     selectWhere.mockResolvedValue([]);
 
-    await (await handler())(payment({ metadata: {}, customer: undefined }));
+    await (
+      await handler()
+    )(payment({ metadata: {}, customer: undefined }));
 
     expect(grantMock).not.toHaveBeenCalled();
   });
@@ -123,13 +139,17 @@ describe("attribution", () => {
   it("returns normally on an unattributable payment so Dodo stops retrying", async () => {
     selectWhere.mockResolvedValue([]);
 
-    await expect((await handler())(payment({ metadata: {}, customer: {} }))).resolves.toBeUndefined();
+    await expect(
+      (await handler())(payment({ metadata: {}, customer: {} }))
+    ).resolves.toBeUndefined();
   });
 
   it("tolerates a missing metadata key entirely", async () => {
     selectWhere.mockResolvedValue([{ id: "user-by-email" }]);
 
-    await (await handler())(payment({ metadata: undefined }));
+    await (
+      await handler()
+    )(payment({ metadata: undefined }));
 
     expect(grantMock.mock.calls[0][0].userId).toBe("user-by-email");
   });
@@ -137,41 +157,49 @@ describe("attribution", () => {
 
 describe("cart to credits", () => {
   it("grants 100 credits for a Starter pack", async () => {
-    await (await handler())(payment());
+    await (
+      await handler()
+    )(payment());
 
     expect(grantMock.mock.calls[0][0]).toMatchObject({ credits: 100, reason: "purchase:starter" });
   });
 
   it("grants 550 credits for a Bundle pack, bonus included", async () => {
-    await (await handler())(payment({ product_cart: [{ product_id: "prod_bundle", quantity: 1 }] }));
+    await (
+      await handler()
+    )(payment({ product_cart: [{ product_id: "prod_bundle", quantity: 1 }] }));
 
     expect(grantMock.mock.calls[0][0]).toMatchObject({ credits: 550, reason: "purchase:bundle" });
   });
 
   it("grants 1200 credits for a Max pack, bonus included", async () => {
-    await (await handler())(payment({ product_cart: [{ product_id: "prod_max", quantity: 1 }] }));
+    await (
+      await handler()
+    )(payment({ product_cart: [{ product_id: "prod_max", quantity: 1 }] }));
 
     expect(grantMock.mock.calls[0][0]).toMatchObject({ credits: 1200, reason: "purchase:max" });
   });
 
   it("multiplies by quantity", async () => {
-    await (await handler())(
-      payment({ product_cart: [{ product_id: "prod_starter", quantity: 3 }] })
-    );
+    await (
+      await handler()
+    )(payment({ product_cart: [{ product_id: "prod_starter", quantity: 3 }] }));
 
     expect(grantMock.mock.calls[0][0].credits).toBe(300);
   });
 
   it("treats a zero quantity as one rather than granting nothing", async () => {
-    await (await handler())(
-      payment({ product_cart: [{ product_id: "prod_starter", quantity: 0 }] })
-    );
+    await (
+      await handler()
+    )(payment({ product_cart: [{ product_id: "prod_starter", quantity: 0 }] }));
 
     expect(grantMock.mock.calls[0][0].credits).toBe(100);
   });
 
   it("sums a mixed cart and names both packs in the reason", async () => {
-    await (await handler())(
+    await (
+      await handler()
+    )(
       payment({
         product_cart: [
           { product_id: "prod_starter", quantity: 1 },
@@ -187,7 +215,9 @@ describe("cart to credits", () => {
   });
 
   it("silently drops an unknown product from a mixed cart", async () => {
-    await (await handler())(
+    await (
+      await handler()
+    )(
       payment({
         product_cart: [
           { product_id: "prod_unknown", quantity: 1 },
@@ -200,19 +230,25 @@ describe("cart to credits", () => {
   });
 
   it("grants nothing when the cart holds no product we sell", async () => {
-    await (await handler())(payment({ product_cart: [{ product_id: "prod_x", quantity: 1 }] }));
+    await (
+      await handler()
+    )(payment({ product_cart: [{ product_id: "prod_x", quantity: 1 }] }));
 
     expect(grantMock).not.toHaveBeenCalled();
   });
 
   it("grants nothing for an empty cart", async () => {
-    await (await handler())(payment({ product_cart: [] }));
+    await (
+      await handler()
+    )(payment({ product_cart: [] }));
 
     expect(grantMock).not.toHaveBeenCalled();
   });
 
   it("tolerates a missing product_cart", async () => {
-    await (await handler())(payment({ product_cart: undefined }));
+    await (
+      await handler()
+    )(payment({ product_cart: undefined }));
 
     expect(grantMock).not.toHaveBeenCalled();
   });
@@ -220,7 +256,9 @@ describe("cart to credits", () => {
 
 describe("idempotency", () => {
   it("keys the grant on the Dodo payment id", async () => {
-    await (await handler())(payment({ payment_id: "pay_abc" }));
+    await (
+      await handler()
+    )(payment({ payment_id: "pay_abc" }));
 
     expect(grantMock.mock.calls[0][0].paymentRef).toBe("pay_abc");
   });
@@ -228,7 +266,9 @@ describe("idempotency", () => {
   it("grants once per payment id, leaving redelivery to the unique constraint", async () => {
     grantMock.mockResolvedValue(false);
 
-    await (await handler())(payment({ payment_id: "pay_abc" }));
+    await (
+      await handler()
+    )(payment({ payment_id: "pay_abc" }));
 
     expect(grantMock).toHaveBeenCalledTimes(1);
   });

@@ -52,7 +52,11 @@ export async function seedUser(
 ): Promise<string> {
   const [row] = await db
     .insert(schema.users)
-    .values({ email: `u${Math.random().toString(36).slice(2)}@example.com`, name: "Test", ...overrides })
+    .values({
+      email: `u${Math.random().toString(36).slice(2)}@example.com`,
+      name: "Test",
+      ...overrides,
+    })
     .returning({ id: schema.users.id });
   return row.id;
 }

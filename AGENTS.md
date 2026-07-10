@@ -32,6 +32,7 @@ CI order: `lint:check → format:check → tsc --noEmit → test:all`
 ## Testing architecture
 
 Vitest has 3 projects:
+
 - **node**: `lib/`, `app/`, `scripts/`, `tests/unit/` — plain Node, no jsdom
 - **jsdom**: `components/`, `features/`, `hooks/` — React component tests
 - **db**: `tests/db/` — PGlite in-process Postgres, `testTimeout: 30000`
@@ -50,6 +51,7 @@ DB tests need these env vars injected by `vitest.config.mts`: `DATABASE_URL`, `B
 ## Env setup
 
 Copy `.env.example` to `.env`. Required for local dev:
+
 - `DATABASE_URL` / `DATABASE_URL_UNPOOLED` — Postgres connection
 - `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — auth
 - `DODO_PAYMENTS_*`, `DODO_PRODUCT_ID_*` — payments

@@ -5,10 +5,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { CreditsBadge } from "@/components/credits-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-
-import { CreditsBadge } from "@/components/credits-badge";
 
 import { signInWithGoogle, signOut, useSession } from "@/lib/auth-client";
 

@@ -53,7 +53,9 @@ test.describe("anonymous access", () => {
 });
 
 test.describe("webhook signature verification", () => {
-  test("rejects an unsigned payload, so credits cannot be minted by anyone", async ({ request }) => {
+  test("rejects an unsigned payload, so credits cannot be minted by anyone", async ({
+    request,
+  }) => {
     const res = await request.post("/api/webhook/dodo-payments", {
       data: {
         type: "payment.succeeded",

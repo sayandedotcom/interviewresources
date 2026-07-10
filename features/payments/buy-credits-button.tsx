@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 
-import { pricingConfig } from "@/config/pricing";
-
 import { Button } from "@/components/ui/button";
+
+import { pricingConfig } from "@/config/pricing";
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
 

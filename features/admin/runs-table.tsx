@@ -1,5 +1,5 @@
-import { USD_PER_CREDIT } from "@/lib/credits";
 import type { RecentRun } from "@/lib/admin/queries";
+import { USD_PER_CREDIT } from "@/lib/credits";
 import { cn } from "@/lib/utils";
 
 const STATUS_CLASS: Record<string, string> = {

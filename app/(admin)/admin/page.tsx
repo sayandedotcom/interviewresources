@@ -78,9 +78,7 @@ export default async function AdminOverviewPage() {
         <TopCompaniesTable companies={topCompanies} />
       </div>
 
-      <p className="text-muted-foreground text-xs">
-        Real cash in (30d): ${purchaseUsd.toFixed(2)}
-      </p>
+      <p className="text-muted-foreground text-xs">Real cash in (30d): ${purchaseUsd.toFixed(2)}</p>
     </div>
   );
 }
