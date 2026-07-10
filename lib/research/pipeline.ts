@@ -5,9 +5,6 @@ import { generateStructured } from "./gemini";
 import { tavilyExtract, tavilyExtractCredits, tavilySearch, tavilySearchCredits } from "./tavily";
 import {
   type CompressedNote,
-  MAX_EXCLUDE_QUESTION_LEN,
-  MAX_EXCLUDE_QUESTIONS,
-  MAX_INTERVIEWERS,
   type PipelineProgressEvent,
   type Report,
   type ResearchInput,

@@ -26,7 +26,6 @@ export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
  */
 export const MAX_COMPANY_NAME = 120;
 export const MAX_URL = 500;
-export const MAX_JOB_DESCRIPTION = 20_000;
 export const MAX_YEARS_EXPERIENCE = 50;
 export const MAX_TECH_STACK = 500;
 export const MAX_ROLE_CONTEXT = 500;
@@ -36,9 +35,9 @@ export const MAX_INTERVIEW_TYPE_LEN = 80;
 
 /**
  * Extensions feed every question the report already holds back into synthesis as
- * a do-not-repeat list, so this list grows with each extension. It is bounded
- * here and re-bounded in the pipeline, which the extend route reaches directly
- * without passing through this schema.
+ * a do-not-repeat list. Note this bound only covers POST /api/research: the
+ * extend route builds the list from the stored report and calls the pipeline
+ * directly, so its prompt still grows with each extension.
  */
 export const MAX_EXCLUDE_QUESTIONS = 200;
 export const MAX_EXCLUDE_QUESTION_LEN = 500;
@@ -53,9 +52,10 @@ export type Interviewer = z.infer<typeof interviewerSchema>;
 export const researchInputSchema = z.object({
   companyName: z.string().min(1).max(MAX_COMPANY_NAME),
   companyUrl: z.string().url().max(MAX_URL).optional(),
-  // Longer than describeInput will actually use; the slice there is what keeps a
-  // pasted novel out of the prompt, while this keeps it out of the process.
-  jobDescription: z.string().max(MAX_JOB_DESCRIPTION).optional(),
+  // Deliberately uncapped: describeInput truncates it to 2000 chars, so its
+  // contribution to the prompt is already bounded, and rejecting a pasted job
+  // posting for being long would be a worse trade than ignoring its tail.
+  jobDescription: z.string().optional(),
   yearsExperience: z.string().max(MAX_YEARS_EXPERIENCE).optional(),
   techStack: z.string().max(MAX_TECH_STACK).optional(),
   interviewers: z.array(interviewerSchema).max(MAX_INTERVIEWERS).default([]),
