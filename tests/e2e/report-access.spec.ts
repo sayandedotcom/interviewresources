@@ -34,7 +34,7 @@ test.describe("anonymous access", () => {
   });
 
   test("the checkout API rejects an unauthenticated POST", async ({ request }) => {
-    const res = await request.post("/api/checkout", { data: { plan: "pro" } });
+    const res = await request.post("/api/checkout", { data: { plan: "bundle" } });
 
     expect(res.status()).toBe(401);
   });
@@ -61,7 +61,7 @@ test.describe("webhook signature verification", () => {
           status: "succeeded",
           payment_id: "pay_forged",
           metadata: { userId: "victim" },
-          product_cart: [{ product_id: "prod_pro", quantity: 1 }],
+          product_cart: [{ product_id: "prod_bundle", quantity: 1 }],
         },
       },
     });
@@ -90,11 +90,12 @@ test.describe("marketing surface", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("pricing shows both credit packs", async ({ page }) => {
+  test("pricing shows every credit pack", async ({ page }) => {
     await page.goto("/pricing");
 
-    await expect(page.getByText(/basic/i).first()).toBeVisible();
-    await expect(page.getByText(/pro/i).first()).toBeVisible();
+    await expect(page.getByText(/starter/i).first()).toBeVisible();
+    await expect(page.getByText(/bundle/i).first()).toBeVisible();
+    await expect(page.getByText(/max/i).first()).toBeVisible();
   });
 
   test("robots and sitemap are served", async ({ request }) => {

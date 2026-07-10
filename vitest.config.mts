@@ -26,8 +26,9 @@ export default defineConfig({
       NEXT_PUBLIC_SITE_URL: "https://test.local",
       DODO_PAYMENTS_API_KEY: "test_bearer",
       DODO_PAYMENTS_WEBHOOK_KEY: "whsec_dGVzdF93ZWJob29rX2tleQ==",
-      DODO_PRODUCT_ID_BASIC: "prod_basic",
-      DODO_PRODUCT_ID_PRO: "prod_pro",
+      DODO_PRODUCT_ID_STARTER: "prod_starter",
+      DODO_PRODUCT_ID_BUNDLE: "prod_bundle",
+      DODO_PRODUCT_ID_MAX: "prod_max",
       TAVILY_API_KEY: "tvly-test",
       GOOGLE_GENERATIVE_AI_API_KEY: "test-gemini-key",
       // better-auth warns on construction without these, even when mocked out.
