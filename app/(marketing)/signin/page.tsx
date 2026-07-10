@@ -47,12 +47,12 @@ export default function SignInPage() {
       <section className="flex flex-1 items-center justify-center px-5 py-16">
         <Card className="mx-auto w-full max-w-sm">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Sign in to {siteConfig.name}</CardTitle>
+            <CardTitle className="font-display text-lg">Sign in to {siteConfig.name}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <Button
               variant="outline"
-              className="w-full gap-2"
+              className="font-display w-full gap-2"
               onClick={() => signInWithGoogle({ callbackURL: "/prepare" })}>
               <GoogleIcon />
               Continue with Google
@@ -63,13 +63,17 @@ export default function SignInPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card text-muted-foreground px-2">or continue with email</span>
+                <span className="bg-card font-display text-muted-foreground px-2">
+                  or continue with email
+                </span>
               </div>
             </div>
 
             <div className="grid gap-4 opacity-50">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="font-display text-sm">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -80,23 +84,19 @@ export default function SignInPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="font-display text-sm">
+                  Password
+                </Label>
                 <Input id="password" type="password" disabled aria-disabled="true" />
               </div>
 
-              <Button className="w-full" disabled aria-disabled="true">
+              <Button className="font-display w-full" disabled aria-disabled="true">
                 Sign in
               </Button>
             </div>
 
-            <p className="text-muted-foreground text-center text-xs">Email sign-in coming soon</p>
-
-            <p className="text-muted-foreground text-center text-xs">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="hover:text-foreground underline underline-offset-4">
-                Sign up
-              </Link>{" "}
-              (Google only for now)
+            <p className="font-display text-muted-foreground text-center text-xs">
+              Email sign-in coming soon
             </p>
           </CardContent>
         </Card>
