@@ -8,6 +8,13 @@
       "when": 1783641891931,
       "tag": "0000_far_the_renegades",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783704804276,
+      "tag": "0001_square_ares",
+      "breakpoints": true
     }
   ]
 }
