@@ -134,7 +134,7 @@ export function SettingsClient({ userId }: SettingsClientProps) {
             </p>
           </div>
           <AlertDialog>
-            <AlertDialogTrigger asChild>
+            <AlertDialogTrigger>
               <Button
                 variant="outline"
                 className="font-display border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
