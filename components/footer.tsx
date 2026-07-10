@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { siteConfig } from "@/site";
 
+import { CookiePreferencesLink } from "@/components/cookie-preferences-link";
 import { LogoMark } from "@/components/logo";
 
 export function Footer() {
@@ -110,6 +111,9 @@ export function Footer() {
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Cookie Policy
                 </Link>
+              </li>
+              <li>
+                <CookiePreferencesLink />
               </li>
               <li>
                 <Link

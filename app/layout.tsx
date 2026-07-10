@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import { siteConfig } from "@/site";
 
 import { Analytics } from "@/components/analytics";
+import { CookieConsentBanner } from "@/components/cookie-consent";
 import { ThemeProvider } from "@/components/theme-provider";
 
 import { organizationJsonLd, webApplicationJsonLd } from "@/lib/seo/json-ld";
@@ -91,6 +92,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           {children}
           <Analytics />
+          <CookieConsentBanner />
         </ThemeProvider>
       </body>
     </html>
