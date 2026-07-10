@@ -12,7 +12,7 @@ export const runtime = "nodejs";
  * link at `/share/<token>`. The token is minted once and reused: re-sharing a
  * report must not break a link the user has already sent.
  */
-export async function POST(request: Request, ctx: RouteContext<"/api/research/[id]/share">) {
+export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
   const user = await getSessionUser(request.headers);

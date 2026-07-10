@@ -23,7 +23,7 @@ export const metadata: Metadata = {
  * `researchId` is passed down — that prop is what enables the extend controls,
  * which spend the owner's credits.
  */
-export default async function Page(props: PageProps<"/share/[token]">) {
+export default async function Page(props: { params: Promise<{ token: string }> }) {
   const { token } = await props.params;
 
   const [row] = await db

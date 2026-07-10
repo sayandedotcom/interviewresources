@@ -52,7 +52,7 @@ function mergeReports(existing: Report, addition: Report): Report {
   };
 }
 
-export async function POST(request: Request, ctx: RouteContext<"/api/research/[id]/extend">) {
+export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
   const user = await getSessionUser(request.headers);

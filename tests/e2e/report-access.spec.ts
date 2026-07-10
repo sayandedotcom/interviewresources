@@ -48,7 +48,7 @@ test.describe("anonymous access", () => {
   test("/api/researches leaks no sessions to an anonymous caller", async ({ request }) => {
     const body = await (await request.get("/api/researches")).json();
 
-    expect(body).toEqual({ sessions: [] });
+    expect(body).toEqual({ sessions: [], limit: 10 });
   });
 });
 

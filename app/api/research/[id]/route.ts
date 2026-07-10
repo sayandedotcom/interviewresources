@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/session";
 export const runtime = "nodejs";
 
 /** Removes one research session and its report. Scoped to the signed-in owner. */
-export async function DELETE(request: Request, ctx: RouteContext<"/api/research/[id]">) {
+export async function DELETE(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
 
   const user = await getSessionUser(request.headers);

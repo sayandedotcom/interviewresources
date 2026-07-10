@@ -10,7 +10,7 @@ import { getSessionUser } from "@/lib/session";
 
 import { ReportView } from "@/features/research/report-view";
 
-export default async function Page(props: PageProps<"/prepare/[id]">) {
+export default async function Page(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
   const user = await getSessionUser(await headers());
   if (!user) redirect("/");
