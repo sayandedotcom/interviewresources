@@ -26,16 +26,15 @@ const spaceGrotesk = Space_Grotesk({
   weight: ["400", "500", "600", "700"],
 });
 
-const description =
-  "Reconnaissance before the interview. Paste a company, get the questions they're likely to ask — grounded in evidence.";
+const title = `${siteConfig.name} — ${siteConfig.copy.titleSuffix}`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: `${siteConfig.name} — Interview Question Guesser`,
+    default: title,
     template: `%s · ${siteConfig.name}`,
   },
-  description,
+  description: siteConfig.copy.metaDescription,
   applicationName: siteConfig.name,
   authors: [{ name: siteConfig.name, url: siteConfig.url }],
   creator: siteConfig.name,
@@ -46,15 +45,15 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: siteConfig.name,
-    title: `${siteConfig.name} — Interview Question Guesser`,
-    description,
+    title,
+    description: siteConfig.copy.metaDescription,
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteConfig.name} — Interview Question Guesser`,
-    description,
-    creator: "@sayandedotcom",
+    title,
+    description: siteConfig.copy.metaDescription,
+    creator: siteConfig.copy.twitterCreator,
   },
   robots: {
     index: true,

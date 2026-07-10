@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+import { siteConfig } from "@/site";
+
 export const size = {
   width: 32,
   height: 32,
@@ -15,14 +17,14 @@ export default function Icon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#171717",
+        backgroundColor: siteConfig.brand.colors.background,
       }}>
       <div
         style={{
           width: "14px",
           height: "14px",
           transform: "rotate(45deg)",
-          backgroundColor: "#eaeaea",
+          backgroundColor: siteConfig.brand.colors.mark,
         }}
       />
     </div>,

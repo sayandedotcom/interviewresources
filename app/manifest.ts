@@ -4,13 +4,13 @@ import { siteConfig } from "@/site";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${siteConfig.name} — Interview Question Guesser`,
+    name: `${siteConfig.name} — ${siteConfig.copy.titleSuffix}`,
     short_name: siteConfig.name,
     description: siteConfig.description,
     start_url: "/",
     display: "standalone",
-    background_color: "#171717",
-    theme_color: "#171717",
+    background_color: siteConfig.brand.colors.background,
+    theme_color: siteConfig.brand.colors.background,
     icons: [
       {
         src: "/icon",
