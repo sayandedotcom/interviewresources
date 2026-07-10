@@ -117,6 +117,8 @@ describe("stage orchestration", () => {
 
   it("uses the cheap model to plan and compress, and the strong model to synthesize", async () => {
     stubStages({});
+    // Compression only runs for extracted pages, so give the top hit a full page.
+    extractMock.mockResolvedValue([{ url: "https://a.dev", rawContent: "F".repeat(500) }]);
 
     await runResearchPipeline(input);
 
@@ -197,11 +199,33 @@ describe("stage orchestration", () => {
     expect(searchMock).not.toHaveBeenCalled();
   });
 
-  it("propagates a Tavily failure", async () => {
+  it("skips a failed search and completes on the surviving queries", async () => {
     stubStages({});
     searchMock.mockRejectedValueOnce(new Error("Tavily search failed (429)"));
 
-    await expect(runResearchPipeline(input)).rejects.toThrow(/429/);
+    const events: PipelineProgressEvent[] = [];
+    const { report: out, budget } = await runResearchPipeline(input, (e) => events.push(e));
+
+    expect(out.companySnapshot).toBe("Payments");
+    expect(searchMock).toHaveBeenCalledTimes(3);
+    expect(events.some((e) => e.message.startsWith("Search failed, skipping:"))).toBe(true);
+    // A failed call costs nothing, so only the two surviving searches are billed.
+    const searchEntries = budget
+      .breakdown()
+      .filter((e) => e.kind === "search" && !e.detail.startsWith("extract"));
+    expect(searchEntries).toHaveLength(2);
+  });
+
+  it("falls back to search snippets when full-page extraction fails", async () => {
+    stubStages({});
+    extractMock.mockRejectedValue(new Error("Tavily extract failed (500)"));
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.companySnapshot).toBe("Payments");
+    // Nothing was extracted, so the snippet reaches synthesis verbatim.
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
+    expect(prompt).toContain("x".repeat(200));
   });
 });
 
@@ -274,10 +298,12 @@ describe("gather stage", () => {
 
     await runResearchPipeline(input);
 
-    const compressed = genMock.mock.calls.filter((c) => c[0].stage === "compress");
-    const sharedMentions = compressed.filter((c) => c[0].prompt.includes("https://shared.dev"));
-    expect(sharedMentions).toHaveLength(1); // one compress call, not one per query
-    expect(compressed).toHaveLength(4); // shared + 3 uniques
+    // One evidence note, not one per query: the url shows up twice in the
+    // synthesize prompt (the fixture title embeds it, plus the citation line).
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
+    expect(prompt.split("https://shared.dev").length - 1).toBe(2);
+    expect(prompt).toContain("[4] "); // shared + 3 uniques
+    expect(prompt).not.toContain("[5] ");
   });
 
   it("never queues the same url for extraction twice", async () => {
@@ -380,19 +406,29 @@ describe("gather stage", () => {
     }
   });
 
-  it("stops mid-plan when a search pushes the run over its cap", async () => {
-    stubStages({ tokensByStage: { plan: [3_960_000, 0] } }); // $0.99 of a $1 cap
+  it("stops mid-plan when a search chunk pushes the run over its cap", async () => {
+    stubStages({
+      plan: plan({
+        queries: Array.from({ length: 8 }, (_, i) => ({
+          query: `q${i}`,
+          purpose: "p",
+          depth: "basic" as const,
+          category: "dsa",
+        })),
+      }),
+      tokensByStage: { plan: [3_960_000, 0] }, // $0.99 of a $1 cap
+    });
 
     await runResearchPipeline(input, undefined, 1.0);
 
-    // First search is allowed (shouldStop() was false), costs $0.008 → $0.998.
-    // Still under $1, so the second runs → $1.006. The third is blocked.
-    expect(searchMock).toHaveBeenCalledTimes(2);
+    // Searches run in chunks of four. The first chunk was allowed (shouldStop()
+    // was false at $0.99) and lands at $1.022, so the second chunk is blocked.
+    expect(searchMock).toHaveBeenCalledTimes(4);
   });
 });
 
 describe("compress stage", () => {
-  it("skips sources with too little content to be worth a model call", async () => {
+  it("drops sources with too little content to be worth keeping", async () => {
     stubStages({});
     searchMock.mockResolvedValue({
       query: "q",
@@ -401,12 +437,12 @@ describe("compress stage", () => {
 
     await runResearchPipeline(input);
 
-    const compressed = genMock.mock.calls.filter((c) => c[0].stage === "compress");
-    expect(compressed.every((c) => !c[0].prompt.includes("short.dev"))).toBe(true);
-    expect(compressed.some((c) => c[0].prompt.includes("long.dev"))).toBe(true);
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
+    expect(prompt).not.toContain("short.dev");
+    expect(prompt).toContain("long.dev");
   });
 
-  it("skips a source whose content is exactly at the 40-character floor", async () => {
+  it("drops a source whose content is under the 40-character floor", async () => {
     stubStages({});
     searchMock.mockResolvedValue({
       query: "q",
@@ -415,26 +451,84 @@ describe("compress stage", () => {
 
     await runResearchPipeline(input);
 
-    expect(genMock.mock.calls.filter((c) => c[0].stage === "compress")).toHaveLength(0);
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
+    expect(prompt).toContain("no evidence gathered");
   });
 
-  it("stops compressing once the budget runs out, keeping the notes gathered so far", async () => {
+  it("passes snippet-only sources through without a model call", async () => {
+    stubStages({});
     searchMock.mockResolvedValue({
       query: "q",
       results: [
-        searchResult("https://a.dev"),
-        searchResult("https://b.dev"),
-        searchResult("https://c.dev"),
+        searchResult("https://a.dev", "Snippet about Stripe's onsite loop and phone screen."),
       ],
     });
-    // Each compress call burns $0.05; a $0.2 cap allows ~4 before stopping.
-    stubStages({ tokensByStage: { compress: [200_000, 0] } });
 
-    await runResearchPipeline(input, undefined, 0.2);
+    await runResearchPipeline(input);
+
+    // No extraction happened, so nothing warrants a compress call — the
+    // snippet is already shorter than the summary the model would produce.
+    expect(genMock.mock.calls.filter((c) => c[0].stage === "compress")).toHaveLength(0);
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
+    expect(prompt).toContain("Snippet about Stripe's onsite loop and phone screen.");
+  });
+
+  it("compresses only the extracted pages, passing the rest through", async () => {
+    stubStages({});
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: [searchResult("https://a.dev"), searchResult("https://b.dev")],
+    });
+    extractMock.mockResolvedValue([{ url: "https://a.dev", rawContent: "F".repeat(9000) }]);
+
+    await runResearchPipeline(input);
 
     const compressed = genMock.mock.calls.filter((c) => c[0].stage === "compress");
-    expect(compressed.length).toBeGreaterThan(0);
-    expect(compressed.length).toBeLessThan(9); // 3 queries x 3 results
+    expect(compressed).toHaveLength(1);
+    expect(compressed[0][0].prompt).toContain("https://a.dev");
+  });
+
+  it("falls back to the raw page opening when a compress call fails", async () => {
+    genMock.mockImplementation(async (args) => {
+      if (args.stage === "plan") return plan() as never;
+      if (args.stage === "compress") throw new Error("gemini 503");
+      if (args.stage === "synthesize") return report() as never;
+      throw new Error(`unexpected stage ${args.stage}`);
+    });
+    extractMock.mockResolvedValue([{ url: "https://a.dev", rawContent: "E".repeat(3000) }]);
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.companySnapshot).toBe("Payments");
+    // The note survives as the first 1500 chars of the page instead of vanishing.
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
+    expect(prompt).toContain("E".repeat(1500));
+    expect(prompt).not.toContain("E".repeat(1501));
+  });
+
+  it("stops compressing once the budget runs out, keeping the notes gathered so far", async () => {
+    // Ten queries at high effort yield eight extracted pages, compressed in
+    // chunks of five. Each compress call burns $0.05 against a $0.3 cap, so the
+    // first chunk lands over the cap and the second never dispatches.
+    const queries = Array.from({ length: 10 }, (_, i) => ({
+      query: `q${i}`,
+      purpose: "p",
+      depth: "basic" as const,
+      category: "dsa",
+    }));
+    stubStages({ plan: plan({ queries }), tokensByStage: { compress: [200_000, 0] } });
+    searchMock.mockImplementation(async (q) => ({
+      query: q,
+      results: [searchResult(`https://${q}.dev`)],
+    }));
+    extractMock.mockImplementation(async (urls) =>
+      urls.map((url) => ({ url, rawContent: "P".repeat(500) }))
+    );
+
+    await runResearchPipeline({ ...input, effort: "high" }, undefined, 0.3);
+
+    const compressed = genMock.mock.calls.filter((c) => c[0].stage === "compress");
+    expect(compressed).toHaveLength(5); // first chunk only, of 8 extracted
   });
 });
 

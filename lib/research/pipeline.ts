@@ -74,6 +74,31 @@ interface GatheredSource {
   title: string;
   category: string;
   content: string;
+  /** True once tavilyExtract replaced the search snippet with the full page. */
+  extracted: boolean;
+}
+
+const GATHER_CONCURRENCY = 4;
+const COMPRESS_CONCURRENCY = 5;
+
+/**
+ * Runs `fn` over `items` in chunks of `size`, re-checking `shouldStop` between
+ * chunks so a blown budget stops dispatching new work while in-flight results
+ * are kept. `fn` must handle its own errors — a rejection here would discard
+ * the whole chunk.
+ */
+async function mapChunked<T, R>(
+  items: T[],
+  size: number,
+  shouldStop: () => boolean,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += size) {
+    if (shouldStop()) break;
+    out.push(...(await Promise.all(items.slice(i, i + size).map(fn))));
+  }
+  return out;
 }
 
 /** Stage 2 — Gather. Runs Tavily searches from the plan, then extracts the top few URLs. */
@@ -87,24 +112,38 @@ async function gatherStage(
   const seenUrls = new Set<string>();
   const topUrlsForExtract: string[] = [];
 
-  for (const q of plan.queries) {
-    if (budget.shouldStop()) break;
-    emit(onProgress, "gather", `Searching: ${q.query}`);
+  // Searches run a few at a time; mapChunked returns them in plan order, so the
+  // dedup and extract-candidate selection below stay deterministic. A failed
+  // search contributes nothing rather than killing a run that already spent money.
+  const searched = await mapChunked(
+    plan.queries,
+    GATHER_CONCURRENCY,
+    () => budget.shouldStop(),
+    async (q) => {
+      emit(onProgress, "gather", `Searching: ${q.query}`);
+      const depth = budget.shouldDegrade() ? "basic" : q.depth;
+      try {
+        const result = await tavilySearch(q.query, { depth, maxResults: preset.searchResults });
+        budget.recordTavilyCredits("gather", tavilySearchCredits(depth), q.query);
+        return { category: q.category, results: result.results };
+      } catch {
+        emit(onProgress, "gather", `Search failed, skipping: ${q.query}`);
+        return { category: q.category, results: [] };
+      }
+    }
+  );
 
-    const depth = budget.shouldDegrade() ? "basic" : q.depth;
-    const result = await tavilySearch(q.query, { depth, maxResults: preset.searchResults });
-    budget.recordTavilyCredits("gather", tavilySearchCredits(depth), q.query);
-
-    for (const r of result.results) {
+  for (const { category, results } of searched) {
+    for (const r of results) {
       // The same page often ranks for several queries; a duplicate would get
       // its own compress call and double-weight the source at synthesis.
       if (seenUrls.has(r.url)) continue;
       seenUrls.add(r.url);
-      sources.push({ url: r.url, title: r.title, category: q.category, content: r.content });
+      sources.push({ url: r.url, title: r.title, category, content: r.content, extracted: false });
     }
 
     // Reserve the single most relevant result per query as an extract candidate.
-    const top = result.results[0];
+    const top = results[0];
     if (
       top &&
       topUrlsForExtract.length < preset.extractLimit &&
@@ -116,15 +155,23 @@ async function gatherStage(
 
   if (!budget.shouldStop() && topUrlsForExtract.length > 0) {
     emit(onProgress, "gather", `Reading ${topUrlsForExtract.length} full pages...`);
-    const extracted = await tavilyExtract(topUrlsForExtract);
-    budget.recordTavilyCredits(
-      "gather",
-      tavilyExtractCredits(topUrlsForExtract.length),
-      `extract ${topUrlsForExtract.length} urls`
-    );
-    for (const e of extracted) {
-      const existing = sources.find((s) => s.url === e.url);
-      if (existing) existing.content = e.rawContent.slice(0, 8000);
+    try {
+      const extracted = await tavilyExtract(topUrlsForExtract);
+      budget.recordTavilyCredits(
+        "gather",
+        tavilyExtractCredits(topUrlsForExtract.length),
+        `extract ${topUrlsForExtract.length} urls`
+      );
+      for (const e of extracted) {
+        const existing = sources.find((s) => s.url === e.url);
+        if (existing) {
+          existing.content = e.rawContent.slice(0, 8000);
+          existing.extracted = true;
+        }
+      }
+    } catch {
+      // Sources keep their search snippets, which compress passes through verbatim.
+      emit(onProgress, "gather", "Full-page reading failed — continuing with search snippets");
     }
   }
 
@@ -141,34 +188,56 @@ async function compressStage(
   budget: BudgetTracker,
   onProgress: OnProgress
 ): Promise<CompressedNote[]> {
-  const notes: CompressedNote[] = [];
+  const usable = sources.filter((s) => s.content && s.content.length >= 40);
 
-  for (const source of sources) {
-    if (budget.shouldStop()) break;
-    if (!source.content || source.content.length < 40) continue;
+  // Notes keep the original source order (slot per source) so the synthesize
+  // evidence block is stable regardless of which compress call finishes first.
+  const slots: (CompressedNote | undefined)[] = new Array(usable.length);
+  const toCompress: { source: GatheredSource; index: number }[] = [];
 
-    emit(onProgress, "compress", `Summarizing: ${source.title || source.url}`);
+  const noteFrom = (source: GatheredSource, summary: string): CompressedNote => ({
+    sourceUrl: source.url,
+    sourceTitle: source.title,
+    category: source.category,
+    summary,
+  });
 
-    const { summary } = await generateStructured({
-      model: "gemini-3.1-flash-lite-preview",
-      stage: "compress",
-      schema: compressedNoteSchema,
-      budget,
-      system: `Summarize the given web page content into a dense note for an interview-prep
+  usable.forEach((source, index) => {
+    if (source.extracted) {
+      toCompress.push({ source, index });
+    } else {
+      // A search snippet is already shorter than the summary we would ask for;
+      // "compressing" it costs a call and loses detail. Pass it through as-is.
+      slots[index] = noteFrom(source, source.content);
+    }
+  });
+
+  await mapChunked(
+    toCompress,
+    COMPRESS_CONCURRENCY,
+    () => budget.shouldStop(),
+    async ({ source, index }) => {
+      emit(onProgress, "compress", `Summarizing: ${source.title || source.url}`);
+      try {
+        const { summary } = await generateStructured({
+          model: "gemini-3.1-flash-lite-preview",
+          stage: "compress",
+          schema: compressedNoteSchema,
+          budget,
+          system: `Summarize the given web page content into a dense note for an interview-prep
 researcher. Keep concrete, checkable facts: specific questions mentioned, technologies
 named, round structure, difficulty signals, dates. Drop filler. Do not editorialize.`,
-      prompt: `Source: ${source.title}\nURL: ${source.url}\nCategory: ${source.category}\n\nContent:\n${source.content.slice(0, 6000)}`,
-    });
+          prompt: `Source: ${source.title}\nURL: ${source.url}\nCategory: ${source.category}\n\nContent:\n${source.content.slice(0, 6000)}`,
+        });
+        slots[index] = noteFrom(source, summary);
+      } catch {
+        // Degraded but grounded: the page's opening beats dropping the source.
+        slots[index] = noteFrom(source, source.content.slice(0, 1500));
+      }
+    }
+  );
 
-    notes.push({
-      sourceUrl: source.url,
-      sourceTitle: source.title,
-      category: source.category,
-      summary,
-    });
-  }
-
-  return notes;
+  return slots.filter((n): n is CompressedNote => n !== undefined);
 }
 
 /** Stage 4 — Synthesize. One strong call producing the final structured report. */
