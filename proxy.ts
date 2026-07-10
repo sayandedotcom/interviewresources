@@ -6,6 +6,13 @@ import { getSessionCookie } from "better-auth/cookies";
 /** The landing page carries this when a stale cookie has just been rejected. */
 export const EXPIRED_PARAM = "session";
 
+/** Query param on a referral link, and the cookie it is stashed in until signup. */
+export const REFERRAL_PARAM = "ref";
+export const REFERRAL_COOKIE = "referral_code";
+
+/** How long a captured referral code survives before the visitor must click again. */
+const REFERRAL_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
 /**
  * An optimistic gate. It reads the session cookie and never the database,
  * because a proxy runs on every request — prefetches included — and a query per
@@ -35,9 +42,25 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/prepare", request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+
+  // A referral link is `…/?ref=CODE`. The code has to survive the round-trip to
+  // Google and back, which drops query params, so we stash it in a cookie now
+  // and the signup hook reads it later. Only for signed-out visitors: an
+  // existing user clicking a friend's link is not a new referral.
+  const referralCode = searchParams.get(REFERRAL_PARAM);
+  if (referralCode && !signedIn) {
+    response.cookies.set(REFERRAL_COOKIE, referralCode, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: REFERRAL_COOKIE_MAX_AGE,
+    });
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ["/", "/prepare", "/prepare/:path*"],
+  matcher: ["/", "/signin", "/prepare", "/prepare/:path*"],
 };

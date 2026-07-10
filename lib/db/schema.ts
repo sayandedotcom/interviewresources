@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   index,
   integer,
@@ -59,6 +60,15 @@ export const users = pgTable("users", {
   name: text("name").notNull().default(""),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  /**
+   * The referral program lives on two nullable columns. `referralCode` is this
+   * user's own share code, generated lazily the first time they open the
+   * referrals page. `referredBy` is set once, at signup, to whoever's code
+   * brought them in. Every reward is derived from `credits_ledger`, so these two
+   * columns plus the ledger are the whole feature — no separate referrals table.
+   */
+  referralCode: text("referral_code").unique(),
+  referredBy: uuid("referred_by").references((): AnyPgColumn => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

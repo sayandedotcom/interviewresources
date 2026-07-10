@@ -33,22 +33,26 @@ Create a dedicated `/signin` page that provides both email sign-in and Google si
 ## Components
 
 ### Sign-In Card
+
 - Uses existing `Card`, `CardHeader`, `CardTitle`, `CardContent` components
 - Centered on page with max-width constraint
 - ClassName: `mx-auto w-full max-w-sm`
 
 ### Google Sign-In Button
+
 - Uses existing `Button` component with Google icon
 - Variant: outline or default
 - On click: calls `signInWithGoogle({ callbackURL: "/prepare" })`
 - SVG icon: Google "G" logo (inline)
 
 ### Email Form Fields
+
 - Email input: `Input` component with `type="email"`, disabled
 - Password input: `Input` component with `type="password"`, disabled
 - Both wrapped in existing `Form`, `FormField`, `FormLabel`, `FormItem` components
 
 ### Disabled State
+
 - Form fields disabled with `disabled` attribute
 - Sign-in button disabled with `disabled` attribute
 - Note text below: "Email sign-in coming soon" in muted text
@@ -65,10 +69,12 @@ app/
 ## Changes to Existing Code
 
 ### Header (`components/header.tsx`)
+
 - Change "Sign in" button from `onClick={() => signInWithGoogle(...)}` to `<Link href="/signin">Sign in</Link>`
 - Same change for nav-user sidebar component
 
 ### Auth Config (`lib/auth.ts`)
+
 - No changes needed — email is already `enabled: false`
 - When ready to enable email, flip to `enabled: true`
 

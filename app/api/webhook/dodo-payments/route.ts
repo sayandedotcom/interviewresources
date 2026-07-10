@@ -8,6 +8,7 @@ import { db } from "@/lib/db/index";
 import { users } from "@/lib/db/schema";
 import { getPackByProductId } from "@/lib/packs";
 import { dodoPaymentsConfig } from "@/lib/payments";
+import { processReferralReward } from "@/lib/referrals";
 
 /**
  * Resolves who paid. `metadata.userId` is authoritative — we set it server-side
@@ -67,12 +68,22 @@ function buildHandler(webhookKey: string) {
       const reasons = packs.map((e) => e.pack.slug).join("+");
 
       // The unique constraint on payment_ref makes a redelivered webhook a no-op.
-      await grantCredits({
+      const applied = await grantCredits({
         userId,
         credits,
         reason: `purchase:${reasons}`,
         paymentRef: data.payment_id,
       });
+
+      // Only pay out a referral on the first delivery of a purchase, and never
+      // let a referral failure fail the webhook — the purchase already landed.
+      if (applied) {
+        try {
+          await processReferralReward(userId);
+        } catch (error) {
+          console.error("referral reward failed for payment", data.payment_id, error);
+        }
+      }
     },
   });
 }
