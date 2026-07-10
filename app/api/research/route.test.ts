@@ -2,16 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { reports } from "@/lib/db/schema";
 import { BudgetTracker } from "@/lib/research/budget";
-import type { Report } from "@/lib/research/types";
+import {
+  MAX_COMPANY_NAME,
+  MAX_EXCLUDE_QUESTIONS,
+  MAX_EXCLUDE_QUESTION_LEN,
+  MAX_INTERVIEWERS,
+  MAX_INTERVIEW_TYPES,
+  MAX_INTERVIEW_TYPE_LEN,
+  MAX_ROLE_CONTEXT,
+  type Report,
+} from "@/lib/research/types";
 import type { SessionUser } from "@/lib/session";
 
 vi.mock("@/lib/session");
 vi.mock("@/lib/research/pipeline");
 vi.mock("@/lib/db/index", () => ({ db: { insert: vi.fn(), update: vi.fn() } }));
 vi.mock("@/lib/research/sessions", async (importOriginal) => {
-  // Keep the real cap; stub the eviction, which talks to the DB.
+  // Keep the real cap; stub the two functions that talk to the DB.
   const actual = await importOriginal<typeof import("@/lib/research/sessions")>();
-  return { ...actual, pruneToLimit: vi.fn() };
+  return { ...actual, pruneToLimit: vi.fn(), hasRunInFlight: vi.fn() };
 });
 vi.mock("@/lib/credits", async (importOriginal) => {
   // Keep the real conversion maths; stub only the two functions that touch the DB.
@@ -22,7 +31,8 @@ vi.mock("@/lib/credits", async (importOriginal) => {
 const { getSessionUser } = await import("@/lib/session");
 const { runResearchPipeline } = await import("@/lib/research/pipeline");
 const { chargeCredits, getBalance } = await import("@/lib/credits");
-const { MAX_SESSIONS_PER_USER, pruneToLimit } = await import("@/lib/research/sessions");
+const { MAX_SESSIONS_PER_USER, hasRunInFlight, pruneToLimit } =
+  await import("@/lib/research/sessions");
 const { db } = await import("@/lib/db/index");
 const { POST } = await import("./route");
 
@@ -31,6 +41,7 @@ const pipelineMock = vi.mocked(runResearchPipeline);
 const balanceMock = vi.mocked(getBalance);
 const chargeMock = vi.mocked(chargeCredits);
 const pruneMock = vi.mocked(pruneToLimit);
+const inFlightMock = vi.mocked(hasRunInFlight);
 const insertMock = vi.mocked(db.insert);
 const updateMock = vi.mocked(db.update);
 
@@ -118,6 +129,7 @@ beforeEach(() => {
   chargeMock.mockResolvedValue({ balanceAfter: 454 });
   pipelineMock.mockResolvedValue({ report, budget: budgetCosting(0.35) });
   pruneMock.mockResolvedValue(0);
+  inFlightMock.mockResolvedValue(false);
   stubDb();
 });
 
@@ -151,6 +163,40 @@ describe("authentication", () => {
   });
 });
 
+describe("the in-flight guard", () => {
+  it("refuses a second concurrent run with 409, before any spend", async () => {
+    inFlightMock.mockResolvedValue(true);
+
+    const res = await POST(post(validBody));
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ error: "run_in_flight" });
+    expect(pipelineMock).not.toHaveBeenCalled();
+    expect(insertMock).not.toHaveBeenCalled();
+  });
+
+  it("checks the caller before reading their balance", async () => {
+    inFlightMock.mockResolvedValue(true);
+
+    await POST(post(validBody));
+
+    expect(balanceMock).not.toHaveBeenCalled();
+    expect(pruneMock).not.toHaveBeenCalled();
+  });
+
+  it("admits a run when nothing else is going", async () => {
+    expect((await POST(post(validBody))).status).toBe(200);
+    expect(inFlightMock).toHaveBeenCalledWith(user.id);
+  });
+
+  it("never reaches the guard for an anonymous caller", async () => {
+    sessionMock.mockResolvedValue(null);
+
+    expect((await POST(post(validBody))).status).toBe(401);
+    expect(inFlightMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("input validation", () => {
   it("rejects a body that fails the schema", async () => {
     const res = await POST(post({ companyName: "" }));
@@ -165,6 +211,67 @@ describe("input validation", () => {
 
   it("rejects a request with no rounds to scout", async () => {
     expect((await POST(post({ companyName: "Stripe", interviewTypes: [] }))).status).toBe(400);
+  });
+});
+
+/**
+ * These fields land in the synthesize prompt, which is billed per input token on
+ * the priciest model — and the BudgetTracker prices a call only once it has
+ * returned, so it cannot stop an oversized one. The schema is the only bound.
+ *
+ * `jobDescription` is the exception, and stays uncapped: the pipeline truncates
+ * it, so its prompt contribution is already bounded. See lib/research/types.test.ts.
+ */
+describe("the input length caps", () => {
+  const rejects = async (body: Record<string, unknown>) => {
+    const res = await POST(post({ ...validBody, ...body }));
+    expect(res.status).toBe(400);
+    expect(pipelineMock).not.toHaveBeenCalled();
+  };
+
+  it("rejects an oversized company name", async () => {
+    await rejects({ companyName: "a".repeat(MAX_COMPANY_NAME + 1) });
+  });
+
+  it("rejects an oversized role context", async () => {
+    await rejects({ roleContext: "a".repeat(MAX_ROLE_CONTEXT + 1) });
+  });
+
+  it("rejects too many rounds to scout", async () => {
+    await rejects({ interviewTypes: Array(MAX_INTERVIEW_TYPES + 1).fill("dsa") });
+  });
+
+  it("rejects a single round identifier used as a payload", async () => {
+    await rejects({ interviewTypes: ["a".repeat(MAX_INTERVIEW_TYPE_LEN + 1)] });
+  });
+
+  it("rejects too many interviewers", async () => {
+    await rejects({ interviewers: Array(MAX_INTERVIEWERS + 1).fill({ name: "Ada" }) });
+  });
+
+  it("rejects a do-not-repeat list long enough to inflate the prompt", async () => {
+    await rejects({ excludeQuestions: Array(MAX_EXCLUDE_QUESTIONS + 1).fill("q") });
+  });
+
+  it("rejects one oversized do-not-repeat entry", async () => {
+    await rejects({ excludeQuestions: ["a".repeat(MAX_EXCLUDE_QUESTION_LEN + 1)] });
+  });
+
+  it("admits a realistic body that sits under every cap", async () => {
+    const res = await POST(
+      post({
+        companyName: "Stripe",
+        jobDescription: "We are hiring a senior backend engineer. ".repeat(60),
+        roleContext: "Senior backend, payments",
+        techStack: "Go, Postgres, Kafka",
+        yearsExperience: "7",
+        interviewTypes: ["dsa", "system_design", "behavioral"],
+        interviewers: [{ name: "Ada Lovelace", url: "https://example.com/ada" }],
+      })
+    );
+
+    expect(res.status).toBe(200);
+    expect(pipelineMock).toHaveBeenCalled();
   });
 });
 

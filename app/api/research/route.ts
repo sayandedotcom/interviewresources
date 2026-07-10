@@ -11,7 +11,7 @@ import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
 import { BudgetTracker, type CostEntry, EFFORT_PRESETS } from "@/lib/research/budget";
 import { runResearchPipeline } from "@/lib/research/pipeline";
-import { MAX_SESSIONS_PER_USER, pruneToLimit } from "@/lib/research/sessions";
+import { MAX_SESSIONS_PER_USER, hasRunInFlight, pruneToLimit } from "@/lib/research/sessions";
 import { researchInputSchema } from "@/lib/research/types";
 import { getSessionUser } from "@/lib/session";
 
@@ -46,6 +46,16 @@ export async function POST(request: Request) {
     return Response.json(
       { error: "Invalid research request.", detail: String(err) },
       { status: 400 }
+    );
+  }
+
+  // One run at a time per user. The balance check below reads a balance it does
+  // not hold a lock on, so without this a user could fire N requests in parallel
+  // and have every one of them pass the same check and start spending.
+  if (await hasRunInFlight(user.id)) {
+    return Response.json(
+      { error: "run_in_flight", detail: "You already have a research run going." },
+      { status: 409 }
     );
   }
 
