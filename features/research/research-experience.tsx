@@ -321,7 +321,7 @@ export function ResearchExperience({
                           Years of Experience <span className="opacity-60">· optional</span>
                         </FormLabel>
                         <FormControl>
-                          <Input {...field} id="yearsExperience" placeholder="5" />
+                          <Input {...field} id="yearsExperience" placeholder="3-5" />
                         </FormControl>
                       </FormItem>
                     )}
