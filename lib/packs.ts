@@ -1,32 +1,39 @@
 /**
- * Server-only mapping from a plan slug to its Dodo product and what it grants.
+ * Server-only mapping from a pack slug to its Dodo product and what it grants.
  * Kept out of config/pricing.ts because that file is imported by client pages
  * and these product ids come from the environment.
  */
 import { env } from "@/env";
 
 export interface CreditPack {
-  slug: "basic" | "pro";
+  slug: "starter" | "bundle" | "max";
   name: string;
   credits: number;
-  tier: "free" | "pro";
   productId: string | undefined;
 }
 
+/**
+ * Starter grants a flat 100 credits per dollar. The bigger packs add a bonus on
+ * top of that rate: Bundle 10%, Max 20%.
+ */
 export const CREDIT_PACKS: Record<CreditPack["slug"], CreditPack> = {
-  basic: {
-    slug: "basic",
-    name: "Basic",
+  starter: {
+    slug: "starter",
+    name: "Starter",
     credits: 100,
-    tier: "free",
-    productId: env.DODO_PRODUCT_ID_BASIC,
+    productId: env.DODO_PRODUCT_ID_STARTER,
   },
-  pro: {
-    slug: "pro",
-    name: "Pro",
-    credits: 500,
-    tier: "pro",
-    productId: env.DODO_PRODUCT_ID_PRO,
+  bundle: {
+    slug: "bundle",
+    name: "Bundle",
+    credits: 550,
+    productId: env.DODO_PRODUCT_ID_BUNDLE,
+  },
+  max: {
+    slug: "max",
+    name: "Max",
+    credits: 1200,
+    productId: env.DODO_PRODUCT_ID_MAX,
   },
 };
 

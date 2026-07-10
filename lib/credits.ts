@@ -2,20 +2,20 @@ import { eq, sql } from "drizzle-orm";
 
 import { db } from "./db/index";
 import { creditsLedger, users } from "./db/schema";
-import { BUDGET_CAP_USD } from "./research/budget";
+import { EFFORT_LEVELS, EFFORT_PRESETS, type Effort, MAX_EFFORT_CAP_USD } from "./research/budget";
 
-/** 1 credit = $0.01. Packs: Basic $1 → 100 credits, Pro $5 → 500 credits. */
+/** 1 credit = $0.01. Packs: Starter $1 → 100, Bundle $5 → 550, Max $10 → 1200. */
 export const USD_PER_CREDIT = 0.01;
 
 /** Users pay the run's real metered cost times this. Covers payment fees + retries. */
 export const CREDIT_MARKUP = 1.3;
 
 /**
- * The most a single run can ever cost, since the pipeline hard-stops at
- * BUDGET_CAP_USD. Note this exceeds the 100-credit Basic pack, which is why we
- * do NOT gate on it — see creditsToBudgetUsd.
+ * The most a single run can ever cost: the priciest effort's cap, since the
+ * pipeline hard-stops there. Note this exceeds the 100-credit Starter pack, which
+ * is why we do NOT gate on it — see creditsToBudgetUsd.
  */
-export const MAX_RUN_CREDITS = Math.ceil((BUDGET_CAP_USD * CREDIT_MARKUP) / USD_PER_CREDIT);
+export const MAX_RUN_CREDITS = Math.ceil((MAX_EFFORT_CAP_USD * CREDIT_MARKUP) / USD_PER_CREDIT);
 
 /**
  * Floor to start a run at all. Below this the pipeline's dollar budget is too
@@ -43,11 +43,19 @@ export function usdToCredits(usd: number): number {
 
 /**
  * The dollar budget a balance can pay for, inverse of usdToCredits. The route
- * caps each run at min(this, $1) so the final charge can never exceed what the
- * user holds — that's what keeps balances non-negative without a reservation.
+ * caps each run at min(effort cap, this) so the final charge can never exceed
+ * what the user holds — that's what keeps balances non-negative without a
+ * reservation.
  */
 export function creditsToBudgetUsd(credits: number): number {
   return (credits * USD_PER_CREDIT) / CREDIT_MARKUP;
+}
+
+/** Credit ceiling per effort level, so the form can price each choice. */
+export function effortCredits(): Record<Effort, number> {
+  return Object.fromEntries(
+    EFFORT_LEVELS.map((e) => [e, usdToCredits(EFFORT_PRESETS[e].capUsd)])
+  ) as Record<Effort, number>;
 }
 
 /** Balance is derived, never stored: the ledger is the source of truth. */

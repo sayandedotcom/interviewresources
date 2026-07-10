@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 
+import { pricingConfig } from "@/config/pricing";
+
 import { Button } from "@/components/ui/button";
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
+
+/** Derived so a new pack in pricingConfig cannot drift from what checkout accepts. */
+type PlanSlug = (typeof pricingConfig.plans)[number]["slug"];
 
 /** Starts a Dodo checkout for a credit pack, or signs the user in first. */
 export function BuyCreditsButton({
@@ -13,7 +18,7 @@ export function BuyCreditsButton({
   className,
   variant,
 }: {
-  plan: "basic" | "pro";
+  plan: PlanSlug;
   children: React.ReactNode;
   className?: string;
   variant?: React.ComponentProps<typeof Button>["variant"];

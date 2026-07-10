@@ -3,36 +3,50 @@
  * credit amounts that actually get granted live in lib/packs.ts (server-only).
  * Keep `credits` here in sync with CREDIT_PACKS.
  *
- * A report is metered at its real cost, so counts are approximate: a typical
- * run is ~46 credits and the pipeline hard-caps at 130.
+ * Both packs unlock the same product; they differ only in how many credits you
+ * get. A report is metered at its real cost, so counts are approximate: a
+ * typical run is ~46 credits and the pipeline hard-caps at 130.
  */
 export const pricingConfig = {
   plans: [
     {
-      slug: "basic" as const,
-      name: "Basic",
+      slug: "starter" as const,
+      name: "Starter",
       price: 1,
       credits: 100,
-      description: "Perfect for occasional prep",
+      description: "Enough to try it out",
       features: [
         "100 credits",
         "About 2 research reports",
         "Question predictions with evidence",
-        "Email support",
+        "Interviewer research",
+        "PDF and JSON export",
       ],
     },
     {
-      slug: "pro" as const,
-      name: "Pro",
+      slug: "bundle" as const,
+      name: "Bundle",
       price: 5,
-      credits: 500,
-      description: "For serious candidates",
+      credits: 550,
+      description: "Stock up, stop topping up",
       features: [
-        "500 credits",
-        "About 10 research reports",
-        "Interviewer research",
-        "Export reports",
-        "Priority support",
+        "550 credits",
+        "About 11 research reports",
+        "Everything in Starter",
+        "10% bonus credits — 500 paid, 550 granted",
+      ],
+    },
+    {
+      slug: "max" as const,
+      name: "Max",
+      price: 10,
+      credits: 1200,
+      description: "For a full interview season",
+      features: [
+        "1200 credits",
+        "About 26 research reports",
+        "Everything in Bundle",
+        "20% bonus credits — 1000 paid, 1200 granted",
       ],
     },
   ],
