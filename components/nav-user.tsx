@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import Link from "next/link";
 
-import { ChevronsUpDownIcon, CreditCardIcon, LogOutIcon, SparklesIcon } from "lucide-react";
+import { ChevronsUpDownIcon, CreditCardIcon, LogOutIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 
 import { signInWithGoogle, signOut, useSession } from "@/lib/auth-client";
-
-interface Me {
-  signedIn: boolean;
-  user: { name: string; email: string; image: string | null; tier: "free" | "pro" } | null;
-  balance: number;
-}
+import type { SessionUser } from "@/lib/session";
 
 function initials(name: string): string {
   return (
@@ -44,29 +39,41 @@ function initials(name: string): string {
   );
 }
 
-export function NavUser() {
+/** `initialUser` is the server's answer: a `SessionUser`, or null for signed out. */
+export function NavUser({ initialUser }: { initialUser: SessionUser | null }) {
   const { isMobile } = useSidebar();
   const { data: session, isPending } = useSession();
-  const [me, setMe] = useState<Me | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
 
+  // Until `useSession` has an answer of its own, the server's stands. After that
+  // it wins, so signing out empties the row instead of stranding a stale name.
+  const user = isPending ? initialUser : (session?.user ?? null);
+  const userId = user?.id ?? null;
+
+  // Only the balance needs `/api/me`, and it lives one click deep in the menu.
+  // Blocking the whole row on it is what made the profile take so long to appear.
   useEffect(() => {
+    if (!userId) return;
     let cancelled = false;
     fetch("/api/me")
       .then((r) => r.json())
       .then((data) => {
-        if (!cancelled) setMe(data);
+        if (!cancelled && data.signedIn) setBalance(data.balance);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [userId]);
 
-  if (!isPending && !session) {
+  if (!user) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <Button size="sm" className="w-full" onClick={() => signInWithGoogle({ callbackURL: "/prepare" })}>
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={() => signInWithGoogle({ callbackURL: "/prepare" })}>
             Sign in
           </Button>
         </SidebarMenuItem>
@@ -74,18 +81,20 @@ export function NavUser() {
     );
   }
 
-  if (!me?.user) {
-    return null;
-  }
-
-  const { user, balance } = me;
-
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />}>
+            render={
+              // A resting tint plus a border lifts the profile off the sidebar.
+              // The button's own `hover:bg-sidebar-accent` then takes it to full
+              // strength, so the row still reacts to a pointer.
+              <SidebarMenuButton
+                size="lg"
+                className="bg-sidebar-accent/60 border-sidebar-border aria-expanded:bg-sidebar-accent border"
+              />
+            }>
             <Avatar>
               <AvatarImage src={user.image ?? undefined} alt={user.name} />
               <AvatarFallback>{initials(user.name)}</AvatarFallback>
@@ -119,14 +128,10 @@ export function NavUser() {
             <DropdownMenuGroup>
               <DropdownMenuItem render={<Link href="/payments" />}>
                 <CreditCardIcon />
-                <span className="font-display">{balance} credits</span>
+                <span className="font-display">
+                  {balance == null ? "Credits · buy more" : `${balance} credits · buy more`}
+                </span>
               </DropdownMenuItem>
-              {user.tier !== "pro" && (
-                <DropdownMenuItem render={<Link href="/pricing" />}>
-                  <SparklesIcon />
-                  <span className="font-display">Upgrade to Pro</span>
-                </DropdownMenuItem>
-              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut()}>

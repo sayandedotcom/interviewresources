@@ -3,11 +3,19 @@
 import * as React from "react";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
-import { PlusIcon } from "lucide-react";
+import { siteConfig } from "@/site";
+import { MoreHorizontalIcon, PlusIcon, Share2Icon, Trash2Icon } from "lucide-react";
 
 import { NavUser } from "@/components/nav-user";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
@@ -16,14 +24,18 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useSession } from "@/lib/auth-client";
 import { categoryLabel } from "@/lib/research/display";
+import type { SessionUser } from "@/lib/session";
 
 interface ResearchSession {
   id: string;
@@ -33,18 +45,44 @@ interface ResearchSession {
   createdAt: string;
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  initialUser,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { initialUser: SessionUser | null }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isMobile } = useSidebar();
   const { data: session, isPending } = useSession();
   const [fetched, setFetched] = React.useState<ResearchSession[] | null>(null);
+  const [limit, setLimit] = React.useState<number | null>(null);
+
+  // The server already knows who this is; `useSession` only overrides it once it
+  // has an answer, which is what lets a sign-out empty the sidebar.
+  const user = isPending ? initialUser : (session?.user ?? null);
+  const userId = user?.id ?? null;
+
+  // One transient line under the list — the app has no toaster, and a share or
+  // delete that silently does nothing is worse than a plain sentence.
+  const [notice, setNotice] = React.useState<string | null>(null);
+  const noticeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flash = React.useCallback((message: string) => {
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    setNotice(message);
+    noticeTimer.current = setTimeout(() => setNotice(null), 2500);
+  }, []);
+
+  React.useEffect(() => () => void (noticeTimer.current && clearTimeout(noticeTimer.current)), []);
 
   React.useEffect(() => {
-    if (!session) return;
+    if (!userId) return;
     let cancelled = false;
     fetch("/api/researches")
       .then((r) => r.json())
       .then((data) => {
-        if (!cancelled) setFetched(data.sessions);
+        if (cancelled) return;
+        setFetched(data.sessions);
+        setLimit(data.limit ?? null);
       })
       .catch(() => {
         if (!cancelled) setFetched([]);
@@ -54,30 +92,93 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     };
     // Refetch on navigation too, so a session created via `onComplete` shows
     // up in the list without a full reload.
-  }, [session, pathname]);
+  }, [userId, pathname]);
 
-  const sessions = session ? fetched : isPending ? null : [];
+  async function share(id: string) {
+    try {
+      const res = await fetch(`/api/research/${id}/share`, { method: "POST" });
+      if (!res.ok) throw new Error("share failed");
+      const { token } = await res.json();
+      await navigator.clipboard.writeText(`${window.location.origin}/share/${token}`);
+      flash("Share link copied");
+    } catch {
+      flash("Could not create a share link");
+    }
+  }
+
+  async function remove(id: string) {
+    if (!window.confirm("Delete this session? The report goes with it.")) return;
+
+    try {
+      const res = await fetch(`/api/research/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("delete failed");
+
+      setFetched((prev) => prev?.filter((s) => s.id !== id) ?? prev);
+      flash("Session deleted");
+
+      // The page we're looking at just stopped existing.
+      if (pathname === `/prepare/${id}`) router.push("/prepare");
+    } catch {
+      flash("Could not delete that session");
+    }
+  }
+
+  // Null means "still loading" — a signed-out visitor gets an empty list, not a
+  // skeleton, because the server already told us there is nothing to wait for.
+  const sessions = user ? fetched : [];
+  const atLimit = limit != null && sessions != null && sessions.length >= limit;
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="gap-3 p-3">
+        {/*
+         * Collapsed, the rail is only wide enough for one control. The brand and
+         * the trigger share the same square: the trigger is stacked on top and
+         * fades in on hover, so the logo is what you see at rest.
+         */}
+        <div className="group/header relative flex h-8 items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
+          <Link
+            href="/"
+            className="group/brand flex items-center gap-2 overflow-hidden transition-opacity group-data-[collapsible=icon]:group-hover/header:opacity-0">
+            <span className="bg-primary relative inline-block size-3 shrink-0 rotate-45">
+              <span className="bg-tertiary/30 absolute inset-0 rounded-sm opacity-0 blur-md transition-opacity group-hover/brand:opacity-100" />
+            </span>
+            <span className="font-display truncate text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+              {siteConfig.name}
+            </span>
+          </Link>
+          <SidebarTrigger className="text-sidebar-foreground/70 hover:text-sidebar-foreground shrink-0 transition-opacity group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:inset-0 group-data-[collapsible=icon]:m-auto group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:group-hover/header:opacity-100" />
+        </div>
+
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              size="lg"
-              className="data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground"
+              tooltip="New session"
+              isActive={pathname === "/prepare"}
               render={<Link href="/prepare" />}>
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                <PlusIcon className="size-4" />
-              </div>
+              <PlusIcon />
               <span className="font-display font-medium">New session</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        <Separator className="bg-sidebar-border" />
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="font-display">Sessions</SidebarGroupLabel>
+        {/* Truncated company names in a 3rem rail read as noise, not navigation. */}
+        <SidebarGroup className="px-3 group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel className="font-display justify-between">
+            <span>Sessions</span>
+            {limit != null && sessions != null && (
+              <span
+                className={`font-mono text-[11px] tabular-nums ${
+                  atLimit ? "text-tertiary" : "text-sidebar-foreground/50"
+                }`}
+                title={`We keep your ${limit} most recent sessions. Starting a new one deletes the oldest.`}>
+                {sessions.length}/{limit}
+              </span>
+            )}
+          </SidebarGroupLabel>
           <SidebarMenu className="gap-1">
             {sessions === null &&
               Array.from({ length: 3 }).map((_, i) => (
@@ -88,7 +189,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {sessions?.length === 0 && (
               <SidebarMenuItem>
                 <span className="font-display text-sidebar-foreground/70 px-2 py-1.5 text-xs">
-                  {session ? "No sessions yet" : "Sign in to save sessions"}
+                  {user ? "No sessions yet" : "Sign in to save sessions"}
                 </span>
               </SidebarMenuItem>
             )}
@@ -108,13 +209,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </span>
                   </div>
                 </SidebarMenuButton>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <SidebarMenuAction showOnHover aria-label={`Actions for ${s.companyName}`} />
+                    }>
+                    <MoreHorizontalIcon />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-40"
+                    side={isMobile ? "bottom" : "right"}
+                    align="start">
+                    <DropdownMenuItem onClick={() => share(s.id)}>
+                      <Share2Icon />
+                      <span className="font-display">Share</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem variant="destructive" onClick={() => remove(s.id)}>
+                      <Trash2Icon />
+                      <span className="font-display">Delete</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
+          {notice && (
+            <p className="text-sidebar-foreground/60 px-2 pt-2 font-mono text-[11px] group-data-[collapsible=icon]:hidden">
+              {notice}
+            </p>
+          )}
+          {atLimit && (
+            <p className="text-sidebar-foreground/50 px-2 pt-2 text-xs leading-snug group-data-[collapsible=icon]:hidden">
+              You&apos;re at the {limit}-session limit. Starting a new one deletes your oldest.
+            </p>
+          )}
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser />
+        <NavUser initialUser={initialUser} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
