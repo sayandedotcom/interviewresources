@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { pricingConfig } from "@/config/pricing";
+
 import { CREDIT_PACKS, getPack, getPackByProductId } from "./packs";
 
 /**
@@ -9,13 +11,9 @@ import { CREDIT_PACKS, getPack, getPackByProductId } from "./packs";
 
 describe("getPack", () => {
   it("resolves the known slugs", () => {
-    expect(getPack("basic")?.credits).toBe(100);
-    expect(getPack("pro")?.credits).toBe(500);
-  });
-
-  it("marks only the Pro pack as tier-upgrading", () => {
-    expect(getPack("basic")?.tier).toBe("free");
-    expect(getPack("pro")?.tier).toBe("pro");
+    expect(getPack("starter")?.credits).toBe(100);
+    expect(getPack("bundle")?.credits).toBe(550);
+    expect(getPack("max")?.credits).toBe(1200);
   });
 
   it("returns null for an unknown slug rather than throwing", () => {
@@ -35,8 +33,9 @@ describe("getPack", () => {
 
 describe("getPackByProductId", () => {
   it("reverse-maps a configured product id", () => {
-    expect(getPackByProductId("prod_basic")?.slug).toBe("basic");
-    expect(getPackByProductId("prod_pro")?.slug).toBe("pro");
+    expect(getPackByProductId("prod_starter")?.slug).toBe("starter");
+    expect(getPackByProductId("prod_bundle")?.slug).toBe("bundle");
+    expect(getPackByProductId("prod_max")?.slug).toBe("max");
   });
 
   it("returns null for a product we do not sell", () => {
@@ -68,7 +67,39 @@ describe("CREDIT_PACKS", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("prices Pro at 5x Basic, matching the $1/$5 pricing page", () => {
-    expect(CREDIT_PACKS.pro.credits).toBe(CREDIT_PACKS.basic.credits * 5);
+  it("grants the advertised bonus over the flat 100-credits-per-dollar rate", () => {
+    // The bonuses are the reason to buy a bigger pack, so a change to any of
+    // these numbers is a change to the offer the pricing page makes.
+    expect(CREDIT_PACKS.starter.credits).toBe(100); // $1, flat
+    expect(CREDIT_PACKS.bundle.credits).toBe(550); // $5 → 500 flat + 10%
+    expect(CREDIT_PACKS.max.credits).toBe(1200); // $10 → 1000 flat + 20%
+  });
+
+  it("makes each larger pack a strictly better rate, so the ladder never inverts", () => {
+    const perDollar = [
+      CREDIT_PACKS.starter.credits / 1,
+      CREDIT_PACKS.bundle.credits / 5,
+      CREDIT_PACKS.max.credits / 10,
+    ];
+    expect(perDollar[0]).toBeLessThan(perDollar[1]);
+    expect(perDollar[1]).toBeLessThan(perDollar[2]);
+  });
+});
+
+/**
+ * config/pricing.ts advertises the credits; CREDIT_PACKS grants them. Only a
+ * comment keeps the two in step, so a drift would quietly sell 500 credits and
+ * hand over 100. Pin it.
+ */
+describe("the pricing page agrees with what the webhook grants", () => {
+  it("advertises exactly the packs that checkout sells", () => {
+    expect(pricingConfig.plans.map((p) => p.slug).sort()).toEqual(Object.keys(CREDIT_PACKS).sort());
+  });
+
+  it("advertises each pack's real credit grant and name", () => {
+    for (const plan of pricingConfig.plans) {
+      expect(CREDIT_PACKS[plan.slug].credits).toBe(plan.credits);
+      expect(CREDIT_PACKS[plan.slug].name).toBe(plan.name);
+    }
   });
 });

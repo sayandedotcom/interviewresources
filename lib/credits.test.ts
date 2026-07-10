@@ -9,7 +9,7 @@ import {
   creditsToBudgetUsd,
   usdToCredits,
 } from "./credits";
-import { BUDGET_CAP_USD } from "./research/budget";
+import { BUDGET_CAP_USD, MAX_EFFORT_CAP_USD } from "./research/budget";
 
 /**
  * These are the money functions. Everything else in the app can be wrong and a
@@ -33,9 +33,13 @@ describe("usdToCredits", () => {
     expect(usdToCredits(0.0001)).toBe(1);
   });
 
-  it("charges MAX_RUN_CREDITS at the hard budget cap", () => {
-    expect(usdToCredits(BUDGET_CAP_USD)).toBe(MAX_RUN_CREDITS);
-    expect(MAX_RUN_CREDITS).toBe(130);
+  it("charges MAX_RUN_CREDITS at the highest effort's budget cap", () => {
+    expect(usdToCredits(MAX_EFFORT_CAP_USD)).toBe(MAX_RUN_CREDITS);
+    expect(MAX_RUN_CREDITS).toBe(260); // high effort: $2 * 1.3 / 0.01
+  });
+
+  it("charges 130 credits at the medium (default) effort cap", () => {
+    expect(usdToCredits(BUDGET_CAP_USD)).toBe(130);
   });
 
   it("does not overcharge by a credit on float dust from the inverse", () => {
@@ -66,13 +70,13 @@ describe("creditsToBudgetUsd", () => {
 });
 
 describe("pack affordability", () => {
-  it("a 100-credit Basic pack cannot cover a worst-case run, so runs must not gate on MAX_RUN_CREDITS", () => {
+  it("a 100-credit Starter pack cannot cover a worst-case run, so runs must not gate on MAX_RUN_CREDITS", () => {
     // Documents the reasoning in the MAX_RUN_CREDITS docstring: gating on it
-    // would make the Basic pack unusable.
+    // would make the Starter pack unusable.
     expect(MAX_RUN_CREDITS).toBeGreaterThan(100);
   });
 
-  it("the Basic pack clears the minimum-run floor", () => {
+  it("the Starter pack clears the minimum-run floor", () => {
     expect(100).toBeGreaterThanOrEqual(MIN_RUN_CREDITS);
   });
 });
@@ -131,6 +135,6 @@ describe("constants", () => {
     expect(USD_PER_CREDIT).toBe(0.01);
     expect(CREDIT_MARKUP).toBe(1.3);
     expect(MIN_RUN_CREDITS).toBe(50);
-    expect(MAX_RUN_CREDITS).toBe(Math.ceil((BUDGET_CAP_USD * CREDIT_MARKUP) / USD_PER_CREDIT));
+    expect(MAX_RUN_CREDITS).toBe(Math.ceil((MAX_EFFORT_CAP_USD * CREDIT_MARKUP) / USD_PER_CREDIT));
   });
 });

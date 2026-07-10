@@ -53,16 +53,12 @@ export const verifications = pgTable("verifications", {
 
 /** PRD §9 data model. */
 
-export const userTiers = ["free", "pro"] as const;
-
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   name: text("name").notNull().default(""),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
-  /** Bumped to "pro" when a Pro credit pack is purchased. Gates interviewer research + export. */
-  tier: text("tier", { enum: userTiers }).notNull().default("free"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

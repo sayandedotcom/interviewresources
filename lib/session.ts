@@ -9,14 +9,9 @@ export interface SessionUser {
   email: string;
   name: string;
   image: string | null;
-  tier: "free" | "pro";
 }
 
-/**
- * Resolves the signed-in user for a route handler, or null. `tier` is read
- * straight from the users table rather than the session payload — better-auth
- * only serialises the fields it manages, and tier is ours.
- */
+/** Resolves the signed-in user for a route handler, or null. */
 export async function getSessionUser(headers: Headers): Promise<SessionUser | null> {
   if (!auth) return null;
 
@@ -29,7 +24,6 @@ export async function getSessionUser(headers: Headers): Promise<SessionUser | nu
       email: users.email,
       name: users.name,
       image: users.image,
-      tier: users.tier,
     })
     .from(users)
     .where(eq(users.id, session.user.id))
