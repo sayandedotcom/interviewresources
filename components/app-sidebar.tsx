@@ -209,7 +209,8 @@ export function AppSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Refer a friend and earn credits"
-                render={<Link href="/refer" />}>
+                render={<Link href="/referrals" />}
+                isActive={pathname === "/referrals"}>
                 <Gift className="size-4" />
                 <span className="font-display font-medium">Refer & Earn</span>
               </SidebarMenuButton>

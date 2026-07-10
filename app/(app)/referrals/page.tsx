@@ -32,9 +32,12 @@ export default async function ReferralsPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-16">
-      <div className="mb-10">
-        <h1 className="font-display text-4xl font-semibold tracking-tight">Refer a friend</h1>
-        <p className="font-display text-muted-foreground mt-4 text-sm">
+      <div className="mb-10 text-center">
+        <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
+          Rewards
+        </p>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">Refer a friend</h1>
+        <p className="font-display text-muted-foreground mt-3 text-sm">
           Invite people to Scouting Report and earn credits when they become customers.
         </p>
       </div>

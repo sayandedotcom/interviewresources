@@ -363,7 +363,7 @@ export function ResearchExperience({
                             </TooltipTrigger>
                             <TooltipContent>
                               <span className="font-display">
-                                Languages, frameworks, and tools you&apos;d use — helps find
+                                Languages, frameworks, and tools the company uses — helps find
                                 relevant domain questions
                               </span>
                             </TooltipContent>

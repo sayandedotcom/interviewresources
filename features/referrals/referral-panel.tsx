@@ -45,17 +45,22 @@ export function ReferralPanel({
   return (
     <div className="space-y-8">
       <div className="flex gap-2">
-        <Input readOnly value={link} onFocus={(e) => e.currentTarget.select()} className="flex-1" />
-        <Button type="button" onClick={copy} variant="outline" className="shrink-0">
+        <Input
+          readOnly
+          value={link}
+          onFocus={(e) => e.currentTarget.select()}
+          className="font-display flex-1"
+        />
+        <Button type="button" onClick={copy} variant="outline" className="font-display shrink-0">
           {copied ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
-          <span className="font-display ml-1">{copied ? "Copied" : "Copy"}</span>
+          <span className="ml-1">{copied ? "Copied" : "Copy"}</span>
         </Button>
       </div>
 
       <p className="font-display text-muted-foreground text-sm">
         Share your link. When someone signs up through it and makes their first purchase, they get{" "}
-        <span className="text-foreground font-medium">{refereeBonus} bonus credits</span> and you
-        earn <span className="text-foreground font-medium">{referrerReward} credits</span>.
+        <span className="text-tertiary font-medium">{refereeBonus} bonus credits</span> and you earn{" "}
+        <span className="text-tertiary font-medium">{referrerReward} credits</span>.
       </p>
 
       <div className="space-y-2">
@@ -63,11 +68,11 @@ export function ReferralPanel({
           <span className="font-medium">
             {convertedCount} of {cap} rewards earned
           </span>
-          <span className="text-muted-foreground">{creditsEarned} credits</span>
+          <span className="text-tertiary">{creditsEarned} credits</span>
         </div>
         <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
           <div
-            className="bg-primary h-full rounded-full transition-all"
+            className="bg-tertiary h-full rounded-full transition-all"
             style={{ width: `${pct}%` }}
           />
         </div>
