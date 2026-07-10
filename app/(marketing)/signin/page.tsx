@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { siteConfig } from "@/site";
-import { signInWithGoogle } from "@/lib/auth-client";
 
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
@@ -12,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+import { signInWithGoogle } from "@/lib/auth-client";
 
 function GoogleIcon() {
   return (
@@ -62,14 +63,20 @@ export default function SignInPage() {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">or continue with email</span>
+                <span className="bg-card text-muted-foreground px-2">or continue with email</span>
               </div>
             </div>
 
             <div className="grid gap-4 opacity-50">
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="you@example.com" disabled aria-disabled="true" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  disabled
+                  aria-disabled="true"
+                />
               </div>
 
               <div className="grid gap-2">
@@ -82,13 +89,11 @@ export default function SignInPage() {
               </Button>
             </div>
 
-            <p className="text-center text-xs text-muted-foreground">
-              Email sign-in coming soon
-            </p>
+            <p className="text-muted-foreground text-center text-xs">Email sign-in coming soon</p>
 
-            <p className="text-center text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-center text-xs">
               Don&apos;t have an account?{" "}
-              <Link href="/signup" className="underline underline-offset-4 hover:text-foreground">
+              <Link href="/signup" className="hover:text-foreground underline underline-offset-4">
                 Sign up
               </Link>{" "}
               (Google only for now)

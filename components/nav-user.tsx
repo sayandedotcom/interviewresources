@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import Link from "next/link";
 
-import { ChevronsUpDownIcon, CreditCardIcon, LogOutIcon } from "lucide-react";
+import { ChevronsUpDownIcon, CreditCardIcon, GiftIcon, LogOutIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -72,7 +72,7 @@ export function NavUser({ initialUser }: { initialUser: SessionUser | null }) {
         <SidebarMenuItem>
           <Link
             href="/signin"
-            className="inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-[min(12px,var(--radius-md))] bg-primary px-2.5 text-[0.8rem] font-medium text-primary-foreground hover:bg-primary/80">
+            className="bg-primary font-display text-primary-foreground hover:bg-primary/80 inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-[min(12px,var(--radius-md))] px-2.5 text-[0.8rem] font-medium">
             Sign in
           </Link>
         </SidebarMenuItem>
@@ -130,6 +130,10 @@ export function NavUser({ initialUser }: { initialUser: SessionUser | null }) {
                 <span className="font-display">
                   {balance == null ? "Credits · buy more" : `${balance} credits · buy more`}
                 </span>
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/referrals" />}>
+                <GiftIcon />
+                <span className="font-display">Refer a friend</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

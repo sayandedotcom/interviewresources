@@ -6,7 +6,15 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { siteConfig } from "@/site";
-import { Loader2Icon, MoreHorizontalIcon, PlusIcon, Share2Icon, Trash2Icon } from "lucide-react";
+import {
+  Gift,
+  Loader2Icon,
+  MessageSquareIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+  Share2Icon,
+  Trash2Icon,
+} from "lucide-react";
 
 import { LogoMark } from "@/components/logo";
 import { NavUser } from "@/components/nav-user";
@@ -196,6 +204,22 @@ export function AppSidebar({
                 <PlusIcon />
                 <span className="font-display font-medium">New session</span>
                 <NavPendingHint />
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Refer a friend and earn credits"
+                render={<Link href="/refer" />}>
+                <Gift className="size-4" />
+                <span className="font-display font-medium">Refer & Earn</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Share your thoughts or report an issue"
+                render={<Link href="/feedback" />}>
+                <MessageSquareIcon className="size-4" />
+                <span className="font-display font-medium">Feedback</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

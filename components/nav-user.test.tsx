@@ -79,7 +79,7 @@ describe("first paint", () => {
     useSessionMock.mockReturnValue({ data: null, isPending: true });
     renderNav(null);
 
-    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /sign in/i })).toBeInTheDocument();
     expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
   });
 
@@ -104,7 +104,7 @@ describe("useSession overrides the server", () => {
     renderNav(ada);
 
     expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /sign in/i })).toBeInTheDocument();
   });
 
   it("prefers the client's user once it has one", () => {

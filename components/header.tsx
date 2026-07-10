@@ -84,7 +84,7 @@ export function Header() {
           {!isPending && !session && (
             <Link
               href="/signin"
-              className="inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-[min(12px,var(--radius-md))] bg-primary px-2.5 text-[0.8rem] font-medium text-primary-foreground hover:bg-primary/80">
+              className="bg-primary font-display text-primary-foreground hover:bg-primary/80 inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-[min(12px,var(--radius-md))] px-2.5 text-[0.8rem] font-medium">
               Sign in
             </Link>
           )}
