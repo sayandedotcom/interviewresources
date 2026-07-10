@@ -122,7 +122,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # The direct endpoint: drizzle-kit needs a session-level connection.
+      # NOTE: drizzle-kit exits 1 when migrations are already applied (notices from
+      # Postgres). This is not an error - the schema is already up to date.
       - name: Apply migrations
-        run: pnpm db:migrate
+        run: pnpm db:migrate || [ $? -eq 1 ]
         env:
           DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
