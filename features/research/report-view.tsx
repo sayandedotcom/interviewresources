@@ -2,17 +2,39 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { Check, ClipboardCopy, Download, Loader2, Plus } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ClipboardCopy,
+  Coins,
+  Download,
+  FileJson,
+  FileText,
+  Loader2,
+  Plus,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-import { CONFIDENCE_META, categoryCode, categoryLabel } from "@/lib/research/display";
+import {
+  CONFIDENCE_META,
+  categoryCode,
+  categoryLabel,
+  groupByCategory,
+} from "@/lib/research/display";
+import { downloadBlob, reportSlug } from "@/lib/research/download";
 import { buildAnswerPrompt } from "@/lib/research/prompt";
-import { INTERVIEW_CATEGORIES, type InterviewCategory, type Report } from "@/lib/research/types";
+import type { Report } from "@/lib/research/types";
 
 import { RoundPicker } from "@/features/research/round-picker";
 import { explainError, streamSse } from "@/features/research/stream";
@@ -29,7 +51,6 @@ export function ReportView({
   report,
   costUsd,
   creditsCharged,
-  canExport,
   company,
   onReset,
   researchId,
@@ -37,7 +58,6 @@ export function ReportView({
   report: Report;
   costUsd: number | null;
   creditsCharged: number | null;
-  canExport: boolean;
   company: string;
   onReset?: () => void;
   /** Enables the extend controls. Absent for a report not yet persisted. */
@@ -64,7 +84,35 @@ export function ReportView({
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // The PDF renderer is code-split, so a slow network can leave a visible gap
+  // between the click and the file appearing. Disable the trigger meanwhile.
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
   useEffect(() => () => void (copyTimer.current && clearTimeout(copyTimer.current)), []);
+
+  function downloadJson() {
+    const blob = new Blob([JSON.stringify(current, null, 2)], { type: "application/json" });
+    downloadBlob(blob, `scouting-report-${reportSlug(company)}.json`);
+  }
+
+  async function downloadPdf() {
+    if (pdfBusy) return;
+    setPdfBusy(true);
+    setDownloadError(null);
+    try {
+      // jsPDF is ~150 KB; only a user who asks for a PDF pays to load it.
+      const { buildReportPdf } = await import("@/lib/research/pdf");
+      downloadBlob(
+        await buildReportPdf(current, company),
+        `scouting-report-${reportSlug(company)}.pdf`
+      );
+    } catch {
+      setDownloadError("Could not build the PDF. Try again.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   async function copyAsPrompt() {
     if (copyTimer.current) clearTimeout(copyTimer.current);
@@ -113,20 +161,9 @@ export function ReportView({
     }
   }
 
-  // Predefined categories in taxonomy order, then custom rounds as first seen. The model
-  // can also return a round the user never asked for (surfaced by loop-format discovery).
-  const present = current.questions.map((q) => q.category);
-  const order = [
-    ...INTERVIEW_CATEGORIES.filter((cat) => present.includes(cat)),
-    ...present.filter(
-      (cat, i) =>
-        !INTERVIEW_CATEGORIES.includes(cat as InterviewCategory) && present.indexOf(cat) === i
-    ),
-  ];
-  const grouped = order.map((cat) => ({
-    cat,
-    questions: current.questions.filter((q) => q.category === cat),
-  }));
+  const grouped = groupByCategory(current.questions);
+  // The rounds already covered, which "Scout more rounds" must not offer again.
+  const order = grouped.map((g) => g.cat);
 
   // Reports generated before importantLinks existed are stored without the field.
   const importantLinks = current.importantLinks ?? [];
@@ -137,11 +174,22 @@ export function ReportView({
         <SectionLabel>Scouting report</SectionLabel>
         <div className="flex items-center gap-4">
           {creditsCharged != null && (
-            <span
-              className="font-display text-muted-foreground font-mono text-[11px]"
-              title={costUsd != null ? `Metered cost $${costUsd.toFixed(4)}` : undefined}>
-              {creditsCharged} credits
-            </span>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span
+                    data-testid="credits-badge"
+                    className="bg-secondary inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-xs tracking-widest">
+                    <Coins className="text-tertiary size-4" />
+                    {creditsCharged.toLocaleString()}
+                  </span>
+                }
+              />
+              <TooltipContent>
+                {creditsCharged.toLocaleString()} credits
+                {costUsd != null && ` · $${costUsd.toFixed(4)} metered`}
+              </TooltipContent>
+            </Tooltip>
           )}
           <Tooltip>
             <TooltipTrigger
@@ -173,12 +221,29 @@ export function ReportView({
             </TooltipContent>
           </Tooltip>
 
-          {canExport && (
-            <Button variant="outline" size="sm" onClick={() => downloadReport(current, company)}>
-              <Download className="mr-1 h-4 w-4" />
-              <span className="font-display">Export</span>
-            </Button>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button type="button" variant="outline" size="sm" aria-label="Download" />}>
+              {pdfBusy ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-1 h-4 w-4" />
+              )}
+              <span className="font-display">Download</span>
+              <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem disabled={pdfBusy} onClick={downloadPdf}>
+                <FileText className="mr-1" />
+                <span className="font-display">PDF</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={downloadJson}>
+                <FileJson className="mr-1" />
+                <span className="font-display">JSON</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {onReset && (
             <Button variant="outline" size="sm" onClick={onReset}>
               <span className="font-display">New report</span>
@@ -186,6 +251,9 @@ export function ReportView({
           )}
         </div>
       </div>
+      {downloadError && (
+        <p className="text-destructive pb-2 text-right font-mono text-[11px]">{downloadError}</p>
+      )}
       <Separator />
 
       <section className="mt-5">
@@ -248,18 +316,18 @@ export function ReportView({
                         render={
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="default"
                             size="sm"
                             aria-label={`Add more ${categoryLabel(cat)} questions`}
-                            className="text-tertiary hover:bg-tertiary/10 hover:text-tertiary h-7 shrink-0 px-2"
+                            className="bg-tertiary hover:bg-tertiary/90 h-7 shrink-0 px-2 text-black"
                             disabled={busy !== null}
                             onClick={() => extend([cat], cat)}
                           />
                         }>
                         {busy === cat ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-black" />
                         ) : (
-                          <Plus className="h-3.5 w-3.5" />
+                          <Plus className="h-3.5 w-3.5 text-black" />
                         )}
                         <span className="font-display ml-1 text-xs">More</span>
                       </TooltipTrigger>
@@ -375,7 +443,8 @@ export function ReportView({
       {researchId && (
         <section className="mt-8">
           <Separator className="mb-5" />
-          <Card>
+          <h2 className="font-display text-lg font-semibold tracking-tight">Keep on Generating</h2>
+          <Card className="mt-4">
             <CardContent>
               <SectionLabel>Scout more rounds</SectionLabel>
               <p className="text-muted-foreground mt-1 text-xs">
@@ -421,27 +490,6 @@ export function ReportView({
       )}
     </div>
   );
-}
-
-/** Pro-only export. Client-side download, no round trip. */
-function downloadReport(report: Report, company: string) {
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const slug =
-    company
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      // Strip the edge hyphens punctuation leaves behind, or "Acme Corp!" would
-      // download as `scouting-report-acme-corp-.json` and "!!!" as `--.json`.
-      .replace(/^-+|-+$/g, "") || "report";
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `scouting-report-${slug}.json`;
-  a.click();
-
-  URL.revokeObjectURL(url);
 }
 
 function hostOf(url: string): string {

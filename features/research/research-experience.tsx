@@ -6,7 +6,6 @@ import Link from "next/link";
 
 import { Plus, X } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
+import { EFFORT_LEVELS, EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
 import type { PipelineProgressEvent, Report } from "@/lib/research/types";
 
 import { ReportView, SectionLabel } from "@/features/research/report-view";
@@ -28,10 +28,11 @@ interface ProgressLine extends PipelineProgressEvent {
 
 interface Me {
   signedIn: boolean;
-  user: { name: string; email: string; image: string | null; tier: "free" | "pro" } | null;
+  user: { name: string; email: string; image: string | null } | null;
   balance: number;
   maxRunCredits: number;
   minRunCredits: number;
+  effortCredits?: Record<Effort, number>;
 }
 
 export function ResearchExperience({
@@ -48,6 +49,7 @@ export function ResearchExperience({
   const [interviewers, setInterviewers] = useState([{ name: "", url: "" }]);
   const [role, setRole] = useState("");
   const [selected, setSelected] = useState<string[]>(["dsa", "system_design"]);
+  const [effort, setEffort] = useState<Effort>("medium");
   const [progress, setProgress] = useState<ProgressLine[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [researchId, setResearchId] = useState<string | null>(null);
@@ -73,8 +75,9 @@ export function ResearchExperience({
     };
   }, [session]);
 
-  const isPro = me?.user?.tier === "pro";
   const maxRunCredits = me?.maxRunCredits ?? 130;
+  /** Credit ceiling for the effort currently picked; the server is the source of truth. */
+  const effortCeiling = me?.effortCredits?.[effort] ?? maxRunCredits;
   const minRunCredits = me?.minRunCredits ?? 50;
   const balance = me?.balance ?? 0;
   const signedIn = Boolean(session);
@@ -130,14 +133,12 @@ export function ResearchExperience({
           jobDescription: jobDescription.trim() || undefined,
           yearsExperience: yearsExperience.trim() || undefined,
           techStack: techStack.trim() || undefined,
-          // Interviewer research is Pro-only; the server rejects it otherwise.
-          interviewers: isPro
-            ? interviewers
-                .filter((i) => i.name.trim())
-                .map((i) => ({ name: i.name.trim(), url: i.url.trim() || undefined }))
-            : [],
+          interviewers: interviewers
+            .filter((i) => i.name.trim())
+            .map((i) => ({ name: i.name.trim(), url: i.url.trim() || undefined })),
           interviewTypes: selected,
           roleContext: role.trim() || undefined,
+          effort,
         }),
       });
 
@@ -252,26 +253,9 @@ export function ResearchExperience({
               </div>
 
               <div className="mt-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
-                    Interviewers
-                  </Label>
-                  {!isPro && (
-                    <Badge variant="outline" className="font-mono text-[10px] tracking-widest">
-                      Pro
-                    </Badge>
-                  )}
-                </div>
-
-                {!isPro && (
-                  <p className="text-muted-foreground text-xs">
-                    Interviewer research is a Pro feature.{" "}
-                    <Link href="/pricing" className="text-tertiary hover:underline">
-                      Upgrade to unlock
-                    </Link>
-                    .
-                  </p>
-                )}
+                <Label className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
+                  Interviewers <span className="opacity-60">· optional</span>
+                </Label>
 
                 {interviewers.map((int, index) => (
                   <div key={index} className="flex items-center gap-2">
@@ -280,31 +264,24 @@ export function ResearchExperience({
                       onChange={(e) => updateInterviewer(index, "name", e.target.value)}
                       placeholder="Name (used only as a public-search seed)"
                       className="flex-1"
-                      disabled={!isPro}
                     />
                     <Input
                       value={int.url}
                       onChange={(e) => updateInterviewer(index, "url", e.target.value)}
                       placeholder="LinkedIn or blog URL (optional)"
                       className="flex-1"
-                      disabled={!isPro}
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       onClick={() => removeInterviewer(index)}
-                      disabled={!isPro || interviewers.length === 1}>
+                      disabled={interviewers.length === 1}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addInterviewer}
-                  disabled={!isPro}>
+                <Button type="button" variant="outline" size="sm" onClick={addInterviewer}>
                   <Plus className="mr-1 h-4 w-4" />
                   Add interviewer
                 </Button>
@@ -329,6 +306,44 @@ export function ResearchExperience({
             </CardContent>
           </Card>
 
+          <Card>
+            <CardContent>
+              <SectionLabel>Effort</SectionLabel>
+              <p className="text-muted-foreground mt-1 text-xs">
+                How wide to search. Higher effort finds more questions and costs more credits.
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                {EFFORT_LEVELS.map((level) => {
+                  const preset = EFFORT_PRESETS[level];
+                  const on = effort === level;
+                  return (
+                    <Button
+                      type="button"
+                      key={level}
+                      variant={on ? "default" : "outline"}
+                      onClick={() => setEffort(level)}
+                      aria-pressed={on}
+                      className="h-auto flex-col items-start gap-1 px-3 py-2.5 text-left whitespace-normal">
+                      <span className="flex w-full items-baseline justify-between gap-2">
+                        <span className="font-display text-sm font-medium">{preset.label}</span>
+                        {me?.effortCredits && (
+                          <span
+                            className={`font-mono text-[10px] ${on ? "opacity-70" : "text-tertiary"}`}>
+                            ≤{me.effortCredits[level]}
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={`font-display text-[11px] leading-snug ${on ? "opacity-70" : "text-muted-foreground"}`}>
+                        {preset.blurb}
+                      </span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex items-center justify-between pt-2">
             <div className="max-w-xs space-y-1">
               <p className="text-muted-foreground font-mono text-[11px] leading-relaxed">
@@ -337,8 +352,9 @@ export function ResearchExperience({
               </p>
               {signedIn && (
                 <p className="text-muted-foreground font-mono text-[11px] leading-relaxed">
-                  Typically ~46 credits. This run is capped at {Math.min(balance, maxRunCredits)}.
-                  Balance: {balance}.
+                  {EFFORT_PRESETS[effort].label} effort: capped at{" "}
+                  {Math.min(balance, effortCeiling)} credits. You are charged only what the run
+                  actually spends. Balance: {balance}.
                 </p>
               )}
             </div>
@@ -390,7 +406,6 @@ export function ResearchExperience({
           report={report}
           costUsd={costUsd}
           creditsCharged={creditsCharged}
-          canExport={isPro}
           company={company}
           onReset={reset}
           researchId={researchId ?? undefined}

@@ -37,7 +37,7 @@ function report(overrides: Partial<Report> = {}): Report {
   };
 }
 
-const base = { costUsd: 0.35, creditsCharged: 46, canExport: false, company: "Stripe" };
+const base = { costUsd: 0.35, creditsCharged: 46, company: "Stripe" };
 
 describe("report body", () => {
   it("renders the company snapshot and the loop structure", () => {
@@ -258,50 +258,75 @@ describe("worth reading", () => {
 });
 
 describe("cost and export", () => {
-  it("shows the credits charged, with the metered dollar cost as a tooltip", () => {
+  /** The badge shows the bare number; "credits" only appears in its tooltip. */
+  const creditsBadge = () => screen.queryByTestId("credits-badge");
+
+  it("shows the credits charged as a badge", () => {
     render(<ReportView {...base} report={report()} />);
 
-    expect(screen.getByText("46 credits")).toHaveAttribute("title", "Metered cost $0.3500");
+    expect(creditsBadge()).toHaveTextContent("46");
   });
 
-  it("hides the cost line for a report whose charge was never recorded", () => {
+  it("reveals the metered dollar cost when the badge is hovered", async () => {
+    render(<ReportView {...base} report={report()} />);
+
+    await userEvent.hover(creditsBadge()!);
+
+    expect(await screen.findByText(/46 credits · \$0\.3500 metered/)).toBeInTheDocument();
+  });
+
+  it("hides the cost badge for a report whose charge was never recorded", () => {
     render(<ReportView {...base} creditsCharged={null} report={report()} />);
 
-    expect(screen.queryByText(/credits$/)).not.toBeInTheDocument();
+    expect(creditsBadge()).not.toBeInTheDocument();
   });
 
-  it("omits the tooltip when the dollar cost is unknown", () => {
+  it("names only the credits when the dollar cost is unknown", async () => {
     render(<ReportView {...base} costUsd={null} report={report()} />);
 
-    expect(screen.getByText("46 credits")).not.toHaveAttribute("title");
+    await userEvent.hover(creditsBadge()!);
+
+    expect(await screen.findByText("46 credits")).toBeInTheDocument();
+    expect(screen.queryByText(/metered/)).not.toBeInTheDocument();
   });
 
   it("shows a zero charge rather than hiding it", () => {
     render(<ReportView {...base} creditsCharged={0} report={report()} />);
 
-    expect(screen.getByText("0 credits")).toBeInTheDocument();
+    expect(creditsBadge()).toHaveTextContent("0");
   });
 
-  it("hides the export button from a free user", () => {
-    render(<ReportView {...base} report={report()} />);
+  it("groups digits so a large charge stays readable", () => {
+    render(<ReportView {...base} creditsCharged={1234} report={report()} />);
 
-    expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
+    expect(creditsBadge()).toHaveTextContent("1,234");
   });
 
-  it("shows the export button to a Pro user", () => {
-    render(<ReportView {...base} canExport report={report()} />);
-
-    expect(screen.getByRole("button", { name: /export/i })).toBeInTheDocument();
-  });
-
-  it("downloads a slugged json file when a Pro user exports", async () => {
-    const createObjectURL = vi.fn(() => "blob:report");
+  /** Stubs the object-URL plumbing and returns the spy on the download anchor. */
+  function stubDownload() {
+    const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:report");
     const revokeObjectURL = vi.fn();
     vi.stubGlobal("URL", Object.assign(URL, { createObjectURL, revokeObjectURL }));
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    return { createObjectURL, revokeObjectURL, click };
+  }
 
-    render(<ReportView {...base} canExport company="Acme Corp!" report={report()} />);
-    await userEvent.click(screen.getByRole("button", { name: /export/i }));
+  const openMenu = () => userEvent.click(screen.getByRole("button", { name: /download/i }));
+
+  it("offers both the pdf and the json to every user", async () => {
+    render(<ReportView {...base} report={report()} />);
+    await openMenu();
+
+    expect(await screen.findByRole("menuitem", { name: /pdf/i })).toBeInTheDocument();
+    expect(await screen.findByRole("menuitem", { name: /json/i })).toBeInTheDocument();
+  });
+
+  it("downloads a slugged json file when the user picks JSON", async () => {
+    const { createObjectURL, revokeObjectURL, click } = stubDownload();
+
+    render(<ReportView {...base} company="Acme Corp!" report={report()} />);
+    await openMenu();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /json/i }));
 
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();
@@ -312,17 +337,32 @@ describe("cost and export", () => {
   });
 
   it("falls back to a generic filename when the company name has no usable characters", async () => {
-    vi.stubGlobal(
-      "URL",
-      Object.assign(URL, { createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() })
-    );
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const { click } = stubDownload();
 
-    render(<ReportView {...base} canExport company="!!!" report={report()} />);
-    await userEvent.click(screen.getByRole("button", { name: /export/i }));
+    render(<ReportView {...base} company="!!!" report={report()} />);
+    await openMenu();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /json/i }));
 
     const anchor = click.mock.instances[0] as unknown as HTMLAnchorElement;
     expect(anchor.download).toBe("scouting-report-report.json");
+  });
+
+  it("downloads a slugged pdf when the user picks PDF", async () => {
+    const { createObjectURL, click } = stubDownload();
+
+    render(<ReportView {...base} company="Acme Corp!" report={report()} />);
+    await openMenu();
+    await userEvent.click(await screen.findByRole("menuitem", { name: /pdf/i }));
+
+    // The renderer arrives through a dynamic import, so the anchor is a tick late.
+    await vi.waitFor(() => expect(click).toHaveBeenCalledOnce());
+
+    const blob = createObjectURL.mock.calls[0][0];
+    expect(blob.type).toBe("application/pdf");
+    expect(blob.size).toBeGreaterThan(0);
+
+    const anchor = click.mock.instances[0] as unknown as HTMLAnchorElement;
+    expect(anchor.download).toBe("scouting-report-acme-corp.pdf");
   });
 });
 
@@ -518,10 +558,9 @@ describe("copy as prompt", () => {
     expect(await screen.findByText("Copy failed")).toBeInTheDocument();
   });
 
-  it("offers the button even to a free user who cannot export", () => {
-    render(<ReportView {...base} canExport={false} report={report()} />);
+  it("offers the button whenever a report is on screen", () => {
+    render(<ReportView {...base} report={report()} />);
 
     expect(screen.getByRole("button", { name: /copy as prompt/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
   });
 });

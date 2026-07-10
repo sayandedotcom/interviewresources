@@ -29,6 +29,20 @@ describe("researchInputSchema", () => {
     expect(researchInputSchema.parse(validInput).excludeQuestions).toEqual([]);
   });
 
+  it("defaults effort to medium, preserving the pre-effort behaviour", () => {
+    expect(researchInputSchema.parse(validInput).effort).toBe("medium");
+  });
+
+  it("accepts each effort level", () => {
+    for (const effort of ["low", "medium", "high"] as const) {
+      expect(researchInputSchema.parse({ ...validInput, effort }).effort).toBe(effort);
+    }
+  });
+
+  it("rejects an effort level the presets have no entry for", () => {
+    expect(() => researchInputSchema.parse({ ...validInput, effort: "extreme" })).toThrow();
+  });
+
   it("carries excludeQuestions through for an extension run", () => {
     const parsed = researchInputSchema.parse({ ...validInput, excludeQuestions: ["LRU cache"] });
     expect(parsed.excludeQuestions).toEqual(["LRU cache"]);
@@ -83,7 +97,7 @@ describe("researchInputSchema", () => {
     expect(parsed.interviewers[0]).toEqual({ name: "Ada" });
   });
 
-  it("keeps interviewers populated so the route's Pro gate has something to reject", () => {
+  it("keeps interviewers populated so the pipeline has someone to research", () => {
     const parsed = researchInputSchema.parse({
       ...validInput,
       interviewers: [{ name: "Ada" }, { name: "Grace" }],
@@ -118,13 +132,22 @@ describe("researchPlanSchema", () => {
     expect(() => researchPlanSchema.parse(plan)).toThrow();
   });
 
-  it("caps the plan at ten queries so one run cannot fan out unbounded", () => {
+  it("caps the plan at twelve queries so one run cannot fan out unbounded", () => {
     const plan = {
       resolvedCompanyDomain: "stripe.com",
       companySummaryQuery: "what does stripe do",
-      queries: Array.from({ length: 11 }, () => query),
+      queries: Array.from({ length: 13 }, () => query),
     };
     expect(() => researchPlanSchema.parse(plan)).toThrow();
+  });
+
+  it("accepts the twelve queries a high-effort run may plan", () => {
+    const plan = {
+      resolvedCompanyDomain: "stripe.com",
+      companySummaryQuery: "what does stripe do",
+      queries: Array.from({ length: 12 }, () => query),
+    };
+    expect(() => researchPlanSchema.parse(plan)).not.toThrow();
   });
 
   it("rejects a search depth Tavily does not price", () => {
