@@ -183,6 +183,11 @@ describe("input validation", () => {
   it("rejects malformed json", async () => {
     expect((await POST(post("{ nope"), ctx)).status).toBe(400);
   });
+
+  it("rejects an effort level outside the known set", async () => {
+    const res = await POST(post({ interviewTypes: ["dsa"], effort: "extreme" }), ctx);
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("the credit pre-flight check", () => {
@@ -225,6 +230,17 @@ describe("the credit pre-flight check", () => {
 
     expect(pipelineMock.mock.calls[0][2]).toBe(0.5);
   });
+
+  it("scales the extend cap with the chosen effort — half the full-run cap", async () => {
+    balanceMock.mockResolvedValue(100_000);
+
+    await readSse(await POST(post({ interviewTypes: ["dsa"], effort: "high" }), ctx));
+    expect(pipelineMock.mock.calls[0][2]).toBe(1.0);
+
+    pipelineMock.mockClear();
+    await readSse(await POST(post({ interviewTypes: ["dsa"], effort: "low" }), ctx));
+    expect(pipelineMock.mock.calls[0][2]).toBe(0.25);
+  });
 });
 
 describe("the extension run", () => {
@@ -236,6 +252,15 @@ describe("the extension run", () => {
     expect(input.interviewTypes).toEqual(["behavioral"]);
     expect(input.companyName).toBe("Stripe");
     expect(input.roleContext).toBe("Senior BE");
+  });
+
+  it("forwards the chosen effort to the pipeline, defaulting to medium", async () => {
+    await readSse(await POST(post({ interviewTypes: ["dsa"], effort: "high" }), ctx));
+    expect(pipelineMock.mock.calls[0][0].effort).toBe("high");
+
+    pipelineMock.mockClear();
+    await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
+    expect(pipelineMock.mock.calls[0][0].effort).toBe("medium");
   });
 
   it("appends the new questions and keeps the original prose", async () => {

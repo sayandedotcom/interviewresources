@@ -26,10 +26,15 @@ export const MIN_RUN_CREDITS = 50;
 /**
  * Extensions ("more questions", "scout another round") reuse the same pipeline
  * but produce a fraction of a full report, so they get a smaller floor and a
- * tighter dollar cap than a fresh run.
+ * tighter dollar cap than a fresh run: half the same effort's full-run cap.
+ * Medium works out to $0.5, the flat value extensions used before they were
+ * effort-aware.
  */
 export const MIN_EXTEND_CREDITS = 25;
-export const EXTEND_CAP_USD = 0.5;
+
+export function extendCapUsd(effort: Effort): number {
+  return EFFORT_PRESETS[effort].capUsd / 2;
+}
 
 /**
  * A typical run lands near $0.35 → ~46 credits. Rounded to 6dp before ceil:
@@ -56,6 +61,14 @@ export function effortCredits(): Record<Effort, number> {
   return Object.fromEntries(
     EFFORT_LEVELS.map((e) => [e, usdToCredits(EFFORT_PRESETS[e].capUsd)])
   ) as Record<Effort, number>;
+}
+
+/** Credit ceiling per effort for an extension — mirror of effortCredits(). */
+export function extendCredits(): Record<Effort, number> {
+  return Object.fromEntries(EFFORT_LEVELS.map((e) => [e, usdToCredits(extendCapUsd(e))])) as Record<
+    Effort,
+    number
+  >;
 }
 
 /** Balance is derived, never stored: the ledger is the source of truth. */

@@ -474,7 +474,7 @@ describe("extend controls", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/research/r-1/extend");
-    expect(JSON.parse(init.body)).toEqual({ interviewTypes: ["dsa"] });
+    expect(JSON.parse(init.body)).toEqual({ interviewTypes: ["dsa"], effort: "medium" });
 
     // The merged report replaces what was rendered.
     expect(await screen.findByText("Two sum")).toBeInTheDocument();
@@ -526,9 +526,47 @@ describe("extend controls", () => {
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       interviewTypes: ["behavioral"],
+      effort: "medium",
     });
     expect(await screen.findByText("Conflict story")).toBeInTheDocument();
     vi.unstubAllGlobals();
+  });
+
+  it("sends the effort picked in the footer, for the rounds form and the More buttons", async () => {
+    const merged = report({ questions: [question(), question({ question: "Two sum" })] });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, body: sseBody(merged) } as unknown as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+    const footer = screen.getByText("Scout more rounds").parentElement!;
+    await userEvent.click(within(footer).getByRole("button", { name: /High/ }));
+
+    // A "More" click uses the same shared effort state as the footer form.
+    await userEvent.click(
+      screen.getByRole("button", { name: /add more algorithmic coding questions/i })
+    );
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      interviewTypes: ["dsa"],
+      effort: "high",
+    });
+    vi.unstubAllGlobals();
+  });
+
+  it("prices each extension effort when the ceilings are supplied", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report()}
+        researchId="r-1"
+        extendCredits={{ low: 33, medium: 65, high: 130 }}
+      />
+    );
+    const footer = screen.getByText("Scout more rounds").parentElement!;
+
+    expect(within(footer).getByText("≤130")).toBeInTheDocument();
   });
 
   it("keeps the scout button disabled until a round is picked", () => {

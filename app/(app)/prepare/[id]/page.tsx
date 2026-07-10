@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { and, eq } from "drizzle-orm";
 
+import { extendCredits } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
 import type { Report } from "@/lib/research/types";
@@ -40,6 +41,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         creditsCharged={row.creditsCharged}
         company={row.companyName}
         researchId={id}
+        extendCredits={extendCredits()}
       />
     </div>
   );

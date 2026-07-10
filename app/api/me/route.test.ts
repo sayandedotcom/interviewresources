@@ -26,6 +26,8 @@ const req = () => new Request("https://test.local/api/me");
 
 /** Credit ceiling per effort: usdToCredits of each preset's capUsd. */
 const EXPECTED_EFFORT_CREDITS = { low: 65, medium: 130, high: 260 };
+/** Extension ceilings: half of each full-run cap, so half the credits. */
+const EXPECTED_EXTEND_CREDITS = { low: 33, medium: 65, high: 130 };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -44,6 +46,7 @@ describe("anonymous", () => {
       maxRunCredits: 260,
       minRunCredits: 50,
       effortCredits: EXPECTED_EFFORT_CREDITS,
+      extendCredits: EXPECTED_EXTEND_CREDITS,
     });
   });
 
@@ -71,6 +74,13 @@ describe("anonymous", () => {
     // High effort must never promise more than the advertised run ceiling.
     expect(body.effortCredits.high).toBe(body.maxRunCredits);
   });
+
+  it("prices every extension effort at half the matching full-run ceiling", async () => {
+    sessionMock.mockResolvedValue(null);
+
+    const body = await (await GET(req())).json();
+    expect(body.extendCredits).toEqual(EXPECTED_EXTEND_CREDITS);
+  });
 });
 
 describe("signed in", () => {
@@ -82,6 +92,7 @@ describe("signed in", () => {
       maxRunCredits: 260,
       minRunCredits: 50,
       effortCredits: EXPECTED_EFFORT_CREDITS,
+      extendCredits: EXPECTED_EXTEND_CREDITS,
     });
   });
 

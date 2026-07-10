@@ -26,6 +26,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
+import type { Effort } from "@/lib/research/budget";
 import {
   CONFIDENCE_META,
   categoryCode,
@@ -36,6 +37,7 @@ import { downloadBlob, reportSlug } from "@/lib/research/download";
 import { buildAnswerPrompt } from "@/lib/research/prompt";
 import type { ImportantLink, Report } from "@/lib/research/types";
 
+import { EffortPicker } from "@/features/research/effort-picker";
 import { RoundPicker } from "@/features/research/round-picker";
 import { explainError, streamSse } from "@/features/research/stream";
 
@@ -54,6 +56,7 @@ export function ReportView({
   company,
   onReset,
   researchId,
+  extendCredits,
 }: {
   report: Report;
   costUsd: number | null;
@@ -62,6 +65,8 @@ export function ReportView({
   onReset?: () => void;
   /** Enables the extend controls. Absent for a report not yet persisted. */
   researchId?: string;
+  /** Per-effort credit ceiling for an extension; omitted until the balance loads. */
+  extendCredits?: Record<Effort, number>;
 }) {
   // An extend run returns a merged report, so what's rendered has to be able to
   // outgrow the prop. Re-sync during render (not in an effect) whenever the
@@ -79,6 +84,8 @@ export function ReportView({
   const [progress, setProgress] = useState<string | null>(null);
   const [extendError, setExtendError] = useState<string | null>(null);
   const [extraRounds, setExtraRounds] = useState<string[]>([]);
+  // How hard every extension (both "More" and "Scout these rounds") searches.
+  const [effort, setEffort] = useState<Effort>("medium");
 
   // "copied" reverts on a timer; "failed" covers a denied clipboard permission.
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
@@ -135,7 +142,7 @@ export function ReportView({
       const res = await fetch(`/api/research/${researchId}/extend`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ interviewTypes }),
+        body: JSON.stringify({ interviewTypes, effort }),
       });
 
       if (!res.ok || !res.body) {
@@ -459,6 +466,21 @@ export function ReportView({
                     setExtraRounds((prev) => prev.filter((c) => c !== round))
                   }
                 />
+              </div>
+
+              <div className="mt-4">
+                <SectionLabel>Effort</SectionLabel>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  How hard to search these rounds. Also applies to the “More” buttons above.
+                </p>
+                <div className="mt-3">
+                  <EffortPicker
+                    value={effort}
+                    onChange={setEffort}
+                    credits={extendCredits}
+                    disabled={busy !== null}
+                  />
+                </div>
               </div>
 
               <div className="mt-4 flex items-center justify-between gap-3">

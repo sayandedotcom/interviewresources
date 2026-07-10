@@ -1,4 +1,10 @@
-import { MAX_RUN_CREDITS, MIN_RUN_CREDITS, effortCredits, getBalance } from "@/lib/credits";
+import {
+  MAX_RUN_CREDITS,
+  MIN_RUN_CREDITS,
+  effortCredits,
+  extendCredits,
+  getBalance,
+} from "@/lib/credits";
 import { getSessionUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -16,6 +22,7 @@ export async function GET(request: Request) {
       maxRunCredits: MAX_RUN_CREDITS,
       minRunCredits: MIN_RUN_CREDITS,
       effortCredits: effortCredits(),
+      extendCredits: extendCredits(),
     });
   }
 
@@ -28,5 +35,6 @@ export async function GET(request: Request) {
     maxRunCredits: MAX_RUN_CREDITS,
     minRunCredits: MIN_RUN_CREDITS,
     effortCredits: effortCredits(),
+    extendCredits: extendCredits(),
   });
 }

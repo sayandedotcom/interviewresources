@@ -22,10 +22,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
-import { EFFORT_LEVELS, EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
+import { EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
 import type { PipelineProgressEvent, Report } from "@/lib/research/types";
 import { zodFormResolver } from "@/lib/zod-form-resolver";
 
+import { EffortPicker } from "@/features/research/effort-picker";
 import {
   type ResearchFormValues,
   clearDraft,
@@ -52,6 +53,7 @@ export interface Me {
   maxRunCredits: number;
   minRunCredits: number;
   effortCredits?: Record<Effort, number>;
+  extendCredits?: Record<Effort, number>;
 }
 
 const DRAFT_SAVE_DEBOUNCE_MS = 300;
@@ -500,36 +502,14 @@ export function ResearchExperience({
                 <p className="text-muted-foreground font-display mt-1 text-xs">
                   How wide to search. Higher effort finds more questions and costs more credits.
                 </p>
-                <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                  {EFFORT_LEVELS.map((level) => {
-                    const preset = EFFORT_PRESETS[level];
-                    const on = effort === level;
-                    return (
-                      <Button
-                        type="button"
-                        key={level}
-                        variant={on ? "default" : "outline"}
-                        onClick={() =>
-                          setValue("effort", level, { shouldDirty: true, shouldValidate: true })
-                        }
-                        aria-pressed={on}
-                        className={`h-auto flex-col items-start gap-1 px-3 py-2.5 text-left whitespace-normal ${on ? "" : "hover:border-tertiary/40"}`}>
-                        <span className="flex w-full items-baseline justify-between gap-2">
-                          <span className="font-display text-sm font-medium">{preset.label}</span>
-                          {me?.effortCredits && (
-                            <span
-                              className={`font-mono text-[10px] ${on ? "opacity-70" : "text-tertiary"}`}>
-                              ≤{me.effortCredits[level]}
-                            </span>
-                          )}
-                        </span>
-                        <span
-                          className={`font-display text-[11px] leading-snug ${on ? "opacity-70" : "text-muted-foreground"}`}>
-                          {preset.blurb}
-                        </span>
-                      </Button>
-                    );
-                  })}
+                <div className="mt-4">
+                  <EffortPicker
+                    value={effort}
+                    onChange={(level) =>
+                      setValue("effort", level, { shouldDirty: true, shouldValidate: true })
+                    }
+                    credits={me?.effortCredits}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -613,6 +593,7 @@ export function ResearchExperience({
           company={formValues.company}
           onReset={resetRun}
           researchId={researchId ?? undefined}
+          extendCredits={me?.extendCredits}
         />
       )}
     </div>

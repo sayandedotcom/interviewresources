@@ -2,16 +2,16 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import {
-  EXTEND_CAP_USD,
   MIN_EXTEND_CREDITS,
   chargeCredits,
   creditsToBudgetUsd,
+  extendCapUsd,
   getBalance,
   usdToCredits,
 } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
-import { type CostEntry, MAX_EFFORT_LINKS } from "@/lib/research/budget";
+import { type CostEntry, EFFORT_LEVELS, MAX_EFFORT_LINKS } from "@/lib/research/budget";
 import { runResearchPipeline } from "@/lib/research/pipeline";
 import type { ImportantLink, Report } from "@/lib/research/types";
 import { getSessionUser } from "@/lib/session";
@@ -22,6 +22,7 @@ export const maxDuration = 300;
 
 const extendBodySchema = z.object({
   interviewTypes: z.array(z.string().min(1)).min(1).max(5),
+  effort: z.enum(EFFORT_LEVELS).default("medium"),
 });
 
 function sse(data: unknown): Uint8Array {
@@ -112,7 +113,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       { status: 402 }
     );
   }
-  const capUsd = Math.min(EXTEND_CAP_USD, creditsToBudgetUsd(balance));
+  const capUsd = Math.min(extendCapUsd(body.effort), creditsToBudgetUsd(balance));
 
   const existing = row.jsonPayload as Report;
 
@@ -127,10 +128,10 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
             interviewTypes: body.interviewTypes,
             fullLoop: false,
             excludeQuestions: existing.questions.map((q) => q.question),
-            // The original run's effort isn't persisted, and an extension is a
-            // slice of a report rather than a whole one, so it always runs at
-            // the balanced preset within EXTEND_CAP_USD.
-            effort: "medium",
+            // The caller picks how hard this extension searches, independent of
+            // the original run's effort (which isn't persisted). The budget is
+            // still capped at half this effort's full-run cap; see extendCapUsd.
+            effort: body.effort,
           },
           (event) => controller.enqueue(sse({ kind: "progress", ...event })),
           capUsd
