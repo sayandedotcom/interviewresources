@@ -69,6 +69,7 @@ export const users = pgTable("users", {
    */
   referralCode: text("referral_code").unique(),
   referredBy: uuid("referred_by").references((): AnyPgColumn => users.id),
+  marketingEmailOptIn: boolean("marketing_email_opt_in").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

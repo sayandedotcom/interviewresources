@@ -9,6 +9,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 
 import { organizationJsonLd, webApplicationJsonLd } from "@/lib/seo/json-ld";
 
+import { ToastProvider } from "@/hooks/use-toast";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -90,9 +92,11 @@ export default function RootLayout({
           }}
         />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          {children}
-          <Analytics />
-          <CookieConsentBanner />
+          <ToastProvider>
+            {children}
+            <Analytics />
+            <CookieConsentBanner />
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

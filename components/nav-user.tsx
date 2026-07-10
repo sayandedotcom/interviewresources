@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 
 import Link from "next/link";
 
-import { ChevronsUpDownIcon, CreditCardIcon, GiftIcon, LogOutIcon } from "lucide-react";
+import {
+  ChevronsUpDownIcon,
+  CreditCardIcon,
+  GiftIcon,
+  LogOutIcon,
+  SettingsIcon,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -134,6 +140,10 @@ export function NavUser({ initialUser }: { initialUser: SessionUser | null }) {
               <DropdownMenuItem render={<Link href="/referrals" />}>
                 <GiftIcon />
                 <span className="font-display">Refer a friend</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/settings" />}>
+                <SettingsIcon />
+                <span className="font-display">Settings</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
