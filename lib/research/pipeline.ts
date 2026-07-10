@@ -1,10 +1,13 @@
 import { z } from "zod";
 
-import { BudgetTracker } from "./budget";
+import { BudgetTracker, EFFORT_PRESETS, type EffortPreset } from "./budget";
 import { generateStructured } from "./gemini";
 import { tavilyExtract, tavilyExtractCredits, tavilySearch, tavilySearchCredits } from "./tavily";
 import {
   type CompressedNote,
+  MAX_EXCLUDE_QUESTION_LEN,
+  MAX_EXCLUDE_QUESTIONS,
+  MAX_INTERVIEWERS,
   type PipelineProgressEvent,
   type Report,
   type ResearchInput,
@@ -37,14 +40,18 @@ Job description: ${input.jobDescription ? input.jobDescription.slice(0, 2000) : 
 }
 
 /** Stage 1 — Plan. Cheap model, structured output. See PRD §6 stage 1 + §5.3 format discovery. */
-async function planStage(input: ResearchInput, budget: BudgetTracker): Promise<ResearchPlan> {
+async function planStage(
+  input: ResearchInput,
+  budget: BudgetTracker,
+  preset: EffortPreset
+): Promise<ResearchPlan> {
   return generateStructured({
     model: "gemini-3.1-flash-lite-preview",
     stage: "plan",
     schema: researchPlanSchema,
     budget,
     system: `You are a research planner for an interview-prep tool. Given a company and the
-rounds the candidate wants scouted, produce a compact search plan: 4-8 targeted web-search
+rounds the candidate wants scouted, produce a compact search plan: ${preset.queriesHint} targeted web-search
 queries. Always include exactly one query with category "loop_format" whose purpose is
 discovering the company's actual interview process/rounds (e.g. "<company> interview
 process rounds") — this may surface rounds the user did not request. If interviewers are
@@ -72,7 +79,8 @@ interface GatheredSource {
 async function gatherStage(
   plan: ResearchPlan,
   budget: BudgetTracker,
-  onProgress: OnProgress
+  onProgress: OnProgress,
+  preset: EffortPreset
 ): Promise<GatheredSource[]> {
   const sources: GatheredSource[] = [];
   const seenUrls = new Set<string>();
@@ -83,7 +91,7 @@ async function gatherStage(
     emit(onProgress, "gather", `Searching: ${q.query}`);
 
     const depth = budget.shouldDegrade() ? "basic" : q.depth;
-    const result = await tavilySearch(q.query, { depth, maxResults: 5 });
+    const result = await tavilySearch(q.query, { depth, maxResults: preset.searchResults });
     budget.recordTavilyCredits("gather", tavilySearchCredits(depth), q.query);
 
     for (const r of result.results) {
@@ -96,7 +104,11 @@ async function gatherStage(
 
     // Reserve the single most relevant result per query as an extract candidate.
     const top = result.results[0];
-    if (top && topUrlsForExtract.length < 5 && !topUrlsForExtract.includes(top.url)) {
+    if (
+      top &&
+      topUrlsForExtract.length < preset.extractLimit &&
+      !topUrlsForExtract.includes(top.url)
+    ) {
       topUrlsForExtract.push(top.url);
     }
   }
@@ -162,7 +174,8 @@ named, round structure, difficulty signals, dates. Drop filler. Do not editorial
 async function synthesizeStage(
   input: ResearchInput,
   notes: CompressedNote[],
-  budget: BudgetTracker
+  budget: BudgetTracker,
+  preset: EffortPreset
 ): Promise<Report> {
   const evidenceBlock = notes
     .map((n, i) => `[${i + 1}] (${n.category}) ${n.sourceTitle} — ${n.sourceUrl}\n${n.summary}`)
@@ -205,11 +218,12 @@ Rules:
 - Summarize each named interviewer in interviewerSummary using only public evidence in the
   notes; if several were named, cover each briefly.
 - Do not invent citations. Do not invent company facts not present in the notes.
-- Aim for 15-30 questions total across the requested rounds, prioritizing breadth
-  across rounds over depth in one.
+- Aim for ${preset.questionTarget} questions total across the requested rounds, prioritizing breadth
+  across rounds over depth in one. Do not pad: a question you cannot ground in the notes
+  does not belong in the report, even if that leaves you short of the range.
 - If an "Already predicted" list is present, treat those questions as taken: never repeat
   one, and never restate one in different words. Cover different ground instead.
-- In importantLinks, pick the 3-6 highest-value sources for the candidate to read before
+- In importantLinks, pick the ${preset.linksHint} highest-value sources for the candidate to read before
   the interview, using only URLs that appear in the evidence notes. Favour first-hand
   interview experiences, the company's engineering blog, and interviewer talks or writing
   over generic listicles. Write each "why" for the candidate, naming what they will get
@@ -238,7 +252,7 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
       seen.add(l.url);
       return true;
     })
-    .slice(0, 6);
+    .slice(0, preset.linksMax);
 
   return report;
 }
@@ -251,21 +265,25 @@ export interface PipelineResult {
 export async function runResearchPipeline(
   input: ResearchInput,
   onProgress: OnProgress = noopProgress,
-  capUsd?: number
+  capUsd?: number,
+  tracker?: BudgetTracker
 ): Promise<PipelineResult> {
-  const budget = new BudgetTracker(capUsd);
+  const budget = tracker ?? new BudgetTracker(capUsd);
+  // The caller's capUsd already accounts for the effort ceiling and the user's
+  // balance; the preset only shapes how much output that budget buys.
+  const preset = EFFORT_PRESETS[input.effort];
 
   emit(onProgress, "plan", "Building research plan...");
-  const plan = await planStage(input, budget);
+  const plan = await planStage(input, budget, preset);
 
   emit(onProgress, "gather", "Gathering evidence from the web...");
-  const sources = await gatherStage(plan, budget, onProgress);
+  const sources = await gatherStage(plan, budget, onProgress, preset);
 
   emit(onProgress, "compress", `Compressing ${sources.length} sources...`);
   const notes = await compressStage(sources, budget, onProgress);
 
   emit(onProgress, "synthesize", "Synthesizing final report...");
-  const report = await synthesizeStage(input, notes, budget);
+  const report = await synthesizeStage(input, notes, budget, preset);
 
   emit(onProgress, "done", `Done. Total cost: $${budget.totalUsd.toFixed(4)}`);
 

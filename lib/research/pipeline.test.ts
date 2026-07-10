@@ -24,6 +24,7 @@ const input: ResearchInput = {
   interviewTypes: ["dsa"],
   fullLoop: false,
   excludeQuestions: [],
+  effort: "medium",
 };
 
 function plan(overrides: Partial<ResearchPlan> = {}): ResearchPlan {
@@ -170,6 +171,24 @@ describe("stage orchestration", () => {
     expect(planPrompt.split("Job description: ")[1]).toHaveLength(2000);
   });
 
+  it("scales the planned query count with effort", async () => {
+    stubStages({});
+
+    await runResearchPipeline({ ...input, effort: "high" });
+    expect(genMock.mock.calls.find((c) => c[0].stage === "plan")![0].system).toContain(
+      "8-12 targeted web-search"
+    );
+
+    vi.clearAllMocks();
+    searchMock.mockResolvedValue({ query: "q", results: [searchResult("https://a.dev")] });
+    stubStages({});
+
+    await runResearchPipeline({ ...input, effort: "low" });
+    expect(genMock.mock.calls.find((c) => c[0].stage === "plan")![0].system).toContain(
+      "3-5 targeted web-search"
+    );
+  });
+
   it("propagates a plan-stage failure instead of synthesizing from nothing", async () => {
     genMock.mockRejectedValueOnce(new Error("gemini 503"));
 
@@ -275,6 +294,68 @@ describe("gather stage", () => {
     const compressed = genMock.mock.calls.filter((c) => c[0].stage === "compress");
     expect(compressed).toHaveLength(1);
     expect(compressed[0][0].prompt).toContain("EEE");
+  });
+
+  it("requests more results per search at high effort", async () => {
+    stubStages({});
+
+    await runResearchPipeline({ ...input, effort: "high" });
+
+    for (const call of searchMock.mock.calls) {
+      expect(call[1]!.maxResults).toBe(8);
+    }
+  });
+
+  it("requests fewer results per search at low effort", async () => {
+    stubStages({});
+
+    await runResearchPipeline({ ...input, effort: "low" });
+
+    for (const call of searchMock.mock.calls) {
+      expect(call[1]!.maxResults).toBe(4);
+    }
+  });
+
+  it("reads more full pages at high effort", async () => {
+    stubStages({
+      plan: plan({
+        queries: Array.from({ length: 10 }, (_, i) => ({
+          query: `q${i}`,
+          purpose: "p",
+          depth: "basic" as const,
+          category: "dsa",
+        })),
+      }),
+    });
+    searchMock.mockImplementation(async (q) => ({
+      query: q,
+      results: [searchResult(`https://${q}.dev`)],
+    }));
+
+    await runResearchPipeline({ ...input, effort: "high" });
+
+    expect(extractMock.mock.calls[0][0]).toHaveLength(8);
+  });
+
+  it("reads fewer full pages at low effort", async () => {
+    stubStages({
+      plan: plan({
+        queries: Array.from({ length: 10 }, (_, i) => ({
+          query: `q${i}`,
+          purpose: "p",
+          depth: "basic" as const,
+          category: "dsa",
+        })),
+      }),
+    });
+    searchMock.mockImplementation(async (q) => ({
+      query: q,
+      results: [searchResult(`https://${q}.dev`)],
+    }));
+
+    await runResearchPipeline({ ...input, effort: "low" });
+
+    expect(extractMock.mock.calls[0][0]).toHaveLength(3);
   });
 
   it("skips extraction entirely once the budget is exhausted", async () => {
@@ -386,6 +467,50 @@ describe("synthesize stage", () => {
 
     const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
     expect(prompt).not.toContain("Already predicted");
+  });
+
+  it("asks for more questions and more links at high effort", async () => {
+    stubStages({});
+
+    await runResearchPipeline({ ...input, effort: "high" });
+
+    const call = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0];
+    expect(call.system).toContain("Aim for 30-50 questions");
+    expect(call.system).toContain("pick the 6-10 highest-value sources");
+  });
+
+  it("asks for fewer questions and fewer links at low effort", async () => {
+    stubStages({});
+
+    await runResearchPipeline({ ...input, effort: "low" });
+
+    const call = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0];
+    expect(call.system).toContain("Aim for 8-15 questions");
+    expect(call.system).toContain("pick the 2-4 highest-value sources");
+  });
+
+  it("keeps up to ten links at high effort, where medium would clip to six", async () => {
+    const urls = Array.from({ length: 12 }, (_, i) => `https://s${i}.dev`);
+    searchMock.mockResolvedValue({ query: "q", results: urls.map((u) => searchResult(u)) });
+    stubStages({
+      report: report({ importantLinks: urls.map((u) => ({ title: u, url: u, why: "w" })) }),
+    });
+
+    const { report: out } = await runResearchPipeline({ ...input, effort: "high" });
+
+    expect(out.importantLinks).toHaveLength(10);
+  });
+
+  it("clips links to four at low effort", async () => {
+    const urls = Array.from({ length: 12 }, (_, i) => `https://s${i}.dev`);
+    searchMock.mockResolvedValue({ query: "q", results: urls.map((u) => searchResult(u)) });
+    stubStages({
+      report: report({ importantLinks: urls.map((u) => ({ title: u, url: u, why: "w" })) }),
+    });
+
+    const { report: out } = await runResearchPipeline({ ...input, effort: "low" });
+
+    expect(out.importantLinks).toHaveLength(4);
   });
 
   it("tells the model to degrade gracefully when no evidence survived", async () => {
