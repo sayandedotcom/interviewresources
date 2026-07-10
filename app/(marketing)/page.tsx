@@ -3,8 +3,10 @@ import Link from "next/link";
 import { siteConfig } from "@/site";
 import { ArrowRight, Check } from "lucide-react";
 
+import { CtaSection } from "@/components/cta-section";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { MAX_RUN_CREDITS } from "@/lib/credits";
 
@@ -26,7 +28,9 @@ export default function Home() {
               <span className="bg-tertiary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"></span>
               <span className="bg-tertiary relative inline-flex h-2 w-2 rounded-full"></span>
             </span>
-            <span className="text-muted-foreground font-mono text-[10px]">34,345 users</span>
+            <span className="text-muted-foreground font-mono text-[10px]">
+              {siteConfig.userCount} users
+            </span>
           </div>
         </div>
         <h1 className="font-display mt-3 max-w-2xl text-4xl leading-[1.05] font-semibold tracking-tight sm:text-5xl">
@@ -50,8 +54,11 @@ export default function Home() {
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="grid gap-8 sm:grid-cols-4">
           {siteConfig.stats.map((stat, i) => (
-            <div key={i} className="text-center">
-              <p className="font-display text-3xl font-bold tracking-tight">{stat.value}</p>
+            <div key={i} className="relative text-center">
+              {i === 0 && <div className="bg-tertiary/5 absolute inset-0 -m-4 rounded-2xl" />}
+              <p className="font-display text-tertiary text-3xl font-bold tracking-tight">
+                {stat.value}
+              </p>
               <p className="text-muted-foreground mt-1 font-mono text-[10px] tracking-widest uppercase">
                 {stat.label}
               </p>
@@ -62,7 +69,7 @@ export default function Home() {
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
-          <p className="text-muted-foreground mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
+          <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
             Trusted for
           </p>
           <h2 className="font-display text-xl font-semibold tracking-tight">
@@ -73,7 +80,7 @@ export default function Home() {
           {siteConfig.companies.map((company, i) => (
             <div
               key={i}
-              className="bg-card font-display text-muted-foreground hover:border-tertiary/30 hover:text-foreground cursor-default rounded-full border px-4 py-2 text-sm transition-colors">
+              className="bg-card border-border font-display text-muted-foreground hover:border-tertiary hover:text-tertiary cursor-default rounded-full border px-4 py-2 text-sm transition-colors">
               {company}
             </div>
           ))}
@@ -211,6 +218,9 @@ export default function Home() {
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
+          <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
+            Testimonials
+          </p>
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             What our users are saying
           </h2>
@@ -219,15 +229,23 @@ export default function Home() {
             about {siteConfig.name}.
           </p>
         </div>
-        <div className="grid gap-6 sm:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {siteConfig.testimonials.map((testimonial, i) => (
-            <div key={i} className="bg-card rounded-xl border p-5">
+            <div
+              key={i}
+              className="bg-card border-border hover:border-tertiary/30 rounded-xl border p-5 transition-colors">
               <p className="font-display text-foreground text-sm">
                 &ldquo;{testimonial.content}&rdquo;
               </p>
-              <div className="mt-4">
-                <p className="font-display text-sm font-semibold">{testimonial.name}</p>
-                <p className="text-muted-foreground font-mono text-[10px]">{testimonial.role}</p>
+              <div className="mt-4 flex items-center gap-3">
+                <Avatar size="sm">
+                  <AvatarImage src={testimonial.image ?? undefined} />
+                  <AvatarFallback>{testimonial.name[0]}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-display text-sm font-semibold">{testimonial.name}</p>
+                  <p className="text-muted-foreground font-mono text-[10px]">{testimonial.role}</p>
+                </div>
               </div>
             </div>
           ))}
@@ -236,13 +254,18 @@ export default function Home() {
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
+          <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
+            FAQ
+          </p>
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             Frequently Asked Questions
           </h2>
         </div>
         <div className="space-y-4">
           {siteConfig.faqs.map((faq, i) => (
-            <div key={i} className="rounded-lg border p-4">
+            <div
+              key={i}
+              className="bg-card border-border hover:border-tertiary/30 rounded-lg border p-4 transition-colors">
               <p className="font-display text-sm font-semibold">{faq.question}</p>
               <p className="font-display text-muted-foreground mt-2 text-sm">{faq.answer}</p>
             </div>
@@ -250,7 +273,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl border-t px-5 py-16">
+      <section id="pricing" className="mx-auto w-full max-w-3xl border-t px-5 py-16">
         <div className="text-center">
           <h1 className="font-display text-4xl font-semibold tracking-tight">
             Simple, transparent pricing
@@ -312,25 +335,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl border-t px-5 py-16">
-        <div className="text-center">
-          <h2 className="font-display text-2xl font-semibold tracking-tight">
-            {siteConfig.cta.title}
-          </h2>
-          <div className="mt-6 flex justify-center gap-4">
-            <Link
-              href="/how-it-works"
-              className="bg-tertiary font-display text-tertiary-foreground hover:bg-tertiary/90 inline-block cursor-pointer rounded-lg px-8 py-3 text-sm font-medium transition-colors">
-              {siteConfig.cta.subtitle}
-            </Link>
-            <Link
-              href="/pricing"
-              className="border-border font-display hover:bg-muted inline-block cursor-pointer rounded-lg border px-8 py-3 text-sm font-medium transition-colors">
-              View pricing
-            </Link>
-          </div>
-        </div>
-      </section>
+      <CtaSection />
 
       <Footer />
     </main>

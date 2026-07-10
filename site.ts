@@ -34,7 +34,8 @@ export const siteConfig = {
   testimonials: testimonialsConfig,
   faqs: faqsConfig,
   cta: ctaConfig,
-  stats: statsConfig,
+  stats: statsConfig.items,
+  userCount: statsConfig.userCount,
   companies: companiesConfig,
   comparison: comparisonConfig,
 };

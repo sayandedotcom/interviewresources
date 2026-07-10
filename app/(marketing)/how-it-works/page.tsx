@@ -195,7 +195,7 @@ export default function HowItWorksPage() {
               Try it free
             </Link>
             <Link
-              href="/pricing"
+              href="/#pricing"
               className="border-border font-display hover:bg-muted cursor-pointer rounded-lg border px-6 py-2.5 text-sm font-medium transition-colors">
               View pricing
             </Link>
