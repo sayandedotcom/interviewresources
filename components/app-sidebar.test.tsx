@@ -81,10 +81,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   pathname.mockReturnValue("/prepare");
   useSessionMock.mockReturnValue({ data: { user: ada }, isPending: false });
-  vi.stubGlobal(
-    "confirm",
-    vi.fn(() => true)
-  );
 });
 
 /**
@@ -248,7 +244,9 @@ describe("delete", () => {
     await openRowMenu(user, "Stripe");
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
 
-    expect(window.confirm).toHaveBeenCalledOnce();
+    expect(screen.getByRole("dialog", { name: /delete this session/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
     expect(fetchMock).toHaveBeenCalledWith("/api/research/r1", { method: "DELETE" });
     await waitFor(() => expect(screen.queryByText("Stripe")).not.toBeInTheDocument());
     expect(screen.getByText("Vercel")).toBeInTheDocument();
@@ -256,17 +254,16 @@ describe("delete", () => {
 
   it("deletes nothing when the confirmation is dismissed", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal(
-      "confirm",
-      vi.fn(() => false)
-    );
-    const fetchMock = stubFetch([session("r1", "Stripe")]);
+    stubFetch([session("r1", "Stripe")]);
     renderSidebar();
 
     await openRowMenu(user, "Stripe");
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
 
-    expect(fetchMock).not.toHaveBeenCalledWith("/api/research/r1", { method: "DELETE" });
+    expect(screen.getByRole("dialog", { name: /delete this session/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByText("Stripe")).toBeInTheDocument();
   });
 
@@ -279,6 +276,8 @@ describe("delete", () => {
     await openRowMenu(user, "Stripe");
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
 
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
     await waitFor(() => expect(push).toHaveBeenCalledWith("/prepare"));
   });
 
@@ -290,6 +289,8 @@ describe("delete", () => {
 
     await openRowMenu(user, "Stripe");
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     await waitFor(() => expect(screen.queryByText("Stripe")).not.toBeInTheDocument());
     expect(push).not.toHaveBeenCalled();
@@ -307,6 +308,8 @@ describe("delete", () => {
 
     await openRowMenu(user, "Stripe");
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(await screen.findByText("Could not delete that session")).toBeInTheDocument();
     expect(screen.getByText("Stripe")).toBeInTheDocument();
