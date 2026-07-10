@@ -24,12 +24,9 @@ vi.mock("@dodopayments/nextjs", () => ({
 vi.mock("@/lib/credits", () => ({ grantCredits: vi.fn() }));
 
 const selectWhere = vi.fn();
-const updateWhere = vi.fn();
-const updateSet = vi.fn(() => ({ where: updateWhere }));
 vi.mock("@/lib/db/index", () => ({
   db: {
     select: () => ({ from: () => ({ where: () => ({ limit: selectWhere }) }) }),
-    update: () => ({ set: updateSet }),
   },
 }));
 
@@ -51,7 +48,7 @@ function payment(overrides: Record<string, unknown> = {}) {
       payment_id: "pay_123",
       metadata: { userId: "user-1" },
       customer: { email: "ada@example.com" },
-      product_cart: [{ product_id: "prod_basic", quantity: 1 }],
+      product_cart: [{ product_id: "prod_starter", quantity: 1 }],
       ...overrides,
     },
   };
@@ -139,26 +136,36 @@ describe("attribution", () => {
 });
 
 describe("cart to credits", () => {
-  it("grants 100 credits for a Basic pack", async () => {
+  it("grants 100 credits for a Starter pack", async () => {
     await (await handler())(payment());
 
-    expect(grantMock.mock.calls[0][0]).toMatchObject({ credits: 100, reason: "purchase:basic" });
+    expect(grantMock.mock.calls[0][0]).toMatchObject({ credits: 100, reason: "purchase:starter" });
   });
 
-  it("grants 500 credits for a Pro pack", async () => {
-    await (await handler())(payment({ product_cart: [{ product_id: "prod_pro", quantity: 1 }] }));
+  it("grants 550 credits for a Bundle pack, bonus included", async () => {
+    await (await handler())(payment({ product_cart: [{ product_id: "prod_bundle", quantity: 1 }] }));
 
-    expect(grantMock.mock.calls[0][0]).toMatchObject({ credits: 500, reason: "purchase:pro" });
+    expect(grantMock.mock.calls[0][0]).toMatchObject({ credits: 550, reason: "purchase:bundle" });
+  });
+
+  it("grants 1200 credits for a Max pack, bonus included", async () => {
+    await (await handler())(payment({ product_cart: [{ product_id: "prod_max", quantity: 1 }] }));
+
+    expect(grantMock.mock.calls[0][0]).toMatchObject({ credits: 1200, reason: "purchase:max" });
   });
 
   it("multiplies by quantity", async () => {
-    await (await handler())(payment({ product_cart: [{ product_id: "prod_basic", quantity: 3 }] }));
+    await (await handler())(
+      payment({ product_cart: [{ product_id: "prod_starter", quantity: 3 }] })
+    );
 
     expect(grantMock.mock.calls[0][0].credits).toBe(300);
   });
 
   it("treats a zero quantity as one rather than granting nothing", async () => {
-    await (await handler())(payment({ product_cart: [{ product_id: "prod_basic", quantity: 0 }] }));
+    await (await handler())(
+      payment({ product_cart: [{ product_id: "prod_starter", quantity: 0 }] })
+    );
 
     expect(grantMock.mock.calls[0][0].credits).toBe(100);
   });
@@ -167,15 +174,15 @@ describe("cart to credits", () => {
     await (await handler())(
       payment({
         product_cart: [
-          { product_id: "prod_basic", quantity: 1 },
-          { product_id: "prod_pro", quantity: 2 },
+          { product_id: "prod_starter", quantity: 1 },
+          { product_id: "prod_bundle", quantity: 2 },
         ],
       })
     );
 
     expect(grantMock.mock.calls[0][0]).toMatchObject({
-      credits: 1100, // 100 + 500*2
-      reason: "purchase:basic+pro",
+      credits: 1200, // 100 + 550*2
+      reason: "purchase:starter+bundle",
     });
   });
 
@@ -184,7 +191,7 @@ describe("cart to credits", () => {
       payment({
         product_cart: [
           { product_id: "prod_unknown", quantity: 1 },
-          { product_id: "prod_basic", quantity: 1 },
+          { product_id: "prod_starter", quantity: 1 },
         ],
       })
     );
@@ -211,43 +218,18 @@ describe("cart to credits", () => {
   });
 });
 
-describe("idempotency and tier", () => {
+describe("idempotency", () => {
   it("keys the grant on the Dodo payment id", async () => {
     await (await handler())(payment({ payment_id: "pay_abc" }));
 
     expect(grantMock.mock.calls[0][0].paymentRef).toBe("pay_abc");
   });
 
-  it("upgrades the user to pro when a Pro pack is granted", async () => {
-    await (await handler())(payment({ product_cart: [{ product_id: "prod_pro", quantity: 1 }] }));
-
-    expect(updateSet).toHaveBeenCalledWith({ tier: "pro" });
-  });
-
-  it("does not upgrade tier for a Basic pack", async () => {
-    await (await handler())(payment());
-
-    expect(updateSet).not.toHaveBeenCalled();
-  });
-
-  it("does not re-upgrade tier when a redelivered webhook grants nothing", async () => {
+  it("grants once per payment id, leaving redelivery to the unique constraint", async () => {
     grantMock.mockResolvedValue(false);
 
-    await (await handler())(payment({ product_cart: [{ product_id: "prod_pro", quantity: 1 }] }));
+    await (await handler())(payment({ payment_id: "pay_abc" }));
 
-    expect(updateSet).not.toHaveBeenCalled();
-  });
-
-  it("upgrades tier when a mixed cart contains any Pro pack", async () => {
-    await (await handler())(
-      payment({
-        product_cart: [
-          { product_id: "prod_basic", quantity: 1 },
-          { product_id: "prod_pro", quantity: 1 },
-        ],
-      })
-    );
-
-    expect(updateSet).toHaveBeenCalledWith({ tier: "pro" });
+    expect(grantMock).toHaveBeenCalledTimes(1);
   });
 });

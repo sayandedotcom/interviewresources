@@ -22,7 +22,6 @@ const user: SessionUser = {
   email: "ada@example.com",
   name: "Ada Lovelace",
   image: null,
-  tier: "free",
 };
 
 function post(body: unknown) {
@@ -42,7 +41,7 @@ describe("auth", () => {
   it("rejects an anonymous caller", async () => {
     sessionMock.mockResolvedValue(null);
 
-    const res = await POST(post({ plan: "pro" }));
+    const res = await POST(post({ plan: "bundle" }));
 
     expect(res.status).toBe(401);
     await expect(res.json()).resolves.toEqual({ error: "unauthenticated" });
@@ -88,24 +87,24 @@ describe("plan validation", () => {
 
 describe("checkout session creation", () => {
   it("takes the userId from the session, never from the request body", async () => {
-    await POST(post({ plan: "pro", userId: "victim-account" }));
+    await POST(post({ plan: "bundle", userId: "victim-account" }));
 
     expect(createSession).toHaveBeenCalledOnce();
-    expect(createSession.mock.calls[0][0].metadata).toEqual({ userId: "user-1", plan: "pro" });
+    expect(createSession.mock.calls[0][0].metadata).toEqual({ userId: "user-1", plan: "bundle" });
   });
 
   it("sends the configured product id and the session's customer details", async () => {
-    await POST(post({ plan: "basic" }));
+    await POST(post({ plan: "starter" }));
 
     expect(createSession.mock.calls[0][0]).toMatchObject({
-      product_cart: [{ product_id: "prod_basic", quantity: 1 }],
+      product_cart: [{ product_id: "prod_starter", quantity: 1 }],
       customer: { email: "ada@example.com", name: "Ada Lovelace" },
       return_url: "https://test.local/payments/success",
     });
   });
 
   it("returns the checkout url on success", async () => {
-    const res = await POST(post({ plan: "pro" }));
+    const res = await POST(post({ plan: "bundle" }));
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ checkoutUrl: "https://checkout.dodo/abc" });
@@ -114,7 +113,7 @@ describe("checkout session creation", () => {
   it("returns 502 when Dodo answers without a checkout url", async () => {
     createSession.mockResolvedValue({ checkout_url: null });
 
-    const res = await POST(post({ plan: "pro" }));
+    const res = await POST(post({ plan: "bundle" }));
 
     expect(res.status).toBe(502);
     await expect(res.json()).resolves.toEqual({ error: "checkout_failed" });
@@ -125,11 +124,11 @@ describe("checkout session creation", () => {
 
     // The handler has no try/catch, so this rejects and Next renders a 500.
     // Pinned so a future refactor cannot silently downgrade it to a fake success.
-    await expect(POST(post({ plan: "pro" }))).rejects.toThrow("dodo 503");
+    await expect(POST(post({ plan: "bundle" }))).rejects.toThrow("dodo 503");
   });
 
   it("never quantifies more than one pack per checkout", async () => {
-    await POST(post({ plan: "pro", quantity: 99 }));
+    await POST(post({ plan: "bundle", quantity: 99 }));
 
     expect(createSession.mock.calls[0][0].product_cart[0].quantity).toBe(1);
   });

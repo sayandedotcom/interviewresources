@@ -8,6 +8,11 @@ import type { SessionUser } from "@/lib/session";
 vi.mock("@/lib/session");
 vi.mock("@/lib/research/pipeline");
 vi.mock("@/lib/db/index", () => ({ db: { insert: vi.fn(), update: vi.fn() } }));
+vi.mock("@/lib/research/sessions", async (importOriginal) => {
+  // Keep the real cap; stub the eviction, which talks to the DB.
+  const actual = await importOriginal<typeof import("@/lib/research/sessions")>();
+  return { ...actual, pruneToLimit: vi.fn() };
+});
 vi.mock("@/lib/credits", async (importOriginal) => {
   // Keep the real conversion maths; stub only the two functions that touch the DB.
   const actual = await importOriginal<typeof import("@/lib/credits")>();
@@ -17,6 +22,7 @@ vi.mock("@/lib/credits", async (importOriginal) => {
 const { getSessionUser } = await import("@/lib/session");
 const { runResearchPipeline } = await import("@/lib/research/pipeline");
 const { chargeCredits, getBalance } = await import("@/lib/credits");
+const { MAX_SESSIONS_PER_USER, pruneToLimit } = await import("@/lib/research/sessions");
 const { db } = await import("@/lib/db/index");
 const { POST } = await import("./route");
 
@@ -24,17 +30,16 @@ const sessionMock = vi.mocked(getSessionUser);
 const pipelineMock = vi.mocked(runResearchPipeline);
 const balanceMock = vi.mocked(getBalance);
 const chargeMock = vi.mocked(chargeCredits);
+const pruneMock = vi.mocked(pruneToLimit);
 const insertMock = vi.mocked(db.insert);
 const updateMock = vi.mocked(db.update);
 
-const freeUser: SessionUser = {
+const user: SessionUser = {
   id: "user-1",
   email: "ada@example.com",
   name: "Ada",
   image: null,
-  tier: "free",
 };
-const proUser: SessionUser = { ...freeUser, id: "user-2", tier: "pro" };
 
 const validBody = { companyName: "Stripe", interviewTypes: ["dsa"] };
 
@@ -108,11 +113,30 @@ function budgetCosting(usd: number): BudgetTracker {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  sessionMock.mockResolvedValue(freeUser);
+  sessionMock.mockResolvedValue(user);
   balanceMock.mockResolvedValue(500);
   chargeMock.mockResolvedValue({ balanceAfter: 454 });
   pipelineMock.mockResolvedValue({ report, budget: budgetCosting(0.35) });
+  pruneMock.mockResolvedValue(0);
   stubDb();
+});
+
+describe("session cap", () => {
+  it("evicts the oldest runs before inserting, leaving room for this one", async () => {
+    await readSse(await POST(post(validBody)));
+
+    expect(pruneMock).toHaveBeenCalledWith(user.id, MAX_SESSIONS_PER_USER - 1);
+    expect(pruneMock.mock.invocationCallOrder[0]).toBeLessThan(
+      insertMock.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("does not evict anything for a caller who cannot afford a run", async () => {
+    balanceMock.mockResolvedValue(0);
+
+    expect((await POST(post(validBody))).status).toBe(402);
+    expect(pruneMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("authentication", () => {
@@ -144,25 +168,8 @@ describe("input validation", () => {
   });
 });
 
-describe("the Pro gate on interviewer research", () => {
-  it("rejects a free user who supplies interviewers", async () => {
-    const res = await POST(post({ ...validBody, interviewers: [{ name: "Ada" }] }));
-
-    expect(res.status).toBe(403);
-    await expect(res.json()).resolves.toMatchObject({ error: "pro_required" });
-    expect(pipelineMock).not.toHaveBeenCalled();
-  });
-
-  it("does not silently strip interviewers — a tampered client must fail loudly", async () => {
-    const res = await POST(post({ ...validBody, interviewers: [{ name: "Ada" }] }));
-
-    expect(res.status).toBe(403);
-    expect(insertMock).not.toHaveBeenCalled();
-  });
-
-  it("allows a Pro user to supply interviewers", async () => {
-    sessionMock.mockResolvedValue(proUser);
-
+describe("interviewer research", () => {
+  it("accepts interviewers from any signed-in user", async () => {
     const res = await POST(post({ ...validBody, interviewers: [{ name: "Ada" }] }));
 
     expect(res.status).toBe(200);
@@ -170,7 +177,13 @@ describe("the Pro gate on interviewer research", () => {
     expect(pipelineMock).toHaveBeenCalledOnce();
   });
 
-  it("allows a free user who supplies no interviewers", async () => {
+  it("forwards the interviewers through to the pipeline", async () => {
+    await readSse(await POST(post({ ...validBody, interviewers: [{ name: "Ada" }] })));
+
+    expect(pipelineMock.mock.calls[0][0]).toMatchObject({ interviewers: [{ name: "Ada" }] });
+  });
+
+  it("runs fine with no interviewers at all", async () => {
     const res = await POST(post(validBody));
 
     expect(res.status).toBe(200);
@@ -221,12 +234,54 @@ describe("the credit pre-flight check", () => {
     expect(pipelineMock.mock.calls[0][2]).toBeCloseTo(0.3846, 4);
   });
 
-  it("clamps a large balance to the $1 hard cap", async () => {
+  it("clamps a large balance to the default effort's $1 cap", async () => {
     balanceMock.mockResolvedValue(100_000);
 
     await readSse(await POST(post(validBody)));
 
     expect(pipelineMock.mock.calls[0][2]).toBe(1.0);
+  });
+});
+
+describe("the effort level", () => {
+  it("defaults to medium when the client omits it", async () => {
+    await readSse(await POST(post(validBody)));
+
+    expect(pipelineMock.mock.calls[0][0].effort).toBe("medium");
+    expect(pipelineMock.mock.calls[0][2]).toBe(1.0);
+  });
+
+  it("raises the budget ceiling to $2 for a high-effort run", async () => {
+    balanceMock.mockResolvedValue(100_000);
+
+    await readSse(await POST(post({ ...validBody, effort: "high" })));
+
+    expect(pipelineMock.mock.calls[0][0].effort).toBe("high");
+    expect(pipelineMock.mock.calls[0][2]).toBe(2.0);
+  });
+
+  it("lowers the budget ceiling to $0.50 for a low-effort run", async () => {
+    balanceMock.mockResolvedValue(100_000);
+
+    await readSse(await POST(post({ ...validBody, effort: "low" })));
+
+    expect(pipelineMock.mock.calls[0][2]).toBe(0.5);
+  });
+
+  it("still lets a thin balance clamp a high-effort run below its ceiling", async () => {
+    balanceMock.mockResolvedValue(50);
+
+    await readSse(await POST(post({ ...validBody, effort: "high" })));
+
+    // creditsToBudgetUsd(50) = $0.3846, far under the $2 high ceiling.
+    expect(pipelineMock.mock.calls[0][2]).toBeCloseTo(0.3846, 4);
+  });
+
+  it("rejects an effort level the presets have no entry for", async () => {
+    const res = await POST(post({ ...validBody, effort: "extreme" }));
+
+    expect(res.status).toBe(400);
+    expect(pipelineMock).not.toHaveBeenCalled();
   });
 });
 
@@ -342,7 +397,20 @@ describe("failure handling", () => {
     const frames = await readSse(await POST(post(validBody)));
 
     expect(frames.at(-1)).toEqual({ kind: "error", message: "gemini 503" });
-    expect(updates.at(-1)).toEqual({ status: "failed" });
+    expect(updates.at(-1)).toEqual({ status: "failed", costCentsLlm: 0, costCentsSearch: 0 });
+  });
+
+  it("records whatever cost the tracker captured before the pipeline threw", async () => {
+    pipelineMock.mockImplementation(async (_input, _onProgress, _capUsd, tracker) => {
+      tracker?.recordLlmCall("plan", "gemini-3.1-pro-preview", 100_000, 0); // $0.20
+      tracker?.recordTavilyCredits("gather", 5, "searches"); // $0.04
+      throw new Error("gemini 503");
+    });
+
+    const { updates } = stubDb();
+    await readSse(await POST(post(validBody)));
+
+    expect(updates.at(-1)).toEqual({ status: "failed", costCentsLlm: 20, costCentsSearch: 4 });
   });
 
   it("does not charge the user for a failed run", async () => {
@@ -392,7 +460,7 @@ describe("failure handling", () => {
     const frames = await readSse(await POST(post(validBody)));
 
     expect(updates[0]).toMatchObject({ status: "done" });
-    expect(updates.at(-1)).toEqual({ status: "failed" });
+    expect(updates.at(-1)).toEqual({ status: "failed", costCentsLlm: 0, costCentsSearch: 0 });
     expect(frames.at(-1)).toMatchObject({ kind: "error" });
   });
 });

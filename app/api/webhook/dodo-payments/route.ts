@@ -67,16 +67,12 @@ function buildHandler(webhookKey: string) {
       const reasons = packs.map((e) => e.pack.slug).join("+");
 
       // The unique constraint on payment_ref makes a redelivered webhook a no-op.
-      const granted = await grantCredits({
+      await grantCredits({
         userId,
         credits,
         reason: `purchase:${reasons}`,
         paymentRef: data.payment_id,
       });
-
-      if (granted && packs.some((e) => e.pack.tier === "pro")) {
-        await db.update(users).set({ tier: "pro" }).where(eq(users.id, userId));
-      }
     },
   });
 }

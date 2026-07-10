@@ -20,10 +20,12 @@ const user: SessionUser = {
   email: "ada@example.com",
   name: "Ada",
   image: "https://img/a.png",
-  tier: "pro",
 };
 
 const req = () => new Request("https://test.local/api/me");
+
+/** Credit ceiling per effort: usdToCredits of each preset's capUsd. */
+const EXPECTED_EFFORT_CREDITS = { low: 65, medium: 130, high: 260 };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -39,8 +41,9 @@ describe("anonymous", () => {
       signedIn: false,
       user: null,
       balance: 0,
-      maxRunCredits: 130,
+      maxRunCredits: 260,
       minRunCredits: 50,
+      effortCredits: EXPECTED_EFFORT_CREDITS,
     });
   });
 
@@ -57,7 +60,16 @@ describe("anonymous", () => {
 
     const body = await (await GET(req())).json();
     expect(body.minRunCredits).toBe(50);
-    expect(body.maxRunCredits).toBe(130);
+    expect(body.maxRunCredits).toBe(260);
+  });
+
+  it("prices every effort level so the form can label its choices", async () => {
+    sessionMock.mockResolvedValue(null);
+
+    const body = await (await GET(req())).json();
+    expect(body.effortCredits).toEqual(EXPECTED_EFFORT_CREDITS);
+    // High effort must never promise more than the advertised run ceiling.
+    expect(body.effortCredits.high).toBe(body.maxRunCredits);
   });
 });
 
@@ -65,10 +77,11 @@ describe("signed in", () => {
   it("returns the profile and live balance", async () => {
     await expect((await GET(req())).json()).resolves.toEqual({
       signedIn: true,
-      user: { name: "Ada", email: "ada@example.com", image: "https://img/a.png", tier: "pro" },
+      user: { name: "Ada", email: "ada@example.com", image: "https://img/a.png" },
       balance: 454,
-      maxRunCredits: 130,
+      maxRunCredits: 260,
       minRunCredits: 50,
+      effortCredits: EXPECTED_EFFORT_CREDITS,
     });
   });
 

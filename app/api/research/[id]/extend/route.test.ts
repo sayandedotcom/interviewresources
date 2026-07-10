@@ -30,7 +30,6 @@ const user: SessionUser = {
   email: "ada@example.com",
   name: "Ada",
   image: null,
-  tier: "free",
 };
 
 const ctx = { params: Promise.resolve({ id: "research-1" }) };

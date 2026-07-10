@@ -11,7 +11,7 @@ import {
 } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
-import type { CostEntry } from "@/lib/research/budget";
+import { type CostEntry, MAX_EFFORT_LINKS } from "@/lib/research/budget";
 import { runResearchPipeline } from "@/lib/research/pipeline";
 import type { Report } from "@/lib/research/types";
 import { getSessionUser } from "@/lib/session";
@@ -48,7 +48,7 @@ function mergeReports(existing: Report, addition: Report): Report {
   return {
     ...existing,
     questions: [...existing.questions, ...addition.questions],
-    importantLinks: links.slice(0, 6),
+    importantLinks: links.slice(0, MAX_EFFORT_LINKS),
   };
 }
 
@@ -122,6 +122,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/research/[i
             interviewTypes: body.interviewTypes,
             fullLoop: false,
             excludeQuestions: existing.questions.map((q) => q.question),
+            // The original run's effort isn't persisted, and an extension is a
+            // slice of a report rather than a whole one, so it always runs at
+            // the balanced preset within EXTEND_CAP_USD.
+            effort: "medium",
           },
           (event) => controller.enqueue(sse({ kind: "progress", ...event })),
           capUsd

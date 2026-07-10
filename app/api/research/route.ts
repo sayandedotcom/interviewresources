@@ -9,8 +9,9 @@ import {
 } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
-import { BUDGET_CAP_USD, type CostEntry } from "@/lib/research/budget";
+import { BudgetTracker, type CostEntry, EFFORT_PRESETS } from "@/lib/research/budget";
 import { runResearchPipeline } from "@/lib/research/pipeline";
+import { MAX_SESSIONS_PER_USER, pruneToLimit } from "@/lib/research/sessions";
 import { researchInputSchema } from "@/lib/research/types";
 import { getSessionUser } from "@/lib/session";
 
@@ -48,20 +49,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // The UI hides these fields for free users, so a populated array here means a
-  // stale client or a tampered request. Reject rather than silently strip.
-  if (input.interviewers.length > 0 && user.tier !== "pro") {
-    return Response.json(
-      { error: "pro_required", detail: "Interviewer research is a Pro feature." },
-      { status: 403 }
-    );
-  }
-
   // Charge happens after the run, when the real cost is known. Rather than
-  // demanding the worst-case 130 credits up front — which a 100-credit Basic
-  // pack could never satisfy — we cap the pipeline's spend at what this balance
-  // can pay for. The run degrades and stops inside that budget, so the charge
-  // below can never exceed the balance.
+  // demanding the effort's worst-case credits up front — which a 100-credit
+  // Starter pack could never satisfy at high effort — we cap the pipeline's spend
+  // at the lesser of the effort ceiling and what this balance can pay for. The
+  // run degrades and stops inside that budget, so the charge below can never
+  // exceed the balance.
   const balance = await getBalance(user.id);
   if (balance < MIN_RUN_CREDITS) {
     return Response.json(
@@ -69,7 +62,10 @@ export async function POST(request: Request) {
       { status: 402 }
     );
   }
-  const capUsd = Math.min(BUDGET_CAP_USD, creditsToBudgetUsd(balance));
+  const capUsd = Math.min(EFFORT_PRESETS[input.effort].capUsd, creditsToBudgetUsd(balance));
+
+  // Make room before inserting, so the user never sees an eleventh session.
+  await pruneToLimit(user.id, MAX_SESSIONS_PER_USER - 1);
 
   const [research] = await db
     .insert(researches)
@@ -83,13 +79,16 @@ export async function POST(request: Request) {
     })
     .returning({ id: researches.id });
 
+  const tracker = new BudgetTracker(capUsd);
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
         const { report, budget } = await runResearchPipeline(
           input,
           (event) => controller.enqueue(sse({ kind: "progress", ...event })),
-          capUsd
+          capUsd,
+          tracker
         );
 
         const entries = budget.breakdown();
@@ -126,7 +125,17 @@ export async function POST(request: Request) {
         );
       } catch (err) {
         // A failed run costs us the API spend, but the user is not charged.
-        await db.update(researches).set({ status: "failed" }).where(eq(researches.id, research.id));
+        // Record whatever the tracker captured before the throw so the cost
+        // isn't invisible to admin reporting.
+        const entries = tracker.breakdown();
+        await db
+          .update(researches)
+          .set({
+            status: "failed",
+            costCentsLlm: costCents(entries, "llm"),
+            costCentsSearch: costCents(entries, "search"),
+          })
+          .where(eq(researches.id, research.id));
 
         controller.enqueue(
           sse({ kind: "error", message: err instanceof Error ? err.message : String(err) })
