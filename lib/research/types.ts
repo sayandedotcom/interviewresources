@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { EFFORT_LEVELS } from "./budget";
+
 /** Interview categories the pipeline knows how to research. See PRD §5.3. */
 export const INTERVIEW_CATEGORIES = [
   "dsa",
@@ -13,26 +15,64 @@ export const INTERVIEW_CATEGORIES = [
 
 export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
 
+/**
+ * Ceilings on caller-supplied free text. Every field below is interpolated into
+ * the synthesize prompt, which is billed per input token on the priciest model,
+ * and the BudgetTracker cannot help: it prices a call only after that call has
+ * returned. So the bound has to live here, at the edge, not in the pipeline.
+ *
+ * They are set well above what the form can realistically produce — they exist
+ * to stop a crafted request, not to discipline a real one.
+ */
+export const MAX_COMPANY_NAME = 120;
+export const MAX_URL = 500;
+export const MAX_JOB_DESCRIPTION = 20_000;
+export const MAX_YEARS_EXPERIENCE = 50;
+export const MAX_TECH_STACK = 500;
+export const MAX_ROLE_CONTEXT = 500;
+export const MAX_INTERVIEWERS = 5;
+export const MAX_INTERVIEW_TYPES = 12;
+export const MAX_INTERVIEW_TYPE_LEN = 80;
+
+/**
+ * Extensions feed every question the report already holds back into synthesis as
+ * a do-not-repeat list, so this list grows with each extension. It is bounded
+ * here and re-bounded in the pipeline, which the extend route reaches directly
+ * without passing through this schema.
+ */
+export const MAX_EXCLUDE_QUESTIONS = 200;
+export const MAX_EXCLUDE_QUESTION_LEN = 500;
+
 export const interviewerSchema = z.object({
-  name: z.string().min(1),
-  url: z.string().url().optional(),
+  name: z.string().min(1).max(MAX_COMPANY_NAME),
+  url: z.string().url().max(MAX_URL).optional(),
 });
 
 export type Interviewer = z.infer<typeof interviewerSchema>;
 
 export const researchInputSchema = z.object({
-  companyName: z.string().min(1),
-  companyUrl: z.string().url().optional(),
-  jobDescription: z.string().optional(),
-  yearsExperience: z.string().optional(),
-  techStack: z.string().optional(),
-  interviewers: z.array(interviewerSchema).default([]),
+  companyName: z.string().min(1).max(MAX_COMPANY_NAME),
+  companyUrl: z.string().url().max(MAX_URL).optional(),
+  // Longer than describeInput will actually use; the slice there is what keeps a
+  // pasted novel out of the prompt, while this keeps it out of the process.
+  jobDescription: z.string().max(MAX_JOB_DESCRIPTION).optional(),
+  yearsExperience: z.string().max(MAX_YEARS_EXPERIENCE).optional(),
+  techStack: z.string().max(MAX_TECH_STACK).optional(),
+  interviewers: z.array(interviewerSchema).max(MAX_INTERVIEWERS).default([]),
   /** Predefined categories plus any custom round identifiers the user added. */
-  interviewTypes: z.array(z.string().min(1)).min(1),
-  roleContext: z.string().optional(),
+  interviewTypes: z
+    .array(z.string().min(1).max(MAX_INTERVIEW_TYPE_LEN))
+    .min(1)
+    .max(MAX_INTERVIEW_TYPES),
+  roleContext: z.string().max(MAX_ROLE_CONTEXT).optional(),
   fullLoop: z.boolean().default(false),
   /** Question text already predicted by an earlier pass, which synthesis must not repeat. */
-  excludeQuestions: z.array(z.string()).default([]),
+  excludeQuestions: z
+    .array(z.string().max(MAX_EXCLUDE_QUESTION_LEN))
+    .max(MAX_EXCLUDE_QUESTIONS)
+    .default([]),
+  /** How wide to search and how many questions to produce. See EFFORT_PRESETS. */
+  effort: z.enum(EFFORT_LEVELS).default("medium"),
 });
 
 export type ResearchInput = z.infer<typeof researchInputSchema>;
@@ -57,7 +97,8 @@ export const researchPlanSchema = z.object({
       })
     )
     .min(3)
-    .max(10),
+    // High effort plans up to 12 queries.
+    .max(12),
 });
 
 export type ResearchPlan = z.infer<typeof researchPlanSchema>;

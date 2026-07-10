@@ -1,4 +1,4 @@
-import type { InterviewCategory } from "./types";
+import { INTERVIEW_CATEGORIES, type InterviewCategory, type PredictedQuestion } from "./types";
 
 /** UI-facing labels and short codes for each interview category (PRD §5.3). */
 export const CATEGORY_META: Record<
@@ -44,3 +44,25 @@ export const CONFIDENCE_META: Record<
   medium: { label: "Medium", signal: "●●○" },
   low: { label: "Low", signal: "●○○" },
 };
+
+/**
+ * Questions bucketed by round: predefined categories in taxonomy order, then
+ * custom rounds in the order they first appear. The model can also return a
+ * round the user never asked for (surfaced by loop-format discovery), so this
+ * cannot assume the categories are known ones.
+ *
+ * The screen and the PDF share this so a report reads the same in both.
+ */
+export function groupByCategory(
+  questions: PredictedQuestion[]
+): { cat: string; questions: PredictedQuestion[] }[] {
+  const present = questions.map((q) => q.category);
+  const order = [
+    ...INTERVIEW_CATEGORIES.filter((cat) => present.includes(cat)),
+    ...present.filter(
+      (cat, i) =>
+        !INTERVIEW_CATEGORIES.includes(cat as InterviewCategory) && present.indexOf(cat) === i
+    ),
+  ];
+  return order.map((cat) => ({ cat, questions: questions.filter((q) => q.category === cat) }));
+}
