@@ -26,7 +26,7 @@ interface ProgressLine extends PipelineProgressEvent {
   id: number;
 }
 
-interface Me {
+export interface Me {
   signedIn: boolean;
   user: { name: string; email: string; image: string | null } | null;
   balance: number;
@@ -37,8 +37,11 @@ interface Me {
 
 export function ResearchExperience({
   onComplete,
+  initialMe,
 }: {
   onComplete?: (researchId: string) => void;
+  /** Resolved on the server where we can, so the submit button never renders the wrong CTA. */
+  initialMe?: Me;
 } = {}) {
   const [phase, setPhase] = useState<Phase>("form");
   const [company, setCompany] = useState("");
@@ -59,7 +62,7 @@ export function ResearchExperience({
   const progressId = useRef(0);
 
   const { data: session, isPending: sessionPending } = useSession();
-  const [me, setMe] = useState<Me | null>(null);
+  const [me, setMe] = useState<Me | null>(initialMe ?? null);
 
   // Advisory only — every gate below is also enforced server-side.
   useEffect(() => {
@@ -82,6 +85,8 @@ export function ResearchExperience({
   const balance = me?.balance ?? 0;
   const signedIn = Boolean(session);
   const canAfford = balance >= minRunCredits;
+  /** Until the balance lands, `balance` is 0 — which is not the same as "cannot afford". */
+  const balanceKnown = me !== null;
 
   function toggleCategory(cat: string) {
     setSelected((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
@@ -350,7 +355,7 @@ export function ResearchExperience({
                 Predictions are grounded in public evidence — not prophecy. Every question cites its
                 source.
               </p>
-              {signedIn && (
+              {signedIn && balanceKnown && (
                 <p className="text-muted-foreground font-mono text-[11px] leading-relaxed">
                   {EFFORT_PRESETS[effort].label} effort: capped at{" "}
                   {Math.min(balance, effortCeiling)} credits. You are charged only what the run
@@ -365,7 +370,19 @@ export function ResearchExperience({
               </Button>
             )}
 
-            {signedIn && !canAfford && (
+            {/*
+             * A balance we haven't read yet is not a balance of zero. Showing
+             * "Buy credits" here and swapping it out a second later reads as a
+             * paywall the user then has to un-see, so we hold the run button
+             * disabled until we actually know.
+             */}
+            {signedIn && !balanceKnown && (
+              <Button type="submit" size="lg" disabled>
+                Run reconnaissance →
+              </Button>
+            )}
+
+            {signedIn && balanceKnown && !canAfford && (
               <Link href="/payments">
                 <Button type="button" size="lg">
                   Buy credits →
@@ -373,7 +390,7 @@ export function ResearchExperience({
               </Link>
             )}
 
-            {signedIn && canAfford && (
+            {signedIn && balanceKnown && canAfford && (
               <Button type="submit" size="lg" disabled={!company.trim() || selected.length === 0}>
                 Run reconnaissance →
               </Button>
