@@ -13,6 +13,9 @@ RUN corepack enable pnpm
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# next.config.ts only emits .next/standalone (which the runner stage copies)
+# when this is set. Vercel builds without it.
+ENV BUILD_STANDALONE=1
 RUN pnpm build
 
 # Stage 3: Production runner
