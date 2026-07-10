@@ -1,5 +1,5 @@
 {
-  "id": "d6cbffc2-66ab-48eb-b198-2cae975c01d5",
+  "id": "925eb0e2-3c41-4091-949a-881608c1b4d2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -96,8 +96,12 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -137,9 +141,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "stripe_ref": {
-          "name": "stripe_ref",
+        "payment_ref": {
+          "name": "payment_ref",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "research_id": {
+          "name": "research_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
@@ -151,20 +161,61 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "credits_ledger_user_id_idx": {
+          "name": "credits_ledger_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "credits_ledger_user_id_users_id_fk": {
           "name": "credits_ledger_user_id_users_id_fk",
           "tableFrom": "credits_ledger",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "credits_ledger_research_id_researches_id_fk": {
+          "name": "credits_ledger_research_id_researches_id_fk",
+          "tableFrom": "credits_ledger",
+          "tableTo": "researches",
+          "columnsFrom": [
+            "research_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "credits_ledger_payment_ref_unique": {
+          "name": "credits_ledger_payment_ref_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "payment_ref"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -212,8 +263,12 @@
           "name": "question_feedback_report_id_reports_id_fk",
           "tableFrom": "question_feedback",
           "tableTo": "reports",
-          "columnsFrom": ["report_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "report_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -267,8 +322,12 @@
           "name": "reports_research_id_researches_id_fk",
           "tableFrom": "reports",
           "tableTo": "researches",
-          "columnsFrom": ["research_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "research_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -278,7 +337,9 @@
         "reports_share_token_unique": {
           "name": "reports_share_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["share_token"]
+          "columns": [
+            "share_token"
+          ]
         }
       },
       "policies": {},
@@ -351,15 +412,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "interviewer_name": {
-          "name": "interviewer_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "interviewer_url": {
-          "name": "interviewer_url",
-          "type": "text",
+        "interviewers": {
+          "name": "interviewers",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -396,6 +451,12 @@
           "notNull": true,
           "default": 0
         },
+        "credits_charged": {
+          "name": "credits_charged",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -410,8 +471,12 @@
           "name": "researches_user_id_users_id_fk",
           "tableFrom": "researches",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -428,9 +493,10 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "expires_at": {
           "name": "expires_at",
@@ -483,8 +549,12 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -494,7 +564,9 @@
         "sessions_token_unique": {
           "name": "sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": [
+            "token"
+          ]
         }
       },
       "policies": {},
@@ -522,10 +594,31 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
           "notNull": false
         },
         "created_at": {
           "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -539,15 +632,17 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": [
+            "email"
+          ]
         }
       },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.verification_tokens": {
-      "name": "verification_tokens",
+    "public.verifications": {
+      "name": "verifications",
       "schema": "",
       "columns": {
         "id": {
@@ -563,8 +658,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "token": {
-          "name": "token",
+        "value": {
+          "name": "value",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -581,18 +676,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "verification_tokens_token_unique": {
-          "name": "verification_tokens_token_unique",
-          "nullsNotDistinct": false,
-          "columns": ["token"]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
