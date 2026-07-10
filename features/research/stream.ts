@@ -40,6 +40,8 @@ export function explainError(
       return "Please sign in before running a report.";
     case "insufficient_credits":
       return `Not enough credits: this needs at least ${body.required}, and you have ${body.balance}. Buy more credits to continue.`;
+    case "run_in_flight":
+      return "You already have a report running. Wait for it to finish before starting another.";
     case "not_found":
       return "That report no longer exists.";
     case "not_extendable":
