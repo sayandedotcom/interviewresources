@@ -1,6 +1,5 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-
 import { desc, eq } from "drizzle-orm";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { creditsLedger, questionFeedback, reports, researches } from "@/lib/db/schema";
 
@@ -17,9 +16,13 @@ import { type TestDb, createTestDb, resetDb, seedUser } from "./harness";
 const dbPromise = createTestDb();
 vi.mock("@/lib/db/index", async () => ({ db: await dbPromise }));
 
-const { MAX_SESSIONS_PER_USER, deleteSession, pruneToLimit } = await import(
-  "@/lib/research/sessions"
-);
+const {
+  MAX_SESSIONS_PER_USER,
+  RUN_INFLIGHT_WINDOW_MS,
+  deleteSession,
+  hasRunInFlight,
+  pruneToLimit,
+} = await import("@/lib/research/sessions");
 const { getBalance } = await import("@/lib/credits");
 
 let db: TestDb;
@@ -33,14 +36,19 @@ afterEach(async () => {
 });
 
 /** Inserts a run whose `createdAt` is `ageMinutes` in the past. */
-async function seedRun(userId: string, companyName: string, ageMinutes: number): Promise<string> {
+async function seedRun(
+  userId: string,
+  companyName: string,
+  ageMinutes: number,
+  status: (typeof researches.status.enumValues)[number] = "done"
+): Promise<string> {
   const [row] = await db
     .insert(researches)
     .values({
       userId,
       companyName,
       interviewType: "dsa",
-      status: "done",
+      status,
       createdAt: new Date(Date.now() - ageMinutes * 60_000),
     })
     .returning({ id: researches.id });
@@ -161,9 +169,9 @@ describe("deleteSession", () => {
   it("returns false for a run that does not exist", async () => {
     const userId = await seedUser(db);
 
-    await expect(
-      deleteSession(userId, "00000000-0000-0000-0000-000000000000")
-    ).resolves.toBe(false);
+    await expect(deleteSession(userId, "00000000-0000-0000-0000-000000000000")).resolves.toBe(
+      false
+    );
   });
 
   it("keeps the charge on the ledger after the run is deleted", async () => {
@@ -175,5 +183,61 @@ describe("deleteSession", () => {
     await deleteSession(userId, researchId);
 
     await expect(getBalance(userId)).resolves.toBe(70);
+  });
+});
+
+/**
+ * The guard is a time-windowed query, and the window is the whole point: a stale
+ * `running` row must stop blocking once it outlives the route's `maxDuration`.
+ * That expiry is a Postgres timestamp comparison, so it only means something
+ * against a real database.
+ */
+describe("hasRunInFlight", () => {
+  const windowMinutes = RUN_INFLIGHT_WINDOW_MS / 60_000;
+
+  it("is false for a user with no runs at all", async () => {
+    const userId = await seedUser(db);
+
+    await expect(hasRunInFlight(userId)).resolves.toBe(false);
+  });
+
+  it("is true while a fresh run is still going", async () => {
+    const userId = await seedUser(db);
+    await seedRun(userId, "stripe", 0, "running");
+
+    await expect(hasRunInFlight(userId)).resolves.toBe(true);
+  });
+
+  it("ignores runs that already settled, however recent", async () => {
+    const userId = await seedUser(db);
+    await seedRun(userId, "stripe", 0, "done");
+    await seedRun(userId, "figma", 0, "failed");
+
+    await expect(hasRunInFlight(userId)).resolves.toBe(false);
+  });
+
+  it("stops blocking once a stuck run outlives the window", async () => {
+    const userId = await seedUser(db);
+    // A client that disconnects leaves `running` set forever; the window is the
+    // only thing that ever clears it.
+    await seedRun(userId, "stripe", windowMinutes + 1, "running");
+
+    await expect(hasRunInFlight(userId)).resolves.toBe(false);
+  });
+
+  it("still blocks a run sitting just inside the window", async () => {
+    const userId = await seedUser(db);
+    await seedRun(userId, "stripe", windowMinutes - 1, "running");
+
+    await expect(hasRunInFlight(userId)).resolves.toBe(true);
+  });
+
+  it("does not let one user's run block another's", async () => {
+    const busy = await seedUser(db);
+    const idle = await seedUser(db);
+    await seedRun(busy, "stripe", 0, "running");
+
+    await expect(hasRunInFlight(busy)).resolves.toBe(true);
+    await expect(hasRunInFlight(idle)).resolves.toBe(false);
   });
 });

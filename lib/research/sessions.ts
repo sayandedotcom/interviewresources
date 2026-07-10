@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray } from "drizzle-orm";
 
 import { db } from "@/lib/db/index";
 import { creditsLedger, questionFeedback, reports, researches } from "@/lib/db/schema";
@@ -9,6 +9,42 @@ import { creditsLedger, questionFeedback, reports, researches } from "@/lib/db/s
  * an archive.
  */
 export const MAX_SESSIONS_PER_USER = 10;
+
+/**
+ * How long a `running` row keeps blocking new runs. Matches the research route's
+ * `maxDuration`, which is the longest a run can legitimately still be alive.
+ *
+ * This is what makes the guard self-healing. A client that disconnects mid-run
+ * leaves its row stuck on `running` forever — the route's `catch` never fires,
+ * because nothing threw. Without a window that user would be locked out
+ * permanently; with one they wait out the ceiling.
+ */
+export const RUN_INFLIGHT_WINDOW_MS = 300_000;
+
+/**
+ * Whether this user already has a run going. The research route's balance check
+ * is read-then-spend with no lock, so N concurrent requests all see the same
+ * balance and each starts a pipeline against it: the row lock in `chargeCredits`
+ * serialises the charge, not the spend. Refusing a second concurrent run is what
+ * actually bounds a single account's Gemini and Tavily spend.
+ */
+export async function hasRunInFlight(userId: string): Promise<boolean> {
+  const since = new Date(Date.now() - RUN_INFLIGHT_WINDOW_MS);
+
+  const [row] = await db
+    .select({ id: researches.id })
+    .from(researches)
+    .where(
+      and(
+        eq(researches.userId, userId),
+        eq(researches.status, "running"),
+        gt(researches.createdAt, since)
+      )
+    )
+    .limit(1);
+
+  return row !== undefined;
+}
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
