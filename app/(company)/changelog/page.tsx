@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "Changelog",
-  description: "Scouting Report changelog - new features and improvements",
+  description: `${siteConfig.name} changelog - new features and improvements`,
 };
 
 const changelog = [
@@ -32,7 +34,7 @@ export default function ChangelogPage() {
     <div className="mx-auto max-w-3xl px-5 py-12">
       <h1 className="font-display text-3xl font-bold tracking-tight">Changelog</h1>
       <p className="text-muted-foreground mt-4">
-        Stay updated with the latest features and improvements to Scouting Report.
+        Stay updated with the latest features and improvements to {siteConfig.name}.
       </p>
 
       <div className="mt-8 space-y-8">

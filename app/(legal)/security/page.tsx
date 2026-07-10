@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "Security",
-  description: "Security policy for Scouting Report",
+  description: `Security policy for ${siteConfig.name}`,
 };
 
 export default function SecurityPage() {
@@ -18,7 +20,7 @@ export default function SecurityPage() {
         <section>
           <h2 className="font-display text-xl font-semibold">Data Encryption</h2>
           <p className="text-muted-foreground mt-2">
-            All data transmitted to and from Scouting Report is encrypted using TLS 1.3. At rest,
+            All data transmitted to and from {siteConfig.name} is encrypted using TLS 1.3. At rest,
             sensitive data is encrypted using AES-256 encryption.
           </p>
         </section>
@@ -59,8 +61,10 @@ export default function SecurityPage() {
           <h2 className="font-display text-xl font-semibold">Reporting Vulnerabilities</h2>
           <p className="text-muted-foreground mt-2">
             If you discover a security vulnerability, please report it responsibly to{" "}
-            <a href="mailto:security@scoutingreport.io" className="text-[#AEF05A] hover:underline">
-              security@scoutingreport.io
+            <a
+              href={`mailto:${siteConfig.emails.security}`}
+              className="text-[#AEF05A] hover:underline">
+              {siteConfig.emails.security}
             </a>
             . We appreciate responsible disclosure and will work with you to address any issues
             promptly.

@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "Contact Us",
-  description: "Contact Scouting Report",
+  description: `Contact ${siteConfig.name}`,
 };
 
 export default function ContactPage() {
@@ -17,13 +19,13 @@ export default function ContactPage() {
         <div className="rounded-lg border p-6">
           <h2 className="font-display text-lg font-semibold">General Inquiries</h2>
           <p className="text-muted-foreground mt-2">
-            For general questions about Scouting Report, partnership opportunities, or press
+            For general questions about {siteConfig.name}, partnership opportunities, or press
             inquiries.
           </p>
           <a
-            href="mailto:hello@scoutingreport.io"
+            href={`mailto:${siteConfig.emails.hello}`}
             className="mt-3 inline-block text-[#AEF05A] hover:underline">
-            hello@scoutingreport.io
+            {siteConfig.emails.hello}
           </a>
         </div>
 
@@ -33,9 +35,9 @@ export default function ContactPage() {
             Experiencing issues with the platform? Our technical support team is here to help.
           </p>
           <a
-            href="mailto:support@scoutingreport.io"
+            href={`mailto:${siteConfig.emails.support}`}
             className="mt-3 inline-block text-[#AEF05A] hover:underline">
-            support@scoutingreport.io
+            {siteConfig.emails.support}
           </a>
         </div>
 
@@ -45,9 +47,9 @@ export default function ContactPage() {
             Discovered a security vulnerability? Please report it responsibly.
           </p>
           <a
-            href="mailto:security@scoutingreport.io"
+            href={`mailto:${siteConfig.emails.security}`}
             className="mt-3 inline-block text-[#AEF05A] hover:underline">
-            security@scoutingreport.io
+            {siteConfig.emails.security}
           </a>
         </div>
 

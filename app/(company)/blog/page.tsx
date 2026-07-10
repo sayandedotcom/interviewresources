@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "Blog",
-  description: "Scouting Report Blog - Interview tips and insights",
+  description: `${siteConfig.name} Blog - Interview tips and insights`,
 };
 
 const posts = [

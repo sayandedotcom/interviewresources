@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "Help & Documentation",
-  description: "Get help with Scouting Report",
+  description: `Get help with ${siteConfig.name}`,
 };
 
 export default function HelpPage() {
@@ -10,7 +12,7 @@ export default function HelpPage() {
     <div className="mx-auto max-w-3xl px-5 py-12">
       <h1 className="font-display text-3xl font-bold tracking-tight">Help & Documentation</h1>
       <p className="text-muted-foreground mt-4">
-        Find answers to common questions and learn how to get the most out of Scouting Report.
+        Find answers to common questions and learn how to get the most out of {siteConfig.name}.
       </p>
 
       <div className="mt-8 space-y-8">
@@ -72,8 +74,10 @@ export default function HelpPage() {
           <h2 className="font-display text-xl font-semibold">Still Need Help?</h2>
           <p className="text-muted-foreground mt-2">
             Can not find what you are looking for? Reach out to our support team at{" "}
-            <a href="mailto:support@scoutingreport.io" className="text-[#AEF05A] hover:underline">
-              support@scoutingreport.io
+            <a
+              href={`mailto:${siteConfig.emails.support}`}
+              className="text-[#AEF05A] hover:underline">
+              {siteConfig.emails.support}
             </a>
             .
           </p>

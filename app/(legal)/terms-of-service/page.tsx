@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Terms of Service for Scouting Report",
+  description: `Terms of Service for ${siteConfig.name}`,
 };
 
 export default function TermsOfServicePage() {
@@ -15,15 +17,15 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="font-display text-xl font-semibold">1. Acceptance of Terms</h2>
           <p className="text-muted-foreground mt-2">
-            By accessing or using Scouting Report, you agree to be bound by these Terms of Service.
-            If you do not agree to these terms, please do not use our services.
+            By accessing or using {siteConfig.name}, you agree to be bound by these Terms of
+            Service. If you do not agree to these terms, please do not use our services.
           </p>
         </section>
 
         <section>
           <h2 className="font-display text-xl font-semibold">2. Description of Service</h2>
           <p className="text-muted-foreground mt-2">
-            Scouting Report provides AI-powered interview preparation and research services. Our
+            {siteConfig.name} provides AI-powered interview preparation and research services. Our
             platform analyzes job descriptions and generates potential interview questions and
             talking points based on publicly available information.
           </p>
@@ -50,16 +52,16 @@ export default function TermsOfServicePage() {
         <section>
           <h2 className="font-display text-xl font-semibold">5. Intellectual Property</h2>
           <p className="text-muted-foreground mt-2">
-            The service and its original content, features, and functionality are owned by Scouting
-            Report and are protected by international copyright, trademark, and other intellectual
-            property laws.
+            The service and its original content, features, and functionality are owned by{" "}
+            {siteConfig.name} and are protected by international copyright, trademark, and other
+            intellectual property laws.
           </p>
         </section>
 
         <section>
           <h2 className="font-display text-xl font-semibold">6. Limitation of Liability</h2>
           <p className="text-muted-foreground mt-2">
-            Scouting Report shall not be liable for any indirect, incidental, special,
+            {siteConfig.name} shall not be liable for any indirect, incidental, special,
             consequential, or punitive damages resulting from your use or inability to use the
             service.
           </p>
@@ -77,8 +79,10 @@ export default function TermsOfServicePage() {
           <h2 className="font-display text-xl font-semibold">8. Contact</h2>
           <p className="text-muted-foreground mt-2">
             If you have any questions about these Terms, please contact us at{" "}
-            <a href="mailto:legal@scoutingreport.io" className="text-[#AEF05A] hover:underline">
-              legal@scoutingreport.io
+            <a
+              href={`mailto:${siteConfig.emails.legal}`}
+              className="text-[#AEF05A] hover:underline">
+              {siteConfig.emails.legal}
             </a>
             .
           </p>

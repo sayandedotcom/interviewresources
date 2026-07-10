@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { siteConfig } from "@/site";
 import { FileText, Search, Sparkles, Target } from "lucide-react";
 
 import { Footer } from "@/components/footer";
@@ -14,7 +15,7 @@ export default function HowItWorksPage() {
         <div className="text-center">
           <h1 className="font-display text-4xl font-semibold tracking-tight">How it works</h1>
           <p className="font-display text-muted-foreground mt-4 text-lg">
-            Get the questions before they ask them — backed by real evidence
+            {siteConfig.copy.howItWorksTagline}
           </p>
         </div>
 

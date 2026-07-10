@@ -134,7 +134,7 @@ export default function Home() {
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
           <h2 className="font-display text-2xl font-semibold tracking-tight">
-            Why Scouting Report?
+            Why {siteConfig.name}?
           </h2>
           <p className="font-display text-muted-foreground mt-2">
             The smarter way to prepare for technical interviews
@@ -146,7 +146,7 @@ export default function Home() {
               <tr className="bg-muted/50 border-b">
                 <th className="font-display p-4 text-left text-sm font-semibold">Feature</th>
                 <th className="font-display p-4 text-center text-sm font-semibold">
-                  Scouting Report
+                  {siteConfig.name}
                 </th>
                 <th className="font-display text-muted-foreground p-4 text-center text-sm font-semibold">
                   Generic Prep
@@ -213,7 +213,7 @@ export default function Home() {
           </h2>
           <p className="font-display text-muted-foreground mt-2">
             Don&apos;t just take our word for it. Here&apos;s what some of our users have to say
-            about Scouting Report.
+            about {siteConfig.name}.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-3">

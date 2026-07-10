@@ -1,20 +1,22 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "About",
-  description: "About Scouting Report",
+  description: `About ${siteConfig.name}`,
 };
 
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
-      <h1 className="font-display text-3xl font-bold tracking-tight">About Scouting Report</h1>
+      <h1 className="font-display text-3xl font-bold tracking-tight">About {siteConfig.name}</h1>
 
       <div className="mt-8 space-y-6">
         <section>
           <h2 className="font-display text-xl font-semibold">Our Mission</h2>
           <p className="text-muted-foreground mt-2">
-            Scouting Report helps job candidates prepare smarter for technical interviews. We
+            {siteConfig.name} helps job candidates prepare smarter for technical interviews. We
             believe that informed preparation leads to better outcomes, and that everyone deserves
             access to quality interview intelligence.
           </p>
@@ -64,8 +66,10 @@ export default function AboutPage() {
           <h2 className="font-display text-xl font-semibold">Get In Touch</h2>
           <p className="text-muted-foreground mt-2">
             We would love to hear from you. Reach out at{" "}
-            <a href="mailto:hello@scoutingreport.io" className="text-[#AEF05A] hover:underline">
-              hello@scoutingreport.io
+            <a
+              href={`mailto:${siteConfig.emails.hello}`}
+              className="text-[#AEF05A] hover:underline">
+              {siteConfig.emails.hello}
             </a>
             .
           </p>

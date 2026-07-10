@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "Cookie Policy",
-  description: "Cookie Policy for Scouting Report",
+  description: `Cookie Policy for ${siteConfig.name}`,
 };
 
 export default function CookiesPage() {
@@ -64,8 +66,10 @@ export default function CookiesPage() {
           <h2 className="font-display text-xl font-semibold">6. Contact</h2>
           <p className="text-muted-foreground mt-2">
             For questions about our use of cookies, contact us at{" "}
-            <a href="mailto:privacy@scoutingreport.io" className="text-[#AEF05A] hover:underline">
-              privacy@scoutingreport.io
+            <a
+              href={`mailto:${siteConfig.emails.privacy}`}
+              className="text-[#AEF05A] hover:underline">
+              {siteConfig.emails.privacy}
             </a>
             .
           </p>

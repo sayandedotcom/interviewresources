@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "Open Source Licenses",
-  description: "Open Source Licenses for Scouting Report",
+  description: `Open Source Licenses for ${siteConfig.name}`,
 };
 
 export default function LicensesPage() {
@@ -10,8 +12,8 @@ export default function LicensesPage() {
     <div className="mx-auto max-w-3xl px-5 py-12">
       <h1 className="font-display text-3xl font-bold tracking-tight">Open Source Licenses</h1>
       <p className="text-muted-foreground mt-4">
-        Scouting Report is built with the following open source projects. We are grateful to all the
-        developers who contribute to these projects.
+        {siteConfig.name} is built with the following open source projects. We are grateful to all
+        the developers who contribute to these projects.
       </p>
 
       <div className="mt-8 space-y-8">

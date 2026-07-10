@@ -1,8 +1,10 @@
 import { Metadata } from "next";
 
+import { siteConfig } from "@/site";
+
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Privacy Policy for Scouting Report",
+  description: `Privacy Policy for ${siteConfig.name}`,
 };
 
 export default function PrivacyPolicyPage() {
@@ -52,8 +54,8 @@ export default function PrivacyPolicyPage() {
           <h2 className="font-display text-xl font-semibold">5. Your Rights</h2>
           <p className="text-muted-foreground mt-2">
             Depending on your location, you may have certain rights regarding your personal
-            information, including the right to access, correct, or delete your data. Contact us at
-            privacy@scoutingreport.io to exercise these rights.
+            information, including the right to access, correct, or delete your data. Contact us at{" "}
+            {siteConfig.emails.privacy} to exercise these rights.
           </p>
         </section>
 
@@ -61,8 +63,10 @@ export default function PrivacyPolicyPage() {
           <h2 className="font-display text-xl font-semibold">6. Contact Us</h2>
           <p className="text-muted-foreground mt-2">
             If you have any questions about this Privacy Policy, please contact us at{" "}
-            <a href="mailto:privacy@scoutingreport.io" className="text-[#AEF05A] hover:underline">
-              privacy@scoutingreport.io
+            <a
+              href={`mailto:${siteConfig.emails.privacy}`}
+              className="text-[#AEF05A] hover:underline">
+              {siteConfig.emails.privacy}
             </a>
             .
           </p>
