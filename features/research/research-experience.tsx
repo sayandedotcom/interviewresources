@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
 import { EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
@@ -258,15 +259,24 @@ export function ResearchExperience({
                 <div className="flex items-center justify-between">
                   <SectionLabel>Target</SectionLabel>
                   {isDraftDirty(formValues) && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearForm}
-                      className="text-muted-foreground hover:text-foreground -mt-1 -mr-2">
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      Clear form
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={clearForm}
+                            className="text-muted-foreground hover:text-foreground -mt-1 -mr-2">
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Clear form
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <span className="font-display">Reset all fields to empty</span>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -290,9 +300,20 @@ export function ResearchExperience({
                     name="companyUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel htmlFor="companyUrl">
-                          Company URL <span className="opacity-60">· preferred</span>
-                        </FormLabel>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <FormLabel htmlFor="companyUrl" className="cursor-help">
+                                Company URL <span className="opacity-60">· preferred</span>
+                              </FormLabel>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span className="font-display">
+                                Helps find company-specific interview questions from public sources
+                              </span>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <FormControl>
                           <Input {...field} id="companyUrl" placeholder="https://stripe.com" />
                         </FormControl>
@@ -333,9 +354,21 @@ export function ResearchExperience({
                     name="techStack"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel htmlFor="techStack">
-                          Tech Stack <span className="opacity-60">· optional</span>
-                        </FormLabel>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <FormLabel htmlFor="techStack" className="cursor-help">
+                                Tech Stack <span className="opacity-60">· optional</span>
+                              </FormLabel>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span className="font-display">
+                                Languages, frameworks, and tools you&apos;d use — helps find
+                                relevant domain questions
+                              </span>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <FormControl>
                           <Input
                             {...field}
@@ -365,9 +398,21 @@ export function ResearchExperience({
                     name="teamContext"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel htmlFor="teamContext">
-                          Team / org <span className="opacity-60">· optional</span>
-                        </FormLabel>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <FormLabel htmlFor="teamContext" className="cursor-help">
+                                Team / org <span className="opacity-60">· optional</span>
+                              </FormLabel>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span className="font-display">
+                                The team or organization you'd work on — helps find relevant system
+                                design questions
+                              </span>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <FormControl>
                           <Input {...field} id="teamContext" placeholder="AWS EC2 · Ads Infra" />
                         </FormControl>
@@ -381,9 +426,20 @@ export function ResearchExperience({
                   name="jobDescription"
                   render={({ field }) => (
                     <FormItem className="mt-4">
-                      <FormLabel htmlFor="jobDescription">
-                        Job Description <span className="opacity-60">· optional</span>
-                      </FormLabel>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <FormLabel htmlFor="jobDescription" className="cursor-help">
+                              Job Description <span className="opacity-60">· optional</span>
+                            </FormLabel>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <span className="font-display">
+                              Paste the job posting to get questions tailored to the specific role
+                            </span>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <FormControl>
                         <Textarea
                           {...field}
@@ -402,9 +458,21 @@ export function ResearchExperience({
                   name="recruiterNotes"
                   render={({ field }) => (
                     <FormItem className="mt-4">
-                      <FormLabel htmlFor="recruiterNotes">
-                        Recruiter notes <span className="opacity-60">· optional</span>
-                      </FormLabel>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <FormLabel htmlFor="recruiterNotes" className="cursor-help">
+                              Recruiter notes <span className="opacity-60">· optional</span>
+                            </FormLabel>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <span className="font-display">
+                              What did the recruiter tell you about the process? Which rounds to
+                              expect?
+                            </span>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <FormControl>
                         <Textarea
                           {...field}
@@ -419,9 +487,21 @@ export function ResearchExperience({
                 />
 
                 <div className="mt-4 space-y-2">
-                  <Label className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
-                    Interviewers <span className="opacity-60">· optional</span>
-                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Label className="text-muted-foreground cursor-help font-mono text-[10px] tracking-[0.16em] uppercase">
+                          Interviewers <span className="opacity-60">· optional</span>
+                        </Label>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <span className="font-display">
+                          Names help personalize questions. URLs are used only as public-search
+                          seeds and are never stored.
+                        </span>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
                   {interviewerFields.map((field, index) => (
                     <div key={field.id} className="flex items-center gap-2">
@@ -447,14 +527,23 @@ export function ResearchExperience({
                           />
                         )}
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeInterviewer(index)}
-                        disabled={interviewerFields.length === 1}>
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeInterviewer(index)}
+                              disabled={interviewerFields.length === 1}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <span className="font-display">Remove interviewer</span>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   ))}
                   {formState.errors.interviewers && (
@@ -462,14 +551,25 @@ export function ResearchExperience({
                       One of the interviewer URLs doesn&rsquo;t look valid.
                     </p>
                   )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => appendInterviewer({ name: "", url: "" })}>
-                    <Plus className="mr-1 h-4 w-4" />
-                    Add interviewer
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => appendInterviewer({ name: "", url: "" })}>
+                          <Plus className="mr-1 h-4 w-4" />
+                          Add interviewer
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <span className="font-display">
+                          Add another interviewer to personalize your report
+                        </span>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </CardContent>
             </Card>
@@ -594,6 +694,7 @@ export function ResearchExperience({
           onReset={resetRun}
           researchId={researchId ?? undefined}
           extendCredits={me?.extendCredits}
+          roleContext={formValues.role.trim() || undefined}
         />
       )}
     </div>

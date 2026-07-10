@@ -6,6 +6,12 @@ import { Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { CATEGORY_META, categoryLabel } from "@/lib/research/display";
 import { INTERVIEW_CATEGORIES, type InterviewCategory } from "@/lib/research/types";
@@ -48,20 +54,29 @@ export function RoundPicker({
     <div className="flex flex-wrap gap-2">
       {predefined.map((cat) => {
         const on = selected.includes(cat);
+        const meta = CATEGORY_META[cat];
         return (
-          <Button
-            type="button"
-            key={cat}
-            size="lg"
-            variant={on ? "default" : "outline"}
-            onClick={() => onToggle(cat)}
-            aria-pressed={on}
-            disabled={disabled}>
-            <span className="font-mono text-[10px] tracking-widest opacity-70">
-              {CATEGORY_META[cat].code}
-            </span>
-            <span className="font-display">{CATEGORY_META[cat].label}</span>
-          </Button>
+          <Tooltip key={cat}>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  size="lg"
+                  variant={on ? "default" : "outline"}
+                  onClick={() => onToggle(cat)}
+                  aria-pressed={on}
+                  disabled={disabled}
+                />
+              }>
+              <span className="font-mono text-[10px] tracking-widest opacity-70">
+                {meta.code}
+              </span>
+              <span className="font-display">{meta.label}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <span className="font-display">{meta.blurb}</span>
+            </TooltipContent>
+          </Tooltip>
         );
       })}
 
@@ -102,15 +117,24 @@ export function RoundPicker({
           </Button>
         </div>
       ) : (
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          onClick={() => setShowCustomInput(true)}
-          disabled={disabled}>
-          <Plus className="mr-1 h-4 w-4" />
-          Add round
-        </Button>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={() => setShowCustomInput(true)}
+                disabled={disabled}
+              />
+            }>
+            <Plus className="mr-1 h-4 w-4" />
+            Add round
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="font-display">Add a custom round type</span>
+          </TooltipContent>
+        </Tooltip>
       )}
     </div>
   );
