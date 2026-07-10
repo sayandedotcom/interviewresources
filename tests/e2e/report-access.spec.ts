@@ -89,7 +89,7 @@ test.describe("marketing surface", () => {
   test("the landing page renders", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
   });
 
   test("pricing shows every credit pack", async ({ page }) => {
