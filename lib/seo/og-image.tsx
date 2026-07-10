@@ -15,8 +15,8 @@ export function OgImageContent() {
         flexDirection: "column",
         justifyContent: "center",
         padding: "80px",
-        backgroundColor: "#171717",
-        color: "#fafafa",
+        backgroundColor: siteConfig.brand.colors.background,
+        color: siteConfig.brand.colors.ogForeground,
       }}>
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         <div
@@ -24,7 +24,7 @@ export function OgImageContent() {
             width: "28px",
             height: "28px",
             transform: "rotate(45deg)",
-            backgroundColor: "#eaeaea",
+            backgroundColor: siteConfig.brand.colors.mark,
           }}
         />
         <span
@@ -46,17 +46,17 @@ export function OgImageContent() {
           letterSpacing: "-0.02em",
           maxWidth: "900px",
         }}>
-        Get the questions before they ask them.
+        {siteConfig.copy.tagline}
       </div>
       <div
         style={{
           display: "flex",
           marginTop: "32px",
           fontSize: "28px",
-          color: "#a1a1a1",
+          color: siteConfig.brand.colors.ogMuted,
           maxWidth: "800px",
         }}>
-        Reconnaissance before the interview, grounded in evidence.
+        {siteConfig.copy.subtagline}
       </div>
     </div>
   );

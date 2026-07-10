@@ -2,12 +2,13 @@
 
 import * as React from "react";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { siteConfig } from "@/site";
-import { MoreHorizontalIcon, PlusIcon, Share2Icon, Trash2Icon } from "lucide-react";
+import { Loader2Icon, MoreHorizontalIcon, PlusIcon, Share2Icon, Trash2Icon } from "lucide-react";
 
+import { LogoMark } from "@/components/logo";
 import { NavUser } from "@/components/nav-user";
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/lib/auth-client";
 import { categoryLabel } from "@/lib/research/display";
 import type { SessionUser } from "@/lib/session";
+import { cn } from "@/lib/utils";
 
 interface ResearchSession {
   id: string;
@@ -43,6 +45,27 @@ interface ResearchSession {
   interviewType: string;
   status: string;
   createdAt: string;
+}
+
+/**
+ * Acknowledges the click while the destination renders. Must live inside the
+ * `Link`, and only lights up when a prefetch hasn't already made the navigation
+ * instant. Always rendered and toggled by opacity — appearing on demand would
+ * shift the row it sits in.
+ */
+function NavPendingHint({ className }: { className?: string }) {
+  const { pending } = useLinkStatus();
+
+  return (
+    <Loader2Icon
+      aria-hidden
+      className={cn(
+        "ml-auto size-3.5 shrink-0 animate-spin transition-opacity",
+        pending ? "opacity-70" : "opacity-0",
+        className
+      )}
+    />
+  );
 }
 
 export function AppSidebar({
@@ -140,9 +163,7 @@ export function AppSidebar({
           <Link
             href="/"
             className="group/brand flex items-center gap-2 overflow-hidden transition-opacity group-data-[collapsible=icon]:group-hover/header:opacity-0">
-            <span className="bg-primary relative inline-block size-3 shrink-0 rotate-45">
-              <span className="bg-tertiary/30 absolute inset-0 rounded-sm opacity-0 blur-md transition-opacity group-hover/brand:opacity-100" />
-            </span>
+            <LogoMark glowClassName="bg-tertiary/30 opacity-0 group-hover/brand:opacity-100" />
             <span className="font-display truncate text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
               {siteConfig.name}
             </span>
@@ -158,6 +179,7 @@ export function AppSidebar({
               render={<Link href="/prepare" />}>
               <PlusIcon />
               <span className="font-display font-medium">New session</span>
+              <NavPendingHint />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -208,6 +230,8 @@ export function AppSidebar({
                         .join(", ")}
                     </span>
                   </div>
+                  {/* Clear of the row's absolutely-positioned action button. */}
+                  <NavPendingHint className="mr-5" />
                 </SidebarMenuButton>
                 <DropdownMenu>
                   <DropdownMenuTrigger

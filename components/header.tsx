@@ -5,7 +5,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { siteConfig } from "@/site";
+
 import { CreditsBadge } from "@/components/credits-badge";
+import { LogoMark } from "@/components/logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -44,11 +47,9 @@ export function Header() {
       <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2">
           <Link href="/" className="group flex items-center gap-2">
-            <span className="bg-primary relative inline-block h-3 w-3 rotate-45">
-              <span className="bg-tertiary/30 absolute inset-0 rounded-sm opacity-0 blur-md transition-opacity group-hover:opacity-100" />
-            </span>
+            <LogoMark glowClassName="bg-tertiary/30 opacity-0 group-hover:opacity-100" />
             <span className="font-display text-sm font-semibold tracking-tight">
-              Scouting Report
+              {siteConfig.name}
             </span>
           </Link>
         </div>

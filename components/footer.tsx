@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { siteConfig } from "@/site";
 
+import { LogoMark } from "@/components/logo";
+
 export function Footer() {
   return (
     <footer className="mt-auto border-t">
@@ -121,14 +123,12 @@ export function Footer() {
         </div>
         <div className="mt-8 flex items-center justify-between border-t pt-6">
           <div className="flex items-center gap-2">
-            <span className="bg-primary relative inline-block h-2.5 w-2.5 rotate-45">
-              <span className="bg-tertiary/40 absolute inset-0 rounded-sm blur-md" />
-            </span>
-            <span className="font-display text-sm font-semibold">Scouting Report</span>
+            <LogoMark size="sm" glowClassName="bg-tertiary/40" />
+            <span className="font-display text-sm font-semibold">{siteConfig.name}</span>
           </div>
           <div className="flex items-center gap-4">
             <p className="text-muted-foreground font-mono text-[10px]">
-              Prep intelligence, not prophecy.
+              {siteConfig.copy.footerTagline}
             </p>
             <div className="flex items-center gap-4">
               <a
