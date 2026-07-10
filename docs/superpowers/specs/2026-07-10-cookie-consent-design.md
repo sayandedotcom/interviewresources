@@ -32,12 +32,13 @@ function useCookieConsent(): { consent: Consent; setConsent: (c: Consent) => voi
 ### `components/cookie-consent.tsx`
 
 - `"use client"` component rendered in `app/layout.tsx` next to `<Analytics />`.
-- Uses `useCookieConsent()`. Renders nothing if `consent !== null` (already decided) or before mount.
-- Otherwise renders a fixed bottom bar (`fixed inset-x-0 bottom-0 border-t bg-background`, similar treatment to `Footer`'s border/spacing) containing:
-  - Short copy: "We use cookies to analyze traffic and improve your experience. See our [Cookie Policy](/cookies)."
-  - **Reject** button (`variant="outline"` or `"ghost"`) → `setConsent("rejected")`
-  - **Accept** button (primary) → `setConsent("accepted")`
-- Exports a second small component/trigger for reopening: actually, reopening is handled by the footer link calling `setConsent(null)` directly via the hook (see below), which makes the banner reappear since `consent === null` again.
+- Uses `useCookieConsent()`. Uses the existing `AlertDialog` primitives from `components/ui/alert-dialog.tsx` (base-ui backed, already used elsewhere in the codebase for confirmation modals) instead of a bottom bar.
+- `open` is controlled: `mounted && consent === null`. Not dismissible by outside click or Escape — a consent gate shouldn't be closable without an explicit choice, so `onOpenChange` is a no-op (base-ui's `Dialog.Root` accepts a controlled `open` and stays open until `open` itself changes).
+- Content:
+  - `AlertDialogTitle`: "🍪 We value your privacy" (cookie emoji in the title, per user request)
+  - `AlertDialogDescription`: "We use cookies to analyze traffic and improve your experience. See our [Cookie Policy](/cookies) for details."
+  - `AlertDialogFooter`: **Reject** (`AlertDialogCancel` → `variant="outline"`) → `setConsent("rejected")`; **Accept** (`AlertDialogAction`, primary) → `setConsent("accepted")`
+- Reopening is handled by the footer link calling `setConsent(null)` directly via the hook (see below), which makes the dialog reappear since `consent === null` again.
 
 ### `components/analytics.tsx`
 
