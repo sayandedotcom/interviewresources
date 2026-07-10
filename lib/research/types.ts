@@ -92,7 +92,8 @@ export const researchPlanSchema = z.object({
         category: z
           .string()
           .describe(
-            'One of the round identifiers supplied in the prompt, or "company", "interviewer", or "loop_format"'
+            'One of the round identifiers supplied in the prompt, or "company", "interviewer", ' +
+              '"loop_format", or "interview_experience"'
           ),
       })
     )
@@ -147,6 +148,13 @@ export const reportSchema = z.object({
   interviewerSummary: z.string().nullable().describe("Null if no interviewer was provided"),
   questions: z.array(questionSchema).min(1),
   prepPlan: z.array(z.string()).describe("Ordered list of prep priorities"),
+  interviewExperiences: z
+    .array(importantLinkSchema)
+    .describe(
+      "First-hand interview experience write-ups for this company (Glassdoor, LeetCode " +
+        "Discuss, Blind, Reddit, personal blogs), chosen from the evidence URLs. Each " +
+        '"why" names the role, level, and recency when known'
+    ),
   importantLinks: z
     .array(importantLinkSchema)
     .describe("3-6 most valuable sources for the candidate to read, chosen from the evidence URLs"),

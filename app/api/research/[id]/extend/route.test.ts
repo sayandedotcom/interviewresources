@@ -53,6 +53,7 @@ const existingReport: Report = {
   interviewerSummary: null,
   questions: [question()],
   prepPlan: ["Drill"],
+  interviewExperiences: [{ title: "Exp A", url: "https://exp-a.dev", why: "w" }],
   importantLinks: [{ title: "A", url: "https://a.dev", why: "w" }],
 };
 
@@ -64,6 +65,10 @@ const additionReport: Report = {
   interviewerSummary: "ignored",
   questions: [question({ question: "Two sum" })],
   prepPlan: ["ignored"],
+  interviewExperiences: [
+    { title: "Exp A dup", url: "https://exp-a.dev", why: "dup" },
+    { title: "Exp B", url: "https://exp-b.dev", why: "new" },
+  ],
   importantLinks: [
     { title: "A dup", url: "https://a.dev", why: "dup" },
     { title: "B", url: "https://b.dev", why: "new" },
@@ -250,6 +255,26 @@ describe("the extension run", () => {
 
     expect(merged.map((l) => l.url)).toEqual(["https://a.dev", "https://b.dev"]);
     expect(merged[0].title).toBe("A"); // the original wins, not the duplicate
+  });
+
+  it("unions interviewExperiences without duplicating a url the report already lists", async () => {
+    const events = await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
+    const merged = (events.find((e) => e.kind === "report")!.report as Report).interviewExperiences;
+
+    expect(merged.map((l) => l.url)).toEqual(["https://exp-a.dev", "https://exp-b.dev"]);
+    expect(merged[0].title).toBe("Exp A"); // the original wins, not the duplicate
+  });
+
+  it("merges into a report stored before interviewExperiences existed", async () => {
+    // Reports written by an older build have no such key at all.
+    const legacy = { ...existingReport } as Partial<Report>;
+    delete legacy.interviewExperiences;
+    stubSelect({ ...row, jsonPayload: legacy });
+
+    const events = await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
+    const merged = (events.find((e) => e.kind === "report")!.report as Report).interviewExperiences;
+
+    expect(merged.map((l) => l.url)).toEqual(["https://exp-a.dev", "https://exp-b.dev"]);
   });
 
   it("adds newly scouted rounds to interviewType so the sidebar shows them", async () => {

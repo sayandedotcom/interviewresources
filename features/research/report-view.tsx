@@ -34,7 +34,7 @@ import {
 } from "@/lib/research/display";
 import { downloadBlob, reportSlug } from "@/lib/research/download";
 import { buildAnswerPrompt } from "@/lib/research/prompt";
-import type { Report } from "@/lib/research/types";
+import type { ImportantLink, Report } from "@/lib/research/types";
 
 import { RoundPicker } from "@/features/research/round-picker";
 import { explainError, streamSse } from "@/features/research/stream";
@@ -165,8 +165,9 @@ export function ReportView({
   // The rounds already covered, which "Scout more rounds" must not offer again.
   const order = grouped.map((g) => g.cat);
 
-  // Reports generated before importantLinks existed are stored without the field.
+  // Reports generated before these sections existed are stored without the fields.
   const importantLinks = current.importantLinks ?? [];
+  const interviewExperiences = current.interviewExperiences ?? [];
 
   return (
     <div className="mt-6">
@@ -407,36 +408,24 @@ export function ReportView({
         </section>
       )}
 
+      {interviewExperiences.length > 0 && (
+        <section className="mt-8">
+          <Separator className="mb-5" />
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Interview experiences
+          </h2>
+          <p className="text-muted-foreground mt-1 text-xs">
+            First-hand accounts from people who interviewed here.
+          </p>
+          <LinkCards links={interviewExperiences} />
+        </section>
+      )}
+
       {importantLinks.length > 0 && (
         <section className="mt-8">
           <Separator className="mb-5" />
           <h2 className="font-display text-lg font-semibold tracking-tight">Worth reading</h2>
-          <ul className="mt-3 space-y-3">
-            {importantLinks.map((link, i) => (
-              <li key={i}>
-                <Card>
-                  <CardContent>
-                    <div className="flex items-baseline justify-between gap-3">
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-display text-foreground hover:text-tertiary flex items-baseline gap-2 text-[15px] leading-snug font-medium underline-offset-4 hover:underline">
-                        <span className="bg-tertiary inline-block h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full" />
-                        {link.title}
-                      </a>
-                      <span className="text-tertiary bg-tertiary/10 shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px]">
-                        {hostOf(link.url)}
-                      </span>
-                    </div>
-                    <p className="font-display text-muted-foreground mt-1.5 text-[13.5px] leading-relaxed">
-                      {link.why}
-                    </p>
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ul>
+          <LinkCards links={importantLinks} />
         </section>
       )}
 
@@ -489,6 +478,38 @@ export function ReportView({
         </section>
       )}
     </div>
+  );
+}
+
+/** The link list shared by "Interview experiences" and "Worth reading". */
+function LinkCards({ links }: { links: ImportantLink[] }) {
+  return (
+    <ul className="mt-3 space-y-3">
+      {links.map((link, i) => (
+        <li key={i}>
+          <Card>
+            <CardContent>
+              <div className="flex items-baseline justify-between gap-3">
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-display text-foreground hover:text-tertiary flex items-baseline gap-2 text-[15px] leading-snug font-medium underline-offset-4 hover:underline">
+                  <span className="bg-tertiary inline-block h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full" />
+                  {link.title}
+                </a>
+                <span className="text-tertiary bg-tertiary/10 shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px]">
+                  {hostOf(link.url)}
+                </span>
+              </div>
+              <p className="font-display text-muted-foreground mt-1.5 text-[13.5px] leading-relaxed">
+                {link.why}
+              </p>
+            </CardContent>
+          </Card>
+        </li>
+      ))}
+    </ul>
   );
 }
 

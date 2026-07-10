@@ -13,7 +13,7 @@ import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
 import { type CostEntry, MAX_EFFORT_LINKS } from "@/lib/research/budget";
 import { runResearchPipeline } from "@/lib/research/pipeline";
-import type { Report } from "@/lib/research/types";
+import type { ImportantLink, Report } from "@/lib/research/types";
 import { getSessionUser } from "@/lib/session";
 
 // Same constraints as the full run: this calls Gemini + Tavily inline.
@@ -40,15 +40,20 @@ function costCents(entries: CostEntry[], kind: CostEntry["kind"]): number {
  * only a slice of the loop and its snapshot would be thinner.
  */
 function mergeReports(existing: Report, addition: Report): Report {
-  const links = [...(existing.importantLinks ?? [])];
-  for (const link of addition.importantLinks ?? []) {
-    if (!links.some((l) => l.url === link.url)) links.push(link);
-  }
+  // `?? []` throughout: reports stored before a link section existed lack the field.
+  const mergeLinks = (a: ImportantLink[] = [], b: ImportantLink[] = []) => {
+    const links = [...a];
+    for (const link of b) {
+      if (!links.some((l) => l.url === link.url)) links.push(link);
+    }
+    return links.slice(0, MAX_EFFORT_LINKS);
+  };
 
   return {
     ...existing,
     questions: [...existing.questions, ...addition.questions],
-    importantLinks: links.slice(0, MAX_EFFORT_LINKS),
+    interviewExperiences: mergeLinks(existing.interviewExperiences, addition.interviewExperiences),
+    importantLinks: mergeLinks(existing.importantLinks, addition.importantLinks),
   };
 }
 

@@ -177,6 +177,7 @@ describe("reportSchema", () => {
     interviewerSummary: null,
     questions: [question],
     prepPlan: ["Drill LRU cache"],
+    interviewExperiences: [{ title: "E", url: "https://example.com/e", why: "2024 E5 onsite" }],
     importantLinks: [{ title: "T", url: "https://example.com/a", why: "w" }],
   };
 
@@ -211,5 +212,9 @@ describe("reportSchema", () => {
 
   it("permits an empty importantLinks array", () => {
     expect(() => reportSchema.parse({ ...validReport, importantLinks: [] })).not.toThrow();
+  });
+
+  it("permits an empty interviewExperiences array — no company has write-ups guaranteed", () => {
+    expect(() => reportSchema.parse({ ...validReport, interviewExperiences: [] })).not.toThrow();
   });
 });

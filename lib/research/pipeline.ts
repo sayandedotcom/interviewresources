@@ -5,6 +5,7 @@ import { generateStructured } from "./gemini";
 import { tavilyExtract, tavilyExtractCredits, tavilySearch, tavilySearchCredits } from "./tavily";
 import {
   type CompressedNote,
+  type ImportantLink,
   type PipelineProgressEvent,
   type Report,
   type ResearchInput,
@@ -51,16 +52,19 @@ async function planStage(
 rounds the candidate wants scouted, produce a compact search plan: ${preset.queriesHint} targeted web-search
 queries. Always include exactly one query with category "loop_format" whose purpose is
 discovering the company's actual interview process/rounds (e.g. "<company> interview
-process rounds") — this may surface rounds the user did not request. If interviewers are
-named, add one query per interviewer (max 2) with category "interviewer" seeking their
-public talks, writing, or open-source work — never target linkedin.com directly. Some
-rounds are custom identifiers rather than standard categories; plan a discovery query for
-each. Use the job description, tech stack, and years of experience to make queries
-specific: seniority and named technologies belong in the query text. Prefer "basic" depth;
-reserve "advanced" for at most 2-3 of the highest-value queries (company tech stack, and
-the primary interview-experience query). Set each query's "category" to the round
-identifier it serves, or "company" / "interviewer" / "loop_format". Keep queries concrete
-and searchable, not vague.`,
+process rounds") — this may surface rounds the user did not request. Always include one or
+two queries with category "interview_experience" hunting for first-hand accounts from
+people who actually interviewed there — Glassdoor reviews, LeetCode Discuss threads, Blind
+posts, Reddit threads, personal blog write-ups — narrowed to the candidate's role and
+seniority. If interviewers are named, add one query per interviewer (max 2) with category
+"interviewer" seeking their public talks, writing, or open-source work — never target
+linkedin.com directly. Some rounds are custom identifiers rather than standard categories;
+plan a discovery query for each. Use the job description, tech stack, and years of
+experience to make queries specific: seniority and named technologies belong in the query
+text. Prefer "basic" depth; reserve "advanced" for at most 2-3 of the highest-value queries
+(company tech stack, and the primary interview-experience query). Set each query's
+"category" to the round identifier it serves, or "company" / "interviewer" /
+"loop_format" / "interview_experience". Keep queries concrete and searchable, not vague.`,
     prompt: describeInput(input),
   });
 }
@@ -220,11 +224,18 @@ Rules:
   does not belong in the report, even if that leaves you short of the range.
 - If an "Already predicted" list is present, treat those questions as taken: never repeat
   one, and never restate one in different words. Cover different ground instead.
+- In interviewExperiences, list every first-hand account of interviewing at this company
+  that the notes contain — a candidate's write-up, a Glassdoor or Blind or Reddit or
+  LeetCode Discuss thread, a personal blog post — using only URLs that appear in the notes.
+  Write each "why" for the candidate, naming the role, the level, and how recent the
+  account is whenever the notes reveal them (e.g. "A 2024 E5 backend candidate's full loop
+  breakdown, round by round"). If the notes contain no first-hand account, return an empty
+  array — never invent one, and never fill it with generic listicles or job postings.
 - In importantLinks, pick the ${preset.linksHint} highest-value sources for the candidate to read before
-  the interview, using only URLs that appear in the evidence notes. Favour first-hand
-  interview experiences, the company's engineering blog, and interviewer talks or writing
-  over generic listicles. Write each "why" for the candidate, naming what they will get
-  from it (e.g. "A recent E5 candidate's full loop breakdown, round by round").`,
+  the interview, using only URLs that appear in the evidence notes. Favour the company's
+  engineering blog, its public docs, and interviewer talks or writing over generic
+  listicles. Never repeat a URL you already placed in interviewExperiences. Write each
+  "why" for the candidate, naming what they will get from it.`,
     prompt: `${describeInput(input)}
 
 Evidence notes:
@@ -242,14 +253,23 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
     if (q.evidenceUrls.length === 0) q.confidence = "low";
   }
 
-  const seen = new Set<string>();
-  report.importantLinks = report.importantLinks
-    .filter((l) => {
-      if (!known.has(l.url) || seen.has(l.url)) return false;
-      seen.add(l.url);
-      return true;
-    })
-    .slice(0, preset.linksMax);
+  // `claimed` spans both link sections, so a URL kept as an interview experience
+  // cannot appear a second time under Worth reading even if the model repeats it.
+  // Only kept URLs are claimed: one dropped at the cap stays available downstream.
+  const claimed = new Set<string>();
+  const keepLinks = (links: ImportantLink[]) => {
+    const kept: ImportantLink[] = [];
+    for (const link of links) {
+      if (kept.length >= preset.linksMax) break;
+      if (!known.has(link.url) || claimed.has(link.url)) continue;
+      claimed.add(link.url);
+      kept.push(link);
+    }
+    return kept;
+  };
+
+  report.interviewExperiences = keepLinks(report.interviewExperiences);
+  report.importantLinks = keepLinks(report.importantLinks);
 
   return report;
 }

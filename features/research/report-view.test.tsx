@@ -32,6 +32,7 @@ function report(overrides: Partial<Report> = {}): Report {
     interviewerSummary: null,
     questions: [question()],
     prepPlan: ["Drill LRU cache", "Read the engineering blog"],
+    interviewExperiences: [],
     importantLinks: [],
     ...overrides,
   };
@@ -254,6 +255,53 @@ describe("worth reading", () => {
 
     expect(() => render(<ReportView {...base} report={legacy as Report} />)).not.toThrow();
     expect(screen.queryByText("Worth reading")).not.toBeInTheDocument();
+  });
+});
+
+describe("interview experiences", () => {
+  const experience = {
+    title: "My Stripe E5 onsite",
+    url: "https://www.glassdoor.com/i/1",
+    why: "A 2024 backend candidate, round by round",
+  };
+
+  it("renders each experience with its title, host, and reason", () => {
+    render(<ReportView {...base} report={report({ interviewExperiences: [experience] })} />);
+
+    expect(screen.getByRole("link", { name: "My Stripe E5 onsite" })).toHaveAttribute(
+      "href",
+      "https://www.glassdoor.com/i/1"
+    );
+    expect(screen.getByText("glassdoor.com")).toBeInTheDocument();
+    expect(screen.getByText("A 2024 backend candidate, round by round")).toBeInTheDocument();
+  });
+
+  it("places the section after the prep plan and before worth reading", () => {
+    const r = report({
+      interviewExperiences: [experience],
+      importantLinks: [{ title: "Eng blog", url: "https://stripe.com/blog", why: "stack" }],
+    });
+    render(<ReportView {...base} report={r} />);
+
+    const headings = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((h) => h.textContent)
+      .filter((t) => t && ["Prep plan", "Interview experiences", "Worth reading"].includes(t));
+
+    expect(headings).toEqual(["Prep plan", "Interview experiences", "Worth reading"]);
+  });
+
+  it("hides the section when no experience was found", () => {
+    render(<ReportView {...base} report={report()} />);
+
+    expect(screen.queryByText("Interview experiences")).not.toBeInTheDocument();
+  });
+
+  it("survives an older stored report that predates interviewExperiences", () => {
+    const { interviewExperiences: _gone, ...legacy } = report();
+
+    expect(() => render(<ReportView {...base} report={legacy as Report} />)).not.toThrow();
+    expect(screen.queryByText("Interview experiences")).not.toBeInTheDocument();
   });
 });
 

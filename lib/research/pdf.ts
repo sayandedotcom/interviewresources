@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 
 import { CONFIDENCE_META, categoryCode, categoryLabel, groupByCategory } from "./display";
-import type { Report } from "./types";
+import type { ImportantLink, Report } from "./types";
 
 /**
  * Renders a report as a print-ready PDF, entirely in the browser.
@@ -217,11 +217,12 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
     });
   }
 
-  // ---- Worth reading ----------------------------------------------------
+  // ---- Link sections ----------------------------------------------------
 
-  if (report.importantLinks && report.importantLinks.length > 0) {
-    heading("Worth reading");
-    for (const item of report.importantLinks) {
+  function linkSection(title: string, items: ImportantLink[] | undefined) {
+    if (!items || items.length === 0) return;
+    heading(title);
+    for (const item of items) {
       ensure(46);
       text(item.title, { size: 10, style: "bold", leading: 1.3 });
       y += 1;
@@ -233,6 +234,9 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
       y += 10;
     }
   }
+
+  linkSection("Interview experiences", report.interviewExperiences);
+  linkSection("Worth reading", report.importantLinks);
 
   // ---- Footers ----------------------------------------------------------
 

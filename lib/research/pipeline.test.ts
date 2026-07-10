@@ -62,6 +62,7 @@ function report(overrides: Partial<Report> = {}): Report {
       },
     ],
     prepPlan: ["Drill LRU"],
+    interviewExperiences: [],
     importantLinks: [],
     ...overrides,
   };
@@ -564,6 +565,82 @@ describe("synthesize stage", () => {
     const { report: out } = await runResearchPipeline(input);
 
     expect(out.importantLinks).toHaveLength(6);
+  });
+
+  it("drops an interview experience whose url never appeared in the evidence", async () => {
+    stubStages({
+      report: report({
+        interviewExperiences: [
+          { title: "Real", url: "https://a.dev", why: "cited" },
+          { title: "Hallucinated", url: "https://invented.dev", why: "made up" },
+        ],
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.interviewExperiences.map((l) => l.url)).toEqual(["https://a.dev"]);
+  });
+
+  it("caps interview experiences at the effort's link limit", async () => {
+    const urls = Array.from({ length: 12 }, (_, i) => `https://s${i}.dev`);
+    searchMock.mockResolvedValue({ query: "q", results: urls.map((u) => searchResult(u)) });
+    stubStages({
+      report: report({ interviewExperiences: urls.map((u) => ({ title: u, url: u, why: "w" })) }),
+    });
+
+    const { report: out } = await runResearchPipeline({ ...input, effort: "high" });
+
+    expect(out.interviewExperiences).toHaveLength(10);
+  });
+
+  it("never lists the same url under both interview experiences and worth reading", async () => {
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: [searchResult("https://a.dev"), searchResult("https://b.dev")],
+    });
+    stubStages({
+      report: report({
+        interviewExperiences: [{ title: "Exp", url: "https://a.dev", why: "first-hand" }],
+        importantLinks: [
+          { title: "Same page again", url: "https://a.dev", why: "repeat" },
+          { title: "Blog", url: "https://b.dev", why: "new" },
+        ],
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.interviewExperiences.map((l) => l.url)).toEqual(["https://a.dev"]);
+    expect(out.importantLinks.map((l) => l.url)).toEqual(["https://b.dev"]);
+  });
+
+  it("leaves a link the experience cap dropped available to worth reading", async () => {
+    const urls = Array.from({ length: 6 }, (_, i) => `https://s${i}.dev`);
+    searchMock.mockResolvedValue({ query: "q", results: urls.map((u) => searchResult(u)) });
+    // Low effort caps each section at four, so s4/s5 fall off the experiences
+    // list — they were never "claimed", so worth reading may still use them.
+    stubStages({
+      report: report({
+        interviewExperiences: urls.map((u) => ({ title: u, url: u, why: "w" })),
+        importantLinks: [{ title: "s5", url: "https://s5.dev", why: "w" }],
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline({ ...input, effort: "low" });
+
+    expect(out.interviewExperiences).toHaveLength(4);
+    expect(out.importantLinks.map((l) => l.url)).toEqual(["https://s5.dev"]);
+  });
+
+  it("asks the planner for first-hand interview experience queries", async () => {
+    stubStages({});
+
+    await runResearchPipeline(input);
+
+    const call = genMock.mock.calls.find((c) => c[0].stage === "plan")![0];
+    expect(call.system).toContain("interview_experience");
+    expect(call.system).toContain("Glassdoor");
   });
 
   it("strips a hallucinated url from a question's citations but keeps the real one", async () => {

@@ -23,6 +23,7 @@ function report(overrides: Partial<Report> = {}): Report {
     interviewerSummary: null,
     questions: [question()],
     prepPlan: ["Drill LRU cache"],
+    interviewExperiences: [],
     importantLinks: [{ title: "T", url: "https://blind.com/post/1", why: "w" }],
     ...overrides,
   };
