@@ -1,3 +1,4 @@
+import { siteConfig } from "@/site";
 import { jsPDF } from "jspdf";
 
 import { CONFIDENCE_META, categoryCode, categoryLabel, groupByCategory } from "./display";
@@ -65,7 +66,7 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
   doc.setProperties({
     title: `Scouting report - ${companyName}`,
     subject: `Interview preparation for ${companyName}`,
-    creator: "Interview Questions",
+    creator: siteConfig.name,
   });
 
   let y = MARGIN;
