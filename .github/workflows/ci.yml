@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Vercel's Git integration performs the deploy. This workflow is the quality
+# gate and the migration runner — it must never call `vercel deploy`.
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  quality:
+    name: Lint, types, tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint:check
+
+      - run: pnpm format:check
+
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      # No database or secrets needed: vitest.config.mts injects dummy env vars,
+      # and the `db` project runs Postgres in-process via PGlite.
+      - name: Test (node, jsdom, db)
+        run: pnpm test:all
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Playwright boots a real build against a real database. Swap this for an
+    # ephemeral Neon branch (neondatabase/create-branch-action) once NEON_API_KEY
+    # is configured, to exercise the pooler the app actually runs against.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: scouting_report_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      CI: "true"
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/scouting_report_e2e
+      BETTER_AUTH_SECRET: e2e-secret-not-a-real-key
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3100
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Also proves the committed drizzle/ baseline actually applies to an
+      # empty database, which `pnpm db:push` never checks.
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # playwright.config.ts's webServer runs `pnpm build && pnpm start`.
+      - run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  migrate:
+    name: Migrate production
+    runs-on: ubuntu-latest
+    needs: [quality, e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    # Two merges landing together must not migrate the same database at once.
+    concurrency:
+      group: production-migrate
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The direct endpoint: drizzle-kit needs a session-level connection.
+      - name: Apply migrations
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
