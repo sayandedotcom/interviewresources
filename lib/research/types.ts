@@ -29,6 +29,9 @@ export const MAX_URL = 500;
 export const MAX_YEARS_EXPERIENCE = 50;
 export const MAX_TECH_STACK = 500;
 export const MAX_ROLE_CONTEXT = 500;
+export const MAX_LOCATION = 120;
+export const MAX_TEAM_CONTEXT = 200;
+export const MAX_RECRUITER_NOTES = 2000;
 export const MAX_INTERVIEWERS = 5;
 export const MAX_INTERVIEW_TYPES = 12;
 export const MAX_INTERVIEW_TYPE_LEN = 80;
@@ -58,6 +61,9 @@ export const researchInputSchema = z.object({
   jobDescription: z.string().optional(),
   yearsExperience: z.string().max(MAX_YEARS_EXPERIENCE).optional(),
   techStack: z.string().max(MAX_TECH_STACK).optional(),
+  location: z.string().max(MAX_LOCATION).optional(),
+  teamContext: z.string().max(MAX_TEAM_CONTEXT).optional(),
+  recruiterNotes: z.string().max(MAX_RECRUITER_NOTES).optional(),
   interviewers: z.array(interviewerSchema).max(MAX_INTERVIEWERS).default([]),
   /** Predefined categories plus any custom round identifiers the user added. */
   interviewTypes: z

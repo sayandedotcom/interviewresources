@@ -34,6 +34,9 @@ Rounds to scout: ${input.interviewTypes.join(", ")}
 Role context: ${input.roleContext ?? "not provided"}
 Candidate years of experience: ${input.yearsExperience || "not provided"}
 Candidate tech stack: ${input.techStack || "not provided"}
+Location: ${input.location || "not provided"}
+Team / org: ${input.teamContext || "not provided"}
+Recruiter notes on the process: ${input.recruiterNotes || "not provided"}
 Job description: ${input.jobDescription ? input.jobDescription.slice(0, 2000) : "not provided"}`;
 }
 
@@ -61,8 +64,12 @@ seniority. If interviewers are named, add one query per interviewer (max 2) with
 linkedin.com directly. Some rounds are custom identifiers rather than standard categories;
 plan a discovery query for each. Use the job description, tech stack, and years of
 experience to make queries specific: seniority and named technologies belong in the query
-text. Prefer "basic" depth; reserve "advanced" for at most 2-3 of the highest-value queries
-(company tech stack, and the primary interview-experience query). Set each query's
+text. If recruiter notes already describe the process, the "loop_format" query should
+confirm and deepen those specific rounds rather than discover the process from scratch.
+Where location or team/org are provided, use them to narrow "interview_experience" queries
+to that geography or org. Prefer "basic" depth; reserve "advanced" for at most 2-3 of the
+highest-value queries (company tech stack, and the primary interview-experience query). Set
+each query's
 "category" to the round identifier it serves, or "company" / "interviewer" /
 "loop_format" / "interview_experience". Keep queries concrete and searchable, not vague.`,
     prompt: describeInput(input),

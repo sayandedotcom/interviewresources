@@ -165,6 +165,22 @@ describe("stage orchestration", () => {
     expect(planPrompt).toContain("Ada Lovelace (https://ada.dev)");
   });
 
+  it("passes location, teamContext, and recruiterNotes into the plan prompt", async () => {
+    stubStages({});
+
+    await runResearchPipeline({
+      ...input,
+      location: "Bengaluru, India",
+      teamContext: "AWS EC2",
+      recruiterNotes: "Phone screen done, next is 2 coding rounds + 1 system design",
+    });
+
+    const planPrompt = genMock.mock.calls.find((c) => c[0].stage === "plan")![0].prompt;
+    expect(planPrompt).toContain("Bengaluru, India");
+    expect(planPrompt).toContain("AWS EC2");
+    expect(planPrompt).toContain("Phone screen done, next is 2 coding rounds + 1 system design");
+  });
+
   it("truncates a huge job description before it reaches the model", async () => {
     stubStages({});
 

@@ -112,6 +112,43 @@ describe("researchInputSchema", () => {
     });
     expect(parsed.jobDescription).toHaveLength(100_000);
   });
+
+  it("accepts location, teamContext, and recruiterNotes", () => {
+    const parsed = researchInputSchema.parse({
+      ...validInput,
+      location: "Bengaluru, India",
+      teamContext: "AWS EC2",
+      recruiterNotes: "Phone screen done, next is 2 coding rounds + 1 system design",
+    });
+    expect(parsed.location).toBe("Bengaluru, India");
+    expect(parsed.teamContext).toBe("AWS EC2");
+    expect(parsed.recruiterNotes).toBe(
+      "Phone screen done, next is 2 coding rounds + 1 system design"
+    );
+  });
+
+  it("defaults location, teamContext, and recruiterNotes to undefined", () => {
+    const parsed = researchInputSchema.parse(validInput);
+    expect(parsed.location).toBeUndefined();
+    expect(parsed.teamContext).toBeUndefined();
+    expect(parsed.recruiterNotes).toBeUndefined();
+  });
+
+  it("rejects an oversized location", () => {
+    expect(() => researchInputSchema.parse({ ...validInput, location: "x".repeat(121) })).toThrow();
+  });
+
+  it("rejects an oversized teamContext", () => {
+    expect(() =>
+      researchInputSchema.parse({ ...validInput, teamContext: "x".repeat(201) })
+    ).toThrow();
+  });
+
+  it("rejects oversized recruiterNotes", () => {
+    expect(() =>
+      researchInputSchema.parse({ ...validInput, recruiterNotes: "x".repeat(2001) })
+    ).toThrow();
+  });
 });
 
 describe("interviewerSchema", () => {
