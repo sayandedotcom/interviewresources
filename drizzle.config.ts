@@ -8,6 +8,8 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: env.DATABASE_URL ?? "",
+    // Prefer the direct endpoint: drizzle-kit needs session-level connections,
+    // which a transaction-mode pooler cannot provide.
+    url: env.DATABASE_URL_UNPOOLED ?? env.DATABASE_URL ?? "",
   },
 });
