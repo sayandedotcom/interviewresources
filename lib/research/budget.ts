@@ -26,6 +26,79 @@ export const BUDGET_CAP_USD = 1.0;
 export const BUDGET_DEGRADE_RATIO = 0.85;
 export const BUDGET_DEGRADE_USD = BUDGET_CAP_USD * BUDGET_DEGRADE_RATIO;
 
+export const EFFORT_LEVELS = ["low", "medium", "high"] as const;
+export type Effort = (typeof EFFORT_LEVELS)[number];
+
+export interface EffortPreset {
+  /** Ceiling on the run's metered spend, before the balance clamps it further. */
+  capUsd: number;
+  /** Query-count range handed to the plan-stage prompt. */
+  queriesHint: string;
+  /** Results requested per Tavily search. */
+  searchResults: number;
+  /** How many top URLs get their full page extracted. */
+  extractLimit: number;
+  /** Question-count range handed to the synthesize prompt. */
+  questionTarget: string;
+  /** Hard ceiling on importantLinks, and the range shown to the model. */
+  linksMax: number;
+  linksHint: string;
+  label: string;
+  blurb: string;
+}
+
+/**
+ * The one place output volume and spend are tuned together. Raising question or
+ * link counts without raising capUsd just starves the synthesize call; raising
+ * capUsd alone buys evidence the prompt then refuses to use. Medium reproduces
+ * the pre-effort behaviour exactly, so old reports and tests stay honest.
+ */
+export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
+  low: {
+    capUsd: 0.5,
+    queriesHint: "3-5",
+    searchResults: 4,
+    extractLimit: 3,
+    questionTarget: "8-15",
+    linksMax: 4,
+    linksHint: "2-4",
+    label: "Low",
+    blurb: "Quick scan — fewer searches, the essentials only",
+  },
+  medium: {
+    capUsd: BUDGET_CAP_USD,
+    queriesHint: "4-8",
+    searchResults: 5,
+    extractLimit: 5,
+    questionTarget: "15-30",
+    linksMax: 6,
+    linksHint: "3-6",
+    label: "Medium",
+    blurb: "Balanced — the default depth",
+  },
+  high: {
+    capUsd: 2.0,
+    queriesHint: "8-12",
+    searchResults: 8,
+    extractLimit: 8,
+    questionTarget: "30-50",
+    linksMax: 10,
+    linksHint: "6-10",
+    label: "High",
+    blurb: "Exhaustive — widest search, most questions",
+  },
+};
+
+/** The costliest effort, which sets the advisory ceiling shown in the UI. */
+export const MAX_EFFORT_CAP_USD = Math.max(...EFFORT_LEVELS.map((e) => EFFORT_PRESETS[e].capUsd));
+
+/**
+ * The most links any effort can produce. Extensions don't know the effort the
+ * original report ran at, so they merge up to this ceiling rather than clipping
+ * a high-effort report's links down to a lower effort's cap.
+ */
+export const MAX_EFFORT_LINKS = Math.max(...EFFORT_LEVELS.map((e) => EFFORT_PRESETS[e].linksMax));
+
 export interface CostEntry {
   stage: string;
   kind: "llm" | "search";
