@@ -34,7 +34,7 @@ import {
   groupByCategory,
 } from "@/lib/research/display";
 import { downloadBlob, reportSlug } from "@/lib/research/download";
-import { buildAnswerPrompt } from "@/lib/research/prompt";
+import { buildAnswerPrompt, buildMockInterviewPrompt } from "@/lib/research/prompt";
 import type { ImportantLink, Report } from "@/lib/research/types";
 
 import { EffortPicker } from "@/features/research/effort-picker";
@@ -57,6 +57,7 @@ export function ReportView({
   onReset,
   researchId,
   extendCredits,
+  roleContext,
 }: {
   report: Report;
   costUsd: number | null;
@@ -67,6 +68,8 @@ export function ReportView({
   researchId?: string;
   /** Per-effort credit ceiling for an extension; omitted until the balance loads. */
   extendCredits?: Record<Effort, number>;
+  /** The role the candidate is interviewing for, woven into the copy prompts. */
+  roleContext?: string;
 }) {
   // An extend run returns a merged report, so what's rendered has to be able to
   // outgrow the prop. Re-sync during render (not in an effect) whenever the
@@ -88,15 +91,25 @@ export function ReportView({
   const [effort, setEffort] = useState<Effort>("medium");
 
   // "copied" reverts on a timer; "failed" covers a denied clipboard permission.
+  // These drive the header button. Per-round menus flip their own icon via
+  // copiedCat, which holds the category slug just copied.
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const [copiedCat, setCopiedCat] = useState<string | null>(null);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const catCopyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // The PDF renderer is code-split, so a slow network can leave a visible gap
   // between the click and the file appearing. Disable the trigger meanwhile.
   const [pdfBusy, setPdfBusy] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  useEffect(() => () => void (copyTimer.current && clearTimeout(copyTimer.current)), []);
+  useEffect(
+    () => () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      if (catCopyTimer.current) clearTimeout(catCopyTimer.current);
+    },
+    []
+  );
 
   function downloadJson() {
     const blob = new Blob([JSON.stringify(current, null, 2)], { type: "application/json" });
@@ -121,15 +134,29 @@ export function ReportView({
     }
   }
 
-  async function copyAsPrompt() {
+  async function copyPrompt(text: string) {
     if (copyTimer.current) clearTimeout(copyTimer.current);
     try {
-      await navigator.clipboard.writeText(buildAnswerPrompt(current, company));
+      await navigator.clipboard.writeText(text);
       setCopyState("copied");
     } catch {
       setCopyState("failed");
     }
     copyTimer.current = setTimeout(() => setCopyState("idle"), 2000);
+  }
+
+  // Per-round copy: flip the round's icon to a check for a beat. A clipboard
+  // failure here just leaves the icon unchanged — the header button is the
+  // primary, feedback-rich path.
+  async function copyRoundPrompt(cat: string, text: string) {
+    if (catCopyTimer.current) clearTimeout(catCopyTimer.current);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedCat(cat);
+      catCopyTimer.current = setTimeout(() => setCopiedCat(null), 2000);
+    } catch {
+      setCopiedCat(null);
+    }
   }
 
   async function extend(interviewTypes: string[], token: string) {
@@ -199,35 +226,57 @@ export function ReportView({
               </TooltipContent>
             </Tooltip>
           )}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  aria-label="Copy as prompt"
-                  onClick={copyAsPrompt}
-                />
-              }>
-              {copyState === "copied" ? (
-                <Check className="text-tertiary mr-1 h-4 w-4" />
-              ) : (
-                <ClipboardCopy className="mr-1 h-4 w-4" />
-              )}
-              <span className="font-display">
-                {copyState === "copied"
-                  ? "Copied"
-                  : copyState === "failed"
-                    ? "Copy failed"
-                    : "Copy as Prompt"}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              Copy the whole report as a prompt, to paste into ChatGPT or any assistant and get
-              every question answered
-            </TooltipContent>
-          </Tooltip>
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <DropdownMenuTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label="Copy as prompt"
+                      />
+                    }
+                  />
+                }>
+                {copyState === "copied" ? (
+                  <Check className="text-tertiary mr-1 h-4 w-4" />
+                ) : (
+                  <ClipboardCopy className="mr-1 h-4 w-4" />
+                )}
+                <span className="font-display">
+                  {copyState === "copied"
+                    ? "Copied"
+                    : copyState === "failed"
+                      ? "Copy failed"
+                      : "Copy as Prompt"}
+                </span>
+                <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+              </TooltipTrigger>
+              <TooltipContent>
+                Copy the report as a prompt for ChatGPT or any assistant — get every question
+                answered, or run a mock interview
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuItem
+                onClick={() =>
+                  copyPrompt(buildAnswerPrompt(current, company, undefined, roleContext))
+                }>
+                <ClipboardCopy className="mr-1" />
+                <span className="font-display">Get every question answered</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  copyPrompt(buildMockInterviewPrompt(current, company, undefined, roleContext))
+                }>
+                <ClipboardCopy className="mr-1" />
+                <span className="font-display">Mock interview — full loop</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -312,13 +361,63 @@ export function ReportView({
                 <h3 className="font-display text-sm font-semibold tracking-wide uppercase">
                   {categoryLabel(cat)}
                 </h3>
-                {researchId && (
-                  <div className="ml-auto flex items-center gap-2">
-                    {busy === cat && progress && (
-                      <span className="text-muted-foreground hidden max-w-[16rem] truncate font-mono text-[11px] sm:inline">
-                        {progress}
-                      </span>
-                    )}
+                <div className="ml-auto flex items-center gap-2">
+                  {researchId && busy === cat && progress && (
+                    <span className="text-muted-foreground hidden max-w-[16rem] truncate font-mono text-[11px] sm:inline">
+                      {progress}
+                    </span>
+                  )}
+                  {/* Copying is free and client-side, so it stays available on
+                      the public share page (unlike "More", which spends credits). */}
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                aria-label={`Copy ${categoryLabel(cat)} as prompt`}
+                                className="h-7 shrink-0 px-2"
+                              />
+                            }
+                          />
+                        }>
+                        {copiedCat === cat ? (
+                          <Check className="text-tertiary h-3.5 w-3.5" />
+                        ) : (
+                          <ClipboardCopy className="h-3.5 w-3.5" />
+                        )}
+                        <ChevronDown className="ml-0.5 h-3 w-3 opacity-60" />
+                      </TooltipTrigger>
+                      <TooltipContent>Copy just this round as a prompt</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          copyRoundPrompt(
+                            cat,
+                            buildAnswerPrompt(current, company, [cat], roleContext)
+                          )
+                        }>
+                        <ClipboardCopy className="mr-1" />
+                        <span className="font-display">Copy answers prompt</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          copyRoundPrompt(
+                            cat,
+                            buildMockInterviewPrompt(current, company, [cat], roleContext)
+                          )
+                        }>
+                        <ClipboardCopy className="mr-1" />
+                        <span className="font-display">Copy mock interview</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {researchId && (
                     <Tooltip>
                       <TooltipTrigger
                         render={
@@ -341,8 +440,8 @@ export function ReportView({
                       </TooltipTrigger>
                       <TooltipContent>Add more questions</TooltipContent>
                     </Tooltip>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               <ul className="mt-2 space-y-3">
                 {questions.map((q, i) => (

@@ -1,12 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { EFFORT_LEVELS, EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
 
@@ -59,9 +54,13 @@ export function EffortPicker({
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              <div className="font-display space-y-0.5">
-                <p className="font-medium">{preset.label} effort — up to ${preset.capUsd.toFixed(2)} spend</p>
-                <p className="text-foreground text-xs">{preset.queriesHint} searches, {preset.questionTarget} questions</p>
+              <div className="font-display space-y-0.5 text-black">
+                <p className="font-medium">
+                  {preset.label} effort — up to ${preset.capUsd.toFixed(2)} spend
+                </p>
+                <p className="text-xs opacity-70">
+                  {preset.queriesHint} searches, {preset.questionTarget} questions
+                </p>
               </div>
             </TooltipContent>
           </Tooltip>

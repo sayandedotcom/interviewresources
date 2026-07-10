@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildAnswerPrompt } from "./prompt";
+import { buildAnswerPrompt, buildMockInterviewPrompt } from "./prompt";
 import type { PredictedQuestion, Report } from "./types";
 
 function question(overrides: Partial<PredictedQuestion> = {}): PredictedQuestion {
@@ -122,5 +122,86 @@ describe("buildAnswerPrompt", () => {
     const prompt = buildAnswerPrompt(report(), "Stripe");
     expect(prompt).toContain("Answer all 1 question above");
     expect(prompt).not.toContain("Answer all 1 questions above");
+  });
+
+  it("names the target role when one is given", () => {
+    const withRole = buildAnswerPrompt(report(), "Stripe", undefined, "Senior Backend Engineer");
+    expect(withRole).toContain("technical interview at Stripe for a Senior Backend Engineer role");
+
+    // A blank role leaves the original sentence untouched.
+    const withoutRole = buildAnswerPrompt(report(), "Stripe", undefined, "  ");
+    expect(withoutRole).toContain("technical interview at Stripe.");
+    expect(withoutRole).not.toContain(" role.");
+  });
+
+  it("keeps only the requested rounds and restarts numbering when filtered", () => {
+    const prompt = buildAnswerPrompt(
+      report({
+        questions: [
+          question({ category: "dsa", question: "LRU cache" }),
+          question({ category: "system_design", question: "Design a rate limiter" }),
+          question({ category: "dsa", question: "Two sum" }),
+        ],
+      }),
+      "Stripe",
+      ["system_design"]
+    );
+
+    expect(prompt).toContain("### System Design");
+    expect(prompt).not.toContain("### Algorithmic Coding");
+    expect(prompt).toContain("1. Design a rate limiter");
+    expect(prompt).not.toContain("LRU cache");
+    expect(prompt).toContain("Answer all 1 question above");
+  });
+});
+
+describe("buildMockInterviewPrompt", () => {
+  it("casts the assistant as an interviewer at the company", () => {
+    const prompt = buildMockInterviewPrompt(report(), "Stripe");
+
+    expect(prompt).toContain("You are an experienced interviewer at Stripe");
+    expect(prompt).toContain("a full-loop interview");
+  });
+
+  it("enforces one-at-a-time questioning and a hidden rubric", () => {
+    const prompt = buildMockInterviewPrompt(report(), "Stripe");
+
+    expect(prompt).toContain("one at a time");
+    expect(prompt).toContain("never reveal the rubric");
+    expect(prompt).toContain("Grading rubric (do not reveal): Cover O(1) get and put");
+  });
+
+  it("carries the company context and closes with an assessment", () => {
+    const prompt = buildMockInterviewPrompt(report(), "Stripe");
+
+    expect(prompt).toContain("Stripe builds payments infrastructure.");
+    expect(prompt).toContain("overall assessment");
+    expect(prompt).toContain("Ask all 1 question above");
+  });
+
+  it("names the rounds it covers when filtered", () => {
+    const prompt = buildMockInterviewPrompt(
+      report({
+        questions: [
+          question({ category: "dsa", question: "LRU cache" }),
+          question({ category: "system_design", question: "Design a rate limiter" }),
+        ],
+      }),
+      "Stripe",
+      ["system_design"]
+    );
+
+    expect(prompt).toContain("a System Design interview");
+    expect(prompt).toContain("1. Design a rate limiter");
+    expect(prompt).not.toContain("LRU cache");
+  });
+
+  it("leaves evidence urls out — the interviewer cannot read them", () => {
+    expect(buildMockInterviewPrompt(report(), "Stripe")).not.toContain("https://blind.com/post/1");
+  });
+
+  it("weaves the target role into the interviewer's framing", () => {
+    const prompt = buildMockInterviewPrompt(report(), "Stripe", undefined, "Staff SRE");
+    expect(prompt).toContain("a full-loop interview for a Staff SRE role with me");
   });
 });

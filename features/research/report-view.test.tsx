@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -584,17 +584,34 @@ describe("copy as prompt", () => {
     });
   }
 
-  it("copies a prompt built from the report to the clipboard", async () => {
+  // The header button is a dropdown: open it, then pick a variant.
+  async function copyVariant(name: RegExp) {
+    await userEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+    await userEvent.click(await screen.findByRole("menuitem", { name }));
+  }
+
+  it("copies an answer-me prompt built from the report to the clipboard", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     stubClipboard(writeText);
 
     render(<ReportView {...base} report={report()} />);
-    await userEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+    await copyVariant(/get every question answered/i);
 
     expect(writeText).toHaveBeenCalledOnce();
     const prompt = writeText.mock.calls[0][0] as string;
     expect(prompt).toContain("technical interview at Stripe");
     expect(prompt).toContain("Implement an LRU cache");
+  });
+
+  it("copies a mock-interview prompt when that variant is chosen", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard(writeText);
+
+    render(<ReportView {...base} report={report()} />);
+    await copyVariant(/mock interview — full loop/i);
+
+    expect(writeText).toHaveBeenCalledOnce();
+    expect(writeText.mock.calls[0][0]).toContain("You are an experienced interviewer at Stripe");
   });
 
   it("copies the extended report, not the one it first rendered", async () => {
@@ -608,38 +625,32 @@ describe("copy as prompt", () => {
         report={report({ questions: [question({ question: "Design a rate limiter" })] })}
       />
     );
-    await userEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+    await copyVariant(/get every question answered/i);
 
     expect(writeText.mock.calls[0][0]).toContain("Design a rate limiter");
   });
 
   it("confirms with Copied, then reverts", async () => {
     stubClipboard(vi.fn().mockResolvedValue(undefined));
-    vi.useFakeTimers();
 
-    try {
-      render(<ReportView {...base} report={report()} />);
-      // fireEvent, not userEvent: userEvent's own timers deadlock against fake ones.
-      fireEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+    render(<ReportView {...base} report={report()} />);
+    await userEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: /get every question answered/i })
+    );
 
-      // Let the clipboard promise settle before the state flips to "copied".
-      await act(async () => {});
-      expect(screen.getByText("Copied")).toBeInTheDocument();
-
-      await act(async () => {
-        vi.advanceTimersByTime(2000);
-      });
-      expect(screen.getByText("Copy as Prompt")).toBeInTheDocument();
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
+    // The label reverts on a 2s timer, past waitFor's default 1s budget.
+    await waitFor(() => expect(screen.getByText("Copy as Prompt")).toBeInTheDocument(), {
+      timeout: 2500,
+    });
   });
 
   it("tells the user when the browser denied clipboard access", async () => {
     stubClipboard(vi.fn().mockRejectedValue(new Error("denied")));
 
     render(<ReportView {...base} report={report()} />);
-    await userEvent.click(screen.getByRole("button", { name: /copy as prompt/i }));
+    await copyVariant(/get every question answered/i);
 
     expect(await screen.findByText("Copy failed")).toBeInTheDocument();
   });
@@ -648,5 +659,28 @@ describe("copy as prompt", () => {
     render(<ReportView {...base} report={report()} />);
 
     expect(screen.getByRole("button", { name: /copy as prompt/i })).toBeInTheDocument();
+  });
+
+  it("copies a single round when using that round's copy menu", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard(writeText);
+
+    render(
+      <ReportView
+        {...base}
+        report={report({
+          questions: [
+            question({ category: "dsa", question: "Implement an LRU cache" }),
+            question({ category: "behavioral", question: "Tell me about a conflict" }),
+          ],
+        })}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: /copy behavioral as prompt/i }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: /copy answers prompt/i }));
+
+    const prompt = writeText.mock.calls[0][0] as string;
+    expect(prompt).toContain("Tell me about a conflict");
+    expect(prompt).not.toContain("Implement an LRU cache");
   });
 });

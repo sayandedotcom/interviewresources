@@ -261,16 +261,18 @@ export function ResearchExperience({
                   {isDraftDirty(formValues) && (
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={clearForm}
-                            className="text-muted-foreground hover:text-foreground -mt-1 -mr-2">
-                            <RotateCcw className="h-3.5 w-3.5" />
-                            Clear form
-                          </Button>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={clearForm}
+                              className="text-muted-foreground hover:text-foreground -mt-1 -mr-2"
+                            />
+                          }>
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Clear form
                         </TooltipTrigger>
                         <TooltipContent>
                           <span className="font-display">Reset all fields to empty</span>
@@ -302,10 +304,9 @@ export function ResearchExperience({
                       <FormItem>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger asChild>
-                              <FormLabel htmlFor="companyUrl" className="cursor-help">
-                                Company URL <span className="opacity-60">· preferred</span>
-                              </FormLabel>
+                            <TooltipTrigger
+                              render={<FormLabel htmlFor="companyUrl" className="cursor-help" />}>
+                              Company URL <span className="opacity-60">· preferred</span>
                             </TooltipTrigger>
                             <TooltipContent>
                               <span className="font-display">
@@ -356,10 +357,9 @@ export function ResearchExperience({
                       <FormItem>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger asChild>
-                              <FormLabel htmlFor="techStack" className="cursor-help">
-                                Tech Stack <span className="opacity-60">· optional</span>
-                              </FormLabel>
+                            <TooltipTrigger
+                              render={<FormLabel htmlFor="techStack" className="cursor-help" />}>
+                              Tech Stack <span className="opacity-60">· optional</span>
                             </TooltipTrigger>
                             <TooltipContent>
                               <span className="font-display">
@@ -400,10 +400,9 @@ export function ResearchExperience({
                       <FormItem>
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger asChild>
-                              <FormLabel htmlFor="teamContext" className="cursor-help">
-                                Team / org <span className="opacity-60">· optional</span>
-                              </FormLabel>
+                            <TooltipTrigger
+                              render={<FormLabel htmlFor="teamContext" className="cursor-help" />}>
+                              Team / org <span className="opacity-60">· optional</span>
                             </TooltipTrigger>
                             <TooltipContent>
                               <span className="font-display">
@@ -428,10 +427,9 @@ export function ResearchExperience({
                     <FormItem className="mt-4">
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <FormLabel htmlFor="jobDescription" className="cursor-help">
-                              Job Description <span className="opacity-60">· optional</span>
-                            </FormLabel>
+                          <TooltipTrigger
+                            render={<FormLabel htmlFor="jobDescription" className="cursor-help" />}>
+                            Job Description <span className="opacity-60">· optional</span>
                           </TooltipTrigger>
                           <TooltipContent>
                             <span className="font-display">
@@ -460,10 +458,9 @@ export function ResearchExperience({
                     <FormItem className="mt-4">
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <FormLabel htmlFor="recruiterNotes" className="cursor-help">
-                              Recruiter notes <span className="opacity-60">· optional</span>
-                            </FormLabel>
+                          <TooltipTrigger
+                            render={<FormLabel htmlFor="recruiterNotes" className="cursor-help" />}>
+                            Recruiter notes <span className="opacity-60">· optional</span>
                           </TooltipTrigger>
                           <TooltipContent>
                             <span className="font-display">
@@ -489,10 +486,11 @@ export function ResearchExperience({
                 <div className="mt-4 space-y-2">
                   <TooltipProvider>
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Label className="text-muted-foreground cursor-help font-mono text-[10px] tracking-[0.16em] uppercase">
-                          Interviewers <span className="opacity-60">· optional</span>
-                        </Label>
+                      <TooltipTrigger
+                        render={
+                          <Label className="text-muted-foreground cursor-help font-mono text-[10px] tracking-[0.16em] uppercase" />
+                        }>
+                        Interviewers <span className="opacity-60">· optional</span>
                       </TooltipTrigger>
                       <TooltipContent>
                         <span className="font-display">
@@ -529,15 +527,17 @@ export function ResearchExperience({
                       />
                       <TooltipProvider>
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeInterviewer(index)}
-                              disabled={interviewerFields.length === 1}>
-                              <X className="h-4 w-4" />
-                            </Button>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeInterviewer(index)}
+                                disabled={interviewerFields.length === 1}
+                              />
+                            }>
+                            <X className="h-4 w-4" />
                           </TooltipTrigger>
                           <TooltipContent>
                             <span className="font-display">Remove interviewer</span>
@@ -553,15 +553,17 @@ export function ResearchExperience({
                   )}
                   <TooltipProvider>
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => appendInterviewer({ name: "", url: "" })}>
-                          <Plus className="mr-1 h-4 w-4" />
-                          Add interviewer
-                        </Button>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => appendInterviewer({ name: "", url: "" })}
+                          />
+                        }>
+                        <Plus className="mr-1 h-4 w-4" />
+                        Add interviewer
                       </TooltipTrigger>
                       <TooltipContent>
                         <span className="font-display">

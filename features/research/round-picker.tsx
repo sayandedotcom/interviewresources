@@ -6,12 +6,7 @@ import { Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { CATEGORY_META, categoryLabel } from "@/lib/research/display";
 import { INTERVIEW_CATEGORIES, type InterviewCategory } from "@/lib/research/types";
@@ -68,9 +63,7 @@ export function RoundPicker({
                   disabled={disabled}
                 />
               }>
-              <span className="font-mono text-[10px] tracking-widest opacity-70">
-                {meta.code}
-              </span>
+              <span className="font-mono text-[10px] tracking-widest opacity-70">{meta.code}</span>
               <span className="font-display">{meta.label}</span>
             </TooltipTrigger>
             <TooltipContent>
