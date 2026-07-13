@@ -23,6 +23,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "lingo:push": "lingo push",
+    "lingo:pull": "lingo pull",
+    "lingo:sync": "lingo push && lingo pull",
     "prepare": "husky"
   },
   "dependencies": {
