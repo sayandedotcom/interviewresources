@@ -4,7 +4,25 @@ import { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 
-import { Plus, RotateCcw, X } from "lucide-react";
+import {
+  Briefcase,
+  Building2,
+  FileText,
+  Hourglass,
+  Link as LinkIcon,
+  MapPin,
+  Mic,
+  NotebookText,
+  Plus,
+  Radio,
+  RotateCcw,
+  Swords,
+  Target,
+  Users,
+  Wrench,
+  X,
+  Zap,
+} from "lucide-react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -257,7 +275,10 @@ export function ResearchExperience({
             <Card>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <SectionLabel>Target</SectionLabel>
+                  <SectionLabel>
+                    <Target className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                    Target
+                  </SectionLabel>
                   {isDraftDirty(formValues) && (
                     <TooltipProvider>
                       <Tooltip>
@@ -288,7 +309,9 @@ export function ResearchExperience({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel htmlFor="company">
-                          Company<span className="text-tertiary">*</span>
+                          <Building2 className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                          Company
+                          <span className="text-tertiary">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input {...field} id="company" placeholder="Stripe" autoFocus />
@@ -306,6 +329,7 @@ export function ResearchExperience({
                           <Tooltip>
                             <TooltipTrigger
                               render={<FormLabel htmlFor="companyUrl" className="cursor-help" />}>
+                              <LinkIcon className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                               Company URL <span className="opacity-60">· preferred</span>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -328,6 +352,7 @@ export function ResearchExperience({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel htmlFor="role">
+                          <Briefcase className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                           Role / level <span className="opacity-60">· optional</span>
                         </FormLabel>
                         <FormControl>
@@ -342,6 +367,7 @@ export function ResearchExperience({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel htmlFor="yearsExperience">
+                          <Hourglass className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                           Years of Experience <span className="opacity-60">· optional</span>
                         </FormLabel>
                         <FormControl>
@@ -359,6 +385,7 @@ export function ResearchExperience({
                           <Tooltip>
                             <TooltipTrigger
                               render={<FormLabel htmlFor="techStack" className="cursor-help" />}>
+                              <Wrench className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                               Tech Stack <span className="opacity-60">· optional</span>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -385,6 +412,7 @@ export function ResearchExperience({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel htmlFor="location">
+                          <MapPin className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                           Location <span className="opacity-60">· optional</span>
                         </FormLabel>
                         <FormControl>
@@ -402,6 +430,7 @@ export function ResearchExperience({
                           <Tooltip>
                             <TooltipTrigger
                               render={<FormLabel htmlFor="teamContext" className="cursor-help" />}>
+                              <Users className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                               Team / org <span className="opacity-60">· optional</span>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -429,6 +458,7 @@ export function ResearchExperience({
                         <Tooltip>
                           <TooltipTrigger
                             render={<FormLabel htmlFor="jobDescription" className="cursor-help" />}>
+                            <FileText className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                             Job Description <span className="opacity-60">· optional</span>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -460,6 +490,7 @@ export function ResearchExperience({
                         <Tooltip>
                           <TooltipTrigger
                             render={<FormLabel htmlFor="recruiterNotes" className="cursor-help" />}>
+                            <NotebookText className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                             Recruiter notes <span className="opacity-60">· optional</span>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -490,6 +521,7 @@ export function ResearchExperience({
                         render={
                           <Label className="text-muted-foreground cursor-help font-mono text-[10px] tracking-[0.16em] uppercase" />
                         }>
+                        <Mic className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                         Interviewers <span className="opacity-60">· optional</span>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -578,7 +610,10 @@ export function ResearchExperience({
 
             <Card>
               <CardContent>
-                <SectionLabel>Rounds to scout</SectionLabel>
+                <SectionLabel>
+                  <Swords className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                  Rounds to scout
+                </SectionLabel>
                 <p className="text-muted-foreground font-display mt-1 text-xs">
                   You can add more rounds later, from the finished report.
                 </p>
@@ -600,7 +635,10 @@ export function ResearchExperience({
 
             <Card>
               <CardContent>
-                <SectionLabel>Effort</SectionLabel>
+                <SectionLabel>
+                  <Zap className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                  Effort
+                </SectionLabel>
                 <p className="text-muted-foreground font-display mt-1 text-xs">
                   How wide to search. Higher effort finds more questions and costs more credits.
                 </p>
@@ -707,7 +745,10 @@ function ProgressLog({ lines }: { lines: ProgressLine[] }) {
   return (
     <Card className="bg-muted">
       <CardContent>
-        <SectionLabel>Live feed</SectionLabel>
+        <SectionLabel>
+          <Radio className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+          Live feed
+        </SectionLabel>
         <ul className="mt-3 space-y-1.5">
           {lines.map((line) => (
             <li key={line.id} className="text-foreground flex gap-3 font-mono text-[13px]">

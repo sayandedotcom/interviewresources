@@ -3,15 +3,28 @@
 import { useEffect, useRef, useState } from "react";
 
 import {
+  AlertTriangle,
+  BookOpen,
+  Building2,
   Check,
   ChevronDown,
   ClipboardCopy,
+  ClipboardList,
   Coins,
+  Compass,
   Download,
   FileJson,
   FileText,
+  HelpCircle,
+  Lightbulb,
+  Link as LinkIcon,
   Loader2,
+  MessagesSquare,
+  Mic,
   Plus,
+  RefreshCw,
+  Search,
+  Zap,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +52,7 @@ import { buildAnswerPrompt, buildMockInterviewPrompt } from "@/lib/research/prom
 import type { ImportantLink, Report } from "@/lib/research/types";
 
 import { EffortPicker } from "@/features/research/effort-picker";
-import { RoundPicker } from "@/features/research/round-picker";
+import { RoundPicker, categoryIcon } from "@/features/research/round-picker";
 import { explainError, streamSse } from "@/features/research/stream";
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -207,7 +220,10 @@ export function ReportView({
   return (
     <div className="mt-6">
       <div className="flex items-center justify-between pb-3">
-        <SectionLabel>Scouting report</SectionLabel>
+        <SectionLabel>
+          <Search className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+          Scouting report
+        </SectionLabel>
         <div className="flex items-center gap-4">
           {creditsCharged != null && (
             <Tooltip>
@@ -318,7 +334,10 @@ export function ReportView({
           and well-documented reports leave it unset and show nothing. */}
       {current.evidenceCoverage === "sparse" && (
         <div className="bg-primary/5 border-primary/40 mt-5 rounded-md border-l-2 px-4 py-3">
-          <SectionLabel>Limited public data</SectionLabel>
+          <SectionLabel>
+            <AlertTriangle className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+            Limited public data
+          </SectionLabel>
           <p className="font-display text-foreground mt-1.5 text-[13.5px] leading-relaxed">
             There is little first-hand interview data for this company. Some questions are inferred
             from the founders&apos; backgrounds, comparable companies, and stage norms — look for
@@ -328,14 +347,20 @@ export function ReportView({
       )}
 
       <section className="mt-5">
-        <h2 className="font-display text-lg font-semibold tracking-tight">The company</h2>
+        <h2 className="font-display text-lg font-semibold tracking-tight">
+          <Building2 className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+          The company
+        </h2>
         <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
           {current.companySnapshot}
         </p>
         {/* Reports generated before companyExplainer existed are stored without it. */}
         {current.companyExplainer && (
           <div className="bg-tertiary/10 border-tertiary/40 mt-3 rounded-md border-l-2 px-4 py-3">
-            <SectionLabel>In plain terms</SectionLabel>
+            <SectionLabel>
+              <Lightbulb className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+              In plain terms
+            </SectionLabel>
             <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
               {current.companyExplainer}
             </p>
@@ -345,7 +370,10 @@ export function ReportView({
 
       {current.likelyLoopStructure && (
         <section className="mt-6">
-          <SectionLabel>The loop</SectionLabel>
+          <SectionLabel>
+            <Compass className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+            The loop
+          </SectionLabel>
           <p className="font-display border-primary text-foreground mt-2 border-l-2 pl-3 text-[15px] leading-relaxed">
             {current.likelyLoopStructure}
           </p>
@@ -355,7 +383,10 @@ export function ReportView({
       {current.interviewerSummary && (
         <Card className="mt-6">
           <CardContent>
-            <SectionLabel>The interviewer</SectionLabel>
+            <SectionLabel>
+              <Mic className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+              The interviewer
+            </SectionLabel>
             <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
               {current.interviewerSummary}
             </p>
@@ -364,165 +395,175 @@ export function ReportView({
       )}
 
       <section className="mt-8">
-        <h2 className="font-display text-lg font-semibold tracking-tight">Predicted questions</h2>
+        <h2 className="font-display text-lg font-semibold tracking-tight">
+          <HelpCircle className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+          Predicted questions
+        </h2>
         <div className="mt-3 space-y-6">
-          {grouped.map(({ cat, questions }) => (
-            <div key={cat}>
-              <div className="flex items-baseline gap-2">
-                <span className="text-tertiary font-mono text-[10px] font-semibold tracking-widest">
-                  {categoryCode(cat)}
-                </span>
-                <h3 className="font-display text-sm font-semibold tracking-wide uppercase">
-                  {categoryLabel(cat)}
-                </h3>
-                <div className="ml-auto flex items-center gap-2">
-                  {researchId && busy === cat && progress && (
-                    <span className="text-muted-foreground hidden max-w-[16rem] truncate font-mono text-[11px] sm:inline">
-                      {progress}
-                    </span>
-                  )}
-                  {/* Copying is free and client-side, so it stays available on
+          {grouped.map(({ cat, questions }) => {
+            const CategoryIcon = categoryIcon(cat);
+            return (
+              <div key={cat}>
+                <div className="flex items-baseline gap-2">
+                  <CategoryIcon className="text-tertiary h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="text-tertiary font-mono text-[10px] font-semibold tracking-widest">
+                    {categoryCode(cat)}
+                  </span>
+                  <h3 className="font-display text-sm font-semibold tracking-wide uppercase">
+                    {categoryLabel(cat)}
+                  </h3>
+                  <div className="ml-auto flex items-center gap-2">
+                    {researchId && busy === cat && progress && (
+                      <span className="text-muted-foreground hidden max-w-[16rem] truncate font-mono text-[11px] sm:inline">
+                        {progress}
+                      </span>
+                    )}
+                    {/* Copying is free and client-side, so it stays available on
                       the public share page (unlike "More", which spends credits). */}
-                  <DropdownMenu>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                aria-label={`Copy ${categoryLabel(cat)} as prompt`}
-                                className="h-7 shrink-0 px-2"
-                              />
-                            }
-                          />
-                        }>
-                        {copiedCat === cat ? (
-                          <Check className="text-tertiary h-3.5 w-3.5" />
-                        ) : (
-                          <ClipboardCopy className="h-3.5 w-3.5" />
-                        )}
-                        <ChevronDown className="ml-0.5 h-3 w-3 opacity-60" />
-                      </TooltipTrigger>
-                      <TooltipContent>Copy just this round as a prompt</TooltipContent>
-                    </Tooltip>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem
-                        onClick={() =>
-                          copyRoundPrompt(
-                            cat,
-                            buildAnswerPrompt(current, company, [cat], roleContext)
-                          )
-                        }>
-                        <ClipboardCopy className="mr-1" />
-                        <span className="font-display">Copy answers prompt</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          copyRoundPrompt(
-                            cat,
-                            buildMockInterviewPrompt(current, company, [cat], roleContext)
-                          )
-                        }>
-                        <ClipboardCopy className="mr-1" />
-                        <span className="font-display">Copy mock interview</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  {researchId && (
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            type="button"
-                            variant="default"
-                            size="sm"
-                            aria-label={`Add more ${categoryLabel(cat)} questions`}
-                            className="bg-tertiary hover:bg-tertiary/90 h-7 shrink-0 px-2 text-black"
-                            disabled={busy !== null}
-                            onClick={() => extend([cat], cat)}
-                          />
-                        }>
-                        {busy === cat ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-black" />
-                        ) : (
-                          <Plus className="h-3.5 w-3.5 text-black" />
-                        )}
-                        <span className="font-display ml-1 text-xs">More</span>
-                      </TooltipTrigger>
-                      <TooltipContent>Add more questions</TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              </div>
-              <ul className="mt-2 space-y-3">
-                {questions.map((q, i) => (
-                  <li key={i}>
-                    <Card>
-                      <CardContent>
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="font-display text-foreground text-[15px] leading-snug font-medium">
-                            {q.question}
-                          </p>
-                          <div className="flex shrink-0 items-center gap-2">
-                            {q.basis === "inferred" && (
-                              <Tooltip>
-                                <TooltipTrigger
-                                  render={
-                                    <Badge
-                                      variant="outline"
-                                      className="text-muted-foreground cursor-default font-mono text-[10px]">
-                                      {BASIS_META.label}
-                                    </Badge>
-                                  }
+                    <DropdownMenu>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  aria-label={`Copy ${categoryLabel(cat)} as prompt`}
+                                  className="h-7 shrink-0 px-2"
                                 />
-                                <TooltipContent className="max-w-xs">
-                                  {BASIS_META.tooltip}
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                            <span
-                              className={`font-mono text-[13px] leading-none ${
-                                q.confidence === "low" ? "text-muted-foreground" : "text-primary"
-                              }`}
-                              title={`Confidence: ${CONFIDENCE_META[q.confidence].label}`}>
-                              {CONFIDENCE_META[q.confidence].signal}
-                            </span>
+                              }
+                            />
+                          }>
+                          {copiedCat === cat ? (
+                            <Check className="text-tertiary h-3.5 w-3.5" />
+                          ) : (
+                            <ClipboardCopy className="h-3.5 w-3.5" />
+                          )}
+                          <ChevronDown className="ml-0.5 h-3 w-3 opacity-60" />
+                        </TooltipTrigger>
+                        <TooltipContent>Copy just this round as a prompt</TooltipContent>
+                      </Tooltip>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            copyRoundPrompt(
+                              cat,
+                              buildAnswerPrompt(current, company, [cat], roleContext)
+                            )
+                          }>
+                          <ClipboardCopy className="mr-1" />
+                          <span className="font-display">Copy answers prompt</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            copyRoundPrompt(
+                              cat,
+                              buildMockInterviewPrompt(current, company, [cat], roleContext)
+                            )
+                          }>
+                          <ClipboardCopy className="mr-1" />
+                          <span className="font-display">Copy mock interview</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    {researchId && (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="default"
+                              size="sm"
+                              aria-label={`Add more ${categoryLabel(cat)} questions`}
+                              className="bg-tertiary hover:bg-tertiary/90 h-7 shrink-0 px-2 text-black"
+                              disabled={busy !== null}
+                              onClick={() => extend([cat], cat)}
+                            />
+                          }>
+                          {busy === cat ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-black" />
+                          ) : (
+                            <Plus className="h-3.5 w-3.5 text-black" />
+                          )}
+                          <span className="font-display ml-1 text-xs">More</span>
+                        </TooltipTrigger>
+                        <TooltipContent>Add more questions</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
+                <ul className="mt-2 space-y-3">
+                  {questions.map((q, i) => (
+                    <li key={i}>
+                      <Card>
+                        <CardContent>
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="font-display text-foreground text-[15px] leading-snug font-medium">
+                              {q.question}
+                            </p>
+                            <div className="flex shrink-0 items-center gap-2">
+                              {q.basis === "inferred" && (
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    render={
+                                      <Badge
+                                        variant="outline"
+                                        className="text-muted-foreground cursor-default font-mono text-[10px]">
+                                        {BASIS_META.label}
+                                      </Badge>
+                                    }
+                                  />
+                                  <TooltipContent className="max-w-xs">
+                                    {BASIS_META.tooltip}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              <span
+                                className={`font-mono text-[13px] leading-none ${
+                                  q.confidence === "low" ? "text-muted-foreground" : "text-primary"
+                                }`}
+                                title={`Confidence: ${CONFIDENCE_META[q.confidence].label}`}>
+                                {CONFIDENCE_META[q.confidence].signal}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <p className="font-display text-muted-foreground mt-2 text-[13.5px] leading-relaxed">
-                          {q.rationale}
-                        </p>
-                        <details className="mt-2">
-                          <summary className="text-muted-foreground hover:text-foreground cursor-pointer font-mono text-[11px] tracking-widest uppercase">
-                            Prep note
-                          </summary>
-                          <p className="font-display text-foreground mt-1.5 text-[13.5px] leading-relaxed">
-                            {q.prepNote}
+                          <p className="font-display text-muted-foreground mt-2 text-[13.5px] leading-relaxed">
+                            {q.rationale}
                           </p>
-                        </details>
-                        {q.evidenceUrls.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {q.evidenceUrls.map((url, j) => (
-                              <Badge
-                                key={j}
-                                variant="outline"
-                                className="hover:border-tertiary/50 hover:bg-tertiary/10 hover:text-tertiary transition-colors"
-                                render={<a href={url} target="_blank" rel="noopener noreferrer" />}>
-                                <span className="font-mono text-[10px]">{hostOf(url)}</span>
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                          <details className="mt-2">
+                            <summary className="text-muted-foreground hover:text-foreground cursor-pointer font-mono text-[11px] tracking-widest uppercase">
+                              Prep note
+                            </summary>
+                            <p className="font-display text-foreground mt-1.5 text-[13.5px] leading-relaxed">
+                              {q.prepNote}
+                            </p>
+                          </details>
+                          {q.evidenceUrls.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {q.evidenceUrls.map((url, j) => (
+                                <Badge
+                                  key={j}
+                                  variant="outline"
+                                  className="hover:border-tertiary/50 hover:bg-tertiary/10 hover:text-tertiary transition-colors"
+                                  render={
+                                    <a href={url} target="_blank" rel="noopener noreferrer" />
+                                  }>
+                                  <LinkIcon className="h-3 w-3" aria-hidden="true" />
+                                  <span className="font-mono text-[10px]">{hostOf(url)}</span>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
         {extendError && (
           <p className="text-destructive mt-3 font-mono text-[11px]">{extendError}</p>
@@ -532,7 +573,10 @@ export function ReportView({
       {current.prepPlan.length > 0 && (
         <section className="mt-8">
           <Separator className="mb-5" />
-          <h2 className="font-display text-lg font-semibold tracking-tight">Prep plan</h2>
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            <ClipboardList className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+            Prep plan
+          </h2>
           <ol className="mt-2 space-y-1.5">
             {current.prepPlan.map((step, i) => (
               <li key={i} className="font-display text-foreground flex gap-3 text-[15px]">
@@ -550,6 +594,7 @@ export function ReportView({
         <section className="mt-8">
           <Separator className="mb-5" />
           <h2 className="font-display text-lg font-semibold tracking-tight">
+            <MessagesSquare className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             Interview experiences
           </h2>
           <p className="text-muted-foreground mt-1 text-xs">
@@ -562,7 +607,10 @@ export function ReportView({
       {importantLinks.length > 0 && (
         <section className="mt-8">
           <Separator className="mb-5" />
-          <h2 className="font-display text-lg font-semibold tracking-tight">Worth reading</h2>
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            <BookOpen className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+            Worth reading
+          </h2>
           <LinkCards links={importantLinks} />
         </section>
       )}
@@ -570,10 +618,16 @@ export function ReportView({
       {researchId && (
         <section className="mt-8">
           <Separator className="mb-5" />
-          <h2 className="font-display text-lg font-semibold tracking-tight">Keep on Generating</h2>
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            <RefreshCw className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+            Keep on Generating
+          </h2>
           <Card className="mt-4">
             <CardContent>
-              <SectionLabel>Scout more rounds</SectionLabel>
+              <SectionLabel>
+                <Search className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                Scout more rounds
+              </SectionLabel>
               <p className="text-muted-foreground mt-1 text-xs">
                 Forgot a round? Pick or create one and we&apos;ll research it into this report.
               </p>
@@ -600,7 +654,10 @@ export function ReportView({
               </div>
 
               <div className="mt-4">
-                <SectionLabel>Effort</SectionLabel>
+                <SectionLabel>
+                  <Zap className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                  Effort
+                </SectionLabel>
                 <p className="text-muted-foreground mt-1 text-xs">
                   How hard to search these rounds. Also applies to the “More” buttons above.
                 </p>
@@ -643,14 +700,16 @@ function LinkCards({ links }: { links: ImportantLink[] }) {
           <Card>
             <CardContent>
               <div className="flex items-baseline justify-between gap-3">
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-display text-foreground hover:text-tertiary flex items-baseline gap-2 text-[15px] leading-snug font-medium underline-offset-4 hover:underline">
-                  <span className="bg-tertiary inline-block h-1.5 w-1.5 shrink-0 translate-y-[-2px] rounded-full" />
-                  {link.title}
-                </a>
+                <span className="flex min-w-0 items-baseline gap-2">
+                  <LinkIcon className="text-tertiary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-display text-foreground hover:text-tertiary text-[15px] leading-snug font-medium underline-offset-4 hover:underline">
+                    {link.title}
+                  </a>
+                </span>
                 <span className="text-tertiary bg-tertiary/10 shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px]">
                   {hostOf(link.url)}
                 </span>

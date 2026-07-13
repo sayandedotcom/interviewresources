@@ -2,7 +2,19 @@
 
 import { useState } from "react";
 
-import { Plus, X } from "lucide-react";
+import {
+  Brain,
+  Building2,
+  Handshake,
+  Hash,
+  Home,
+  type LucideIcon,
+  MessageCircle,
+  Plus,
+  Puzzle,
+  Users,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +22,25 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { CATEGORY_META, categoryLabel } from "@/lib/research/display";
 import { INTERVIEW_CATEGORIES, type InterviewCategory } from "@/lib/research/types";
+
+const CATEGORY_ICON: Record<InterviewCategory, LucideIcon> = {
+  dsa: Puzzle,
+  system_design: Building2,
+  domain_quiz: Brain,
+  take_home: Home,
+  pair_programming: Users,
+  behavioral: MessageCircle,
+  hr_culture: Handshake,
+};
+
+function isKnownCategory(cat: string): cat is InterviewCategory {
+  return Object.hasOwn(CATEGORY_ICON, cat);
+}
+
+/** Custom rounds have no dedicated icon, so they fall back to a generic marker. */
+export function categoryIcon(cat: string): LucideIcon {
+  return isKnownCategory(cat) ? CATEGORY_ICON[cat] : Hash;
+}
 
 export function isCustomRound(round: string): boolean {
   return !INTERVIEW_CATEGORIES.includes(round as InterviewCategory);
@@ -50,6 +81,7 @@ export function RoundPicker({
       {predefined.map((cat) => {
         const on = selected.includes(cat);
         const meta = CATEGORY_META[cat];
+        const Icon = CATEGORY_ICON[cat];
         return (
           <Tooltip key={cat}>
             <TooltipTrigger
@@ -63,6 +95,7 @@ export function RoundPicker({
                   disabled={disabled}
                 />
               }>
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
               <span className="font-mono text-[10px] tracking-widest opacity-70">{meta.code}</span>
               <span className="font-display">{meta.label}</span>
             </TooltipTrigger>

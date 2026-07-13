@@ -334,12 +334,13 @@ describe("interview experiences", () => {
     });
     render(<ReportView {...base} report={r} />);
 
+    const known = ["Prep plan", "Interview experiences", "Worth reading"];
     const headings = screen
       .getAllByRole("heading", { level: 2 })
-      .map((h) => h.textContent)
-      .filter((t) => t && ["Prep plan", "Interview experiences", "Worth reading"].includes(t));
+      .map((h) => known.find((label) => h.textContent?.includes(label)))
+      .filter((label): label is string => Boolean(label));
 
-    expect(headings).toEqual(["Prep plan", "Interview experiences", "Worth reading"]);
+    expect(headings).toEqual(known);
   });
 
   it("hides the section when no experience was found", () => {
