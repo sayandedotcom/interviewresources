@@ -1,0 +1,176 @@
+{
+  "common": {
+    "signIn": "Anmelden",
+    "signOut": "Abmelden",
+    "home": "Startseite",
+    "pricing": "Preise",
+    "howItWorks": "So funktioniert es",
+    "learnMore": "Mehr darüber erfahren, wie es funktioniert",
+    "getStarted": "Loslegen",
+    "joinNow": "Jetzt beitreten und mit der Vorbereitung beginnen",
+    "mostPopular": "Am beliebtesten",
+    "forCredits": "für {credits} Credits",
+    "check": "—"
+  },
+  "nav": {
+    "home": "Startseite",
+    "howItWorks": "So funktioniert es",
+    "pricing": "Preise"
+  },
+  "hero": {
+    "overline": "Aufklärung vor dem Vorstellungsgespräch",
+    "title": "Erhalte die Fragen, bevor sie gestellt werden.",
+    "subtitle": "Gib ein Unternehmen ein. Wir recherchieren sein Produkt, seinen Tech-Stack, die Ingenieurskultur, den gemeldeten Interview-Ablauf und — wenn du einen nennst — die öffentlichen Arbeiten des Interviewers, um die Fragen vorherzusagen, denen du wahrscheinlich begegnen wirst. Jede Frage nennt die Quelle, auf der sie basiert.",
+    "usersCount": "{count} Nutzer"
+  },
+  "howItWorks": {
+    "overline": "So funktioniert es",
+    "title": "Drei Schritte zur Interviewvorbereitung",
+    "subtitle": "Vom Firmennamen zu evidenzgestützten Fragen in wenigen Minuten",
+    "step1Title": "Nenne dein Ziel",
+    "step1Desc": "Gib das Unternehmen ein, füge einen Interviewer hinzu, falls bekannt, und wähle deine Gesprächsrunden",
+    "step2Title": "Wir recherchieren",
+    "step2Desc": "Unsere KI durchsucht Engineering-Blogs, Interview-Bewertungen und öffentliche Daten",
+    "step3Title": "Erhalte deinen Bericht",
+    "step3Desc": "Fragen mit Konfidenzwerten, Quellenlinks und Vorbereitungshinweisen"
+  },
+  "stats": {
+    "questionsPredicted": "Vorhergesagte Fragen",
+    "companiesResearched": "Recherchierte Unternehmen",
+    "userSatisfaction": "Nutzerzufriedenheit",
+    "avgResearchTime": "Ø Recherchezeit"
+  },
+  "companies": {
+    "overline": "Vertraut für",
+    "title": "Vorbereitung auf Top-Technologieunternehmen"
+  },
+  "comparison": {
+    "title": "Warum {name}?",
+    "subtitle": "Der intelligentere Weg, sich auf technische Vorstellungsgespräche vorzubereiten",
+    "feature": "Funktion",
+    "genericPrep": "Allgemeine Vorbereitung",
+    "coachingLabel": "Coaching",
+    "us": "{name}",
+    "companySpecificQuestions": "Unternehmensspezifische Fragen",
+    "evidenceBackedPredictions": "Evidenzgestützte Vorhersagen",
+    "liveResearchProcess": "Live-Rechercheprozess",
+    "interviewerTargeting": "Interviewer-Targeting",
+    "prepTimePerCompany": "Vorbereitungszeit pro Unternehmen",
+    "startingPrice": "Startpreis",
+    "sometimes": "Manchmal",
+    "expensiveAddOn": "Teures Zusatzangebot",
+    "minutes": "{time}",
+    "hours": "Stunden",
+    "multipleSessions": "Mehrere Sitzungen",
+    "free": "Kostenlos",
+    "dollars": "${price}"
+  },
+  "testimonials": {
+    "overline": "Referenzen",
+    "title": "Was unsere Nutzer sagen",
+    "subtitle": "Verlass dich nicht nur auf unser Wort. Hier ist, was einige unserer Nutzer über {name} zu sagen haben."
+  },
+  "faq": {
+    "overline": "FAQ",
+    "title": "Häufig gestellte Fragen",
+    "items": [
+      {
+        "question": "Wie funktioniert Scouting Report?",
+        "answer": "Du gibst das Unternehmen ein, bei dem du vorstellig wirst, wählst die Gesprächsrunden aus, auf die du dich vorbereitest, und wir recherchieren öffentlich verfügbare Informationen, um die Fragen vorherzusagen, denen du begegnen könntest. Jede Vorhersage enthält Belege und Vorbereitungshinweise."
+      },
+      {
+        "question": "Ist das legal? Scrapt ihr LinkedIn?",
+        "answer": "Wir verwenden ausschließlich öffentlich zugängliche Websuchergebnisse. Wir scrapen niemals LinkedIn und greifen nicht auf private Profile zu. Interviewernamen werden nur als Suchbegriff verwendet, um ihre öffentlichen Arbeiten wie Vorträge oder Blogbeiträge zu finden."
+      },
+      {
+        "question": "Wie genau sind die Vorhersagen?",
+        "answer": "Jede Frage wird mit einem Konfidenzwert und Quellenlinks versehen. Wenn die Belege stark sind, ist der Konfidenzwert hoch. Wenn wir mit begrenzten Daten arbeiten, sagen wir das ehrlich."
+      },
+      {
+        "question": "Für welche Unternehmen funktioniert es am besten?",
+        "answer": "Technologieunternehmen mit aktiven Engineering-Blogs, veröffentlichten Interviewprozessen oder Kandidaten, die ihre Erfahrungen online teilen, haben in der Regel die reichhaltigsten Daten."
+      },
+      {
+        "question": "Kann ich das für jeden Interviewtyp verwenden?",
+        "answer": "Ja. Wir decken DSA, Systemdesign, Verhaltensinterviews, Fachquizze, Take-Home-Projekte, Pair Programming und HR/Kultur-Runden ab."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Einfache, transparente Preisgestaltung",
+    "subtitle": "Keine Pläne, kein Abonnement — nur Credits. Jedes Feature ist in jedem Paket enthalten. Ein Bericht kostet das, was die Recherche kostet: in der Regel etwa 46 Credits, und nie mehr als {maxCredits}.",
+    "plans": [
+      {
+        "name": "Starter",
+        "description": "Genug zum Ausprobieren",
+        "features": [
+          "100 Credits",
+          "Etwa 2 Rechercheberichte",
+          "Fragenvorhersagen mit Belegen",
+          "Interviewer-Recherche",
+          "PDF- und JSON-Export"
+        ]
+      },
+      {
+        "name": "Bundle",
+        "description": "Vorrat anlegen, nicht mehr aufladen müssen",
+        "features": [
+          "550 Credits",
+          "Etwa 11 Rechercheberichte",
+          "Alles aus Starter",
+          "10 % Bonus-Credits — 500 bezahlt, 550 gutgeschrieben"
+        ]
+      },
+      {
+        "name": "Max",
+        "description": "Für eine komplette Bewerbungsphase",
+        "features": [
+          "1200 Credits",
+          "Etwa 26 Rechercheberichte",
+          "Alles aus Bundle",
+          "20 % Bonus-Credits — 1000 bezahlt, 1200 gutgeschrieben"
+        ]
+      }
+    ]
+  },
+  "cta": {
+    "title": "Bereit, deine Interviewvorbereitungs-Reise zu beginnen?",
+    "buttonText": "Ressourcen entdecken"
+  },
+  "footer": {
+    "product": "Produkt",
+    "company": "Unternehmen",
+    "resources": "Ressourcen",
+    "legal": "Rechtliches",
+    "about": "Über uns",
+    "blog": "Blog",
+    "contact": "Kontakt",
+    "changelog": "Changelog",
+    "help": "Hilfe",
+    "howItWorks": "So funktioniert es",
+    "openSource": "Open Source",
+    "privacyPolicy": "Datenschutzrichtlinie",
+    "termsOfService": "Nutzungsbedingungen",
+    "cookiePolicy": "Cookie-Richtlinie",
+    "security": "Sicherheit",
+    "twitter": "Twitter",
+    "github": "GitHub"
+  },
+  "cookieConsent": {
+    "title": "🍪 Wir schätzen deine Privatsphäre",
+    "message": "Wir verwenden Cookies, um den Datenverkehr zu analysieren und deine Erfahrung zu verbessern.",
+    "cookiePolicyLink": "Cookie-Richtlinie",
+    "reject": "Ablehnen",
+    "accept": "Akzeptieren",
+    "close": "Schließen"
+  },
+  "copy": {
+    "tagline": "Erhalte die Fragen, bevor sie gestellt werden.",
+    "howItWorksTagline": "Erhalte die Fragen, bevor sie gestellt werden — gestützt auf echte Belege",
+    "subtagline": "Aufklärung vor dem Vorstellungsgespräch, fundiert durch Belege.",
+    "metaDescription": "Aufklärung vor dem Vorstellungsgespräch. Gib ein Unternehmen ein und erhalte die Fragen, die wahrscheinlich gestellt werden — fundiert durch Belege.",
+    "titleSuffix": "Interview-Fragen-Vorhersager",
+    "footerTagline": "Vorbereitungsintelligenz, keine Prophezeiung.",
+    "twitterCreator": "@sayandedotcom"
+  }
+}
