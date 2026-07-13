@@ -42,6 +42,7 @@ function question(overrides: Partial<Report["questions"][number]> = {}) {
     rationale: "r",
     prepNote: "p",
     evidenceUrls: ["https://a.dev"],
+    basis: "evidence" as const,
     ...overrides,
   };
 }

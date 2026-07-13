@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BudgetTracker, GeminiModel } from "./budget";
-import type { PipelineProgressEvent, Report, ResearchInput, ResearchPlan } from "./types";
+import type {
+  PipelineProgressEvent,
+  ProxyPlan,
+  Report,
+  ResearchInput,
+  ResearchPlan,
+} from "./types";
 
 vi.mock("./gemini");
 vi.mock("./tavily", async (importOriginal) => {
@@ -59,6 +65,7 @@ function report(overrides: Partial<Report> = {}): Report {
         rationale: "reported",
         prepNote: "O(1)",
         evidenceUrls: ["https://a.dev"],
+        basis: "evidence",
       },
     ],
     prepPlan: ["Drill LRU"],
@@ -72,6 +79,42 @@ function searchResult(url: string, content = "x".repeat(200)) {
   return { title: `Title ${url}`, url, content, score: 0.9 };
 }
 
+function proxyPlan(overrides: Partial<ProxyPlan> = {}): ProxyPlan {
+  return {
+    queries: [
+      {
+        query: "founder background",
+        purpose: "founders",
+        depth: "basic",
+        category: "founder_background",
+      },
+      {
+        query: "comparable startup interview",
+        purpose: "peers",
+        depth: "basic",
+        category: "comparable_company",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+/**
+ * Non-sparse evidence: many distinct substantive sources across queries, with
+ * the top of each extracted. Used by tests that must not trip the proxy wave.
+ */
+function nonSparseSearches() {
+  searchMock.mockImplementation(async (q) => ({
+    query: q,
+    results: Array.from({ length: 3 }, (_, i) =>
+      searchResult(`https://${q.replaceAll(" ", "-")}-${i}.dev`)
+    ),
+  }));
+  extractMock.mockImplementation(async (urls) =>
+    urls.map((url) => ({ url, rawContent: "R".repeat(500) }))
+  );
+}
+
 /**
  * Drives generateStructured stage-by-stage, recording a caller-chosen token cost
  * into the real BudgetTracker so budget-threshold behaviour is exercised for
@@ -79,6 +122,7 @@ function searchResult(url: string, content = "x".repeat(200)) {
  */
 function stubStages(opts: {
   plan?: ResearchPlan;
+  proxyPlan?: ProxyPlan;
   report?: Report;
   tokensByStage?: Partial<Record<string, [number, number]>>;
   model?: GeminiModel;
@@ -89,6 +133,7 @@ function stubStages(opts: {
     budget.recordLlmCall(args.stage, args.model, inTok, outTok);
 
     if (args.stage === "plan") return (opts.plan ?? plan()) as never;
+    if (args.stage === "plan_proxy") return (opts.proxyPlan ?? proxyPlan()) as never;
     if (args.stage === "compress") return { summary: `summary of ${args.stage}` } as never;
     if (args.stage === "synthesize") return (opts.report ?? report()) as never;
     throw new Error(`unexpected stage ${args.stage}`);
@@ -217,6 +262,9 @@ describe("stage orchestration", () => {
 
   it("skips a failed search and completes on the surviving queries", async () => {
     stubStages({});
+    // Surviving queries return enough distinct evidence to stay non-sparse, so
+    // the proxy wave does not fire and skew the direct-wave search counts.
+    nonSparseSearches();
     searchMock.mockRejectedValueOnce(new Error("Tavily search failed (429)"));
 
     const events: PipelineProgressEvent[] = [];
@@ -248,6 +296,9 @@ describe("stage orchestration", () => {
 describe("gather stage", () => {
   it("searches every planned query and bills the right depth", async () => {
     stubStages({});
+    // Distinct evidence per query keeps the run non-sparse, so no proxy wave
+    // adds searches on top of the three planned ones.
+    nonSparseSearches();
 
     const { budget } = await runResearchPipeline(input);
 
@@ -311,6 +362,9 @@ describe("gather stage", () => {
         searchResult(`https://${q.replaceAll(" ", "-")}.dev`),
       ],
     }));
+    // Extracting the shared page keeps the run non-sparse (a full page behind
+    // the evidence), so the proxy wave stays out of the source count.
+    extractMock.mockResolvedValue([{ url: "https://shared.dev", rawContent: "S".repeat(500) }]);
 
     await runResearchPipeline(input);
 
@@ -324,8 +378,16 @@ describe("gather stage", () => {
 
   it("never queues the same url for extraction twice", async () => {
     stubStages({});
-    // The same page is the top hit for all three queries.
-    searchMock.mockResolvedValue({ query: "q", results: [searchResult("https://top.dev")] });
+    // The same page is the top hit for all three queries; each also brings a
+    // unique second result so the run stays non-sparse and the proxy wave,
+    // which would call extract again, never fires.
+    searchMock.mockImplementation(async (q) => ({
+      query: q,
+      results: [
+        searchResult("https://top.dev"),
+        searchResult(`https://${q.replaceAll(" ", "-")}.dev`),
+      ],
+    }));
     extractMock.mockResolvedValue([{ url: "https://top.dev", rawContent: "E".repeat(500) }]);
 
     await runResearchPipeline(input);
@@ -764,6 +826,7 @@ describe("synthesize stage", () => {
             rationale: "reported",
             prepNote: "O(1)",
             evidenceUrls: ["https://a.dev", "https://invented.dev"],
+            basis: "evidence",
           },
         ],
       }),
@@ -786,6 +849,7 @@ describe("synthesize stage", () => {
             rationale: "reported",
             prepNote: "O(1)",
             evidenceUrls: ["https://invented.dev", "https://also-fake.dev"],
+            basis: "evidence",
           },
         ],
       }),
@@ -805,6 +869,129 @@ describe("synthesize stage", () => {
     const { report: out } = await runResearchPipeline(input);
 
     expect(out.importantLinks).toEqual([]);
+  });
+});
+
+describe("sparse-evidence proxy wave", () => {
+  it("broadens into a proxy wave when direct evidence is thin", async () => {
+    // The default beforeEach returns one shared snippet — genuinely sparse.
+    stubStages({});
+    const events: PipelineProgressEvent[] = [];
+
+    const { report: out } = await runResearchPipeline(input, (e) => events.push(e));
+
+    const stages = genMock.mock.calls.map((c) => c[0].stage);
+    expect(stages).toContain("plan_proxy");
+    expect(events.some((e) => e.stage === "broaden")).toBe(true);
+    expect(out.evidenceCoverage).toBe("sparse");
+  });
+
+  it("plans the proxy wave with the cheap model", async () => {
+    stubStages({});
+
+    await runResearchPipeline(input);
+
+    const proxy = genMock.mock.calls.find((c) => c[0].stage === "plan_proxy")![0];
+    expect(proxy.model).toBe("gemini-3.1-flash-lite-preview");
+  });
+
+  it("does not broaden when direct evidence is plentiful", async () => {
+    stubStages({});
+    nonSparseSearches();
+    const events: PipelineProgressEvent[] = [];
+
+    const { report: out } = await runResearchPipeline(input, (e) => events.push(e));
+
+    const stages = genMock.mock.calls.map((c) => c[0].stage);
+    expect(stages).not.toContain("plan_proxy");
+    expect(events.some((e) => e.stage === "broaden")).toBe(false);
+    expect(out.evidenceCoverage).toBe("rich");
+  });
+
+  it("skips the proxy wave when the budget is already stretched, despite sparsity", async () => {
+    // Plan burns 86% of the $1 cap, so shouldDegrade() is true after wave 1.
+    stubStages({ tokensByStage: { plan: [3_440_000, 0] } });
+    const events: PipelineProgressEvent[] = [];
+
+    const { report: out } = await runResearchPipeline(input, (e) => events.push(e), 1.0);
+
+    const stages = genMock.mock.calls.map((c) => c[0].stage);
+    expect(stages).not.toContain("plan_proxy");
+    expect(events.some((e) => e.stage === "broaden")).toBe(false);
+    expect(out.evidenceCoverage).toBe("rich");
+  });
+
+  it("completes on wave-1 evidence when the proxy plan call fails", async () => {
+    genMock.mockImplementation(async (args) => {
+      if (args.stage === "plan") return plan() as never;
+      if (args.stage === "plan_proxy") throw new Error("gemini 503");
+      if (args.stage === "compress") return { summary: "s" } as never;
+      if (args.stage === "synthesize") return report() as never;
+      throw new Error(`unexpected stage ${args.stage}`);
+    });
+    const events: PipelineProgressEvent[] = [];
+
+    const { report: out } = await runResearchPipeline(input, (e) => events.push(e));
+
+    expect(out.companySnapshot).toBe("Payments");
+    // The wave still ran and failed gracefully, so nothing was inferred.
+    expect(out.evidenceCoverage).toBe("rich");
+    expect(events.some((e) => e.message.startsWith("Broadened research failed"))).toBe(true);
+  });
+
+  it("dedupes a proxy-wave url against what wave 1 already gathered", async () => {
+    // Both waves surface the same page; wave 2's copy is dropped, so synthesis
+    // sees a single evidence note rather than a duplicate.
+    searchMock.mockResolvedValue({ query: "q", results: [searchResult("https://shared.dev")] });
+    stubStages({});
+
+    await runResearchPipeline(input);
+
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
+    expect(prompt).toContain("[1] ");
+    expect(prompt).not.toContain("[2] ");
+  });
+
+  it("keeps an inferred question's proxy citation but caps its confidence", async () => {
+    searchMock.mockResolvedValue({ query: "q", results: [searchResult("https://shared.dev")] });
+    stubStages({
+      report: report({
+        questions: [
+          {
+            category: "dsa",
+            question: "Systems design tradeoffs",
+            confidence: "high",
+            rationale: "the CTO ran a big-tech infra loop",
+            prepNote: "p",
+            evidenceUrls: ["https://shared.dev"],
+            basis: "inferred",
+          },
+        ],
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.questions[0].evidenceUrls).toEqual(["https://shared.dev"]);
+    expect(out.questions[0].basis).toBe("inferred");
+    expect(out.questions[0].confidence).toBe("medium");
+  });
+
+  it("relaxes the synthesis prompt to allow inferred questions only when broadened", async () => {
+    stubStages({});
+    await runResearchPipeline(input);
+    const sparsePrompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].system;
+    expect(sparsePrompt).toContain('set "basis" to "inferred"');
+
+    vi.clearAllMocks();
+    searchMock.mockResolvedValue({ query: "q", results: [searchResult("https://a.dev")] });
+    extractMock.mockResolvedValue([]);
+    stubStages({});
+    nonSparseSearches();
+    await runResearchPipeline(input);
+    const richPrompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].system;
+    expect(richPrompt).toContain('Set every question\'s "basis" to "evidence"');
+    expect(richPrompt).not.toContain('set "basis" to "inferred"');
   });
 });
 

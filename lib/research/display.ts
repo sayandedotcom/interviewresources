@@ -45,6 +45,14 @@ export const CONFIDENCE_META: Record<
   low: { label: "Low", signal: "●○○" },
 };
 
+/** Copy for the badge shown on questions the pipeline inferred from proxy evidence. */
+export const BASIS_META = {
+  label: "Inferred",
+  tooltip:
+    "Predicted from proxy signals — the founders' backgrounds, comparable companies, and " +
+    "stage norms — not first-hand accounts of interviewing here. See the rationale for the basis.",
+} as const;
+
 /**
  * Questions bucketed by round: predefined categories in taxonomy order, then
  * custom rounds in the order they first appear. The model can also return a

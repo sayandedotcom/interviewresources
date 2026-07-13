@@ -2,14 +2,18 @@ import { z } from "zod";
 
 import { BudgetTracker, EFFORT_PRESETS, type EffortPreset } from "./budget";
 import { generateStructured } from "./gemini";
+import { assessEvidenceDensity } from "./sparsity";
 import { tavilyExtract, tavilyExtractCredits, tavilySearch, tavilySearchCredits } from "./tavily";
 import {
   type CompressedNote,
+  type GatheredSource,
   type ImportantLink,
   type PipelineProgressEvent,
+  type ProxyPlan,
   type Report,
   type ResearchInput,
   type ResearchPlan,
+  proxyPlanSchema,
   reportSchema,
   researchPlanSchema,
 } from "./types";
@@ -76,13 +80,46 @@ each query's
   });
 }
 
-interface GatheredSource {
-  url: string;
-  title: string;
-  category: string;
-  content: string;
-  /** True once tavilyExtract replaced the search snippet with the full page. */
-  extracted: boolean;
+/**
+ * Stage 1b — Proxy plan. Only runs when gather came back thin. A second cheap
+ * call, fed a digest of what wave 1 already found, so it can name-drop the
+ * founders/leaders it discovered rather than guessing blind. See PRD §5.3 —
+ * this is what keeps an early-stage company from producing an empty report.
+ */
+async function proxyPlanStage(
+  input: ResearchInput,
+  wave1Sources: GatheredSource[],
+  budget: BudgetTracker,
+  preset: EffortPreset
+): Promise<ProxyPlan> {
+  // Only the company-overview sources are worth digesting for names: the thin
+  // interview sources are exactly why we're here.
+  const digest = wave1Sources
+    .filter((s) => s.category === "company")
+    .map((s) => `${s.title}: ${s.content.slice(0, 300)}`)
+    .join("\n")
+    .slice(0, 3000);
+
+  return generateStructured({
+    model: "gemini-3.1-flash-lite-preview",
+    stage: "plan_proxy",
+    schema: proxyPlanSchema,
+    budget,
+    system: `The direct interview evidence for this company is thin — it is likely early-stage
+or low-profile. Plan ${preset.proxyQueriesHint} proxy web-search queries that surface how it
+probably interviews, by analogy: (a) category "founder_background" — the founders'/leaders'
+backgrounds and the interview styles of the notable companies they previously worked at,
+using any names visible in the evidence digest; (b) category "funding_stage" — the company's
+funding stage, size, and recent news; (c) category "comparable_company" — interview
+processes at similar-stage companies in the same domain; (d) category "role_norms" —
+interview norms for this role and tech stack at seed-to-Series-B startups. Prefer "basic"
+depth. Set each query's "category" to one of those four identifiers. Keep queries concrete
+and searchable.`,
+    prompt: `${describeInput(input)}
+
+What wave 1 already found about the company:
+${digest || "(little — lead with founder names if any appear in the company name or URL)"}`,
+  });
 }
 
 const GATHER_CONCURRENCY = 4;
@@ -108,15 +145,21 @@ async function mapChunked<T, R>(
   return out;
 }
 
-/** Stage 2 — Gather. Runs Tavily searches from the plan, then extracts the top few URLs. */
+/**
+ * Stage 2 — Gather. Runs Tavily searches from the plan, then extracts the top
+ * few URLs. Reused for the proxy wave: `opts.seenUrls` lets the second wave
+ * dedupe against the first, and `opts.stage` labels its progress events.
+ */
 async function gatherStage(
-  plan: ResearchPlan,
+  plan: Pick<ResearchPlan, "queries">,
   budget: BudgetTracker,
   onProgress: OnProgress,
-  preset: EffortPreset
+  preset: EffortPreset,
+  opts: { seenUrls?: Set<string>; stage?: PipelineProgressEvent["stage"] } = {}
 ): Promise<GatheredSource[]> {
+  const stage = opts.stage ?? "gather";
   const sources: GatheredSource[] = [];
-  const seenUrls = new Set<string>();
+  const seenUrls = opts.seenUrls ?? new Set<string>();
   const topUrlsForExtract: string[] = [];
 
   // Searches run a few at a time; mapChunked returns them in plan order, so the
@@ -127,14 +170,14 @@ async function gatherStage(
     GATHER_CONCURRENCY,
     () => budget.shouldStop(),
     async (q) => {
-      emit(onProgress, "gather", `Searching: ${q.query}`);
+      emit(onProgress, stage, `Searching: ${q.query}`);
       const depth = budget.shouldDegrade() ? "basic" : q.depth;
       try {
         const result = await tavilySearch(q.query, { depth, maxResults: preset.searchResults });
-        budget.recordTavilyCredits("gather", tavilySearchCredits(depth), q.query);
+        budget.recordTavilyCredits(stage, tavilySearchCredits(depth), q.query);
         return { category: q.category, results: result.results };
       } catch {
-        emit(onProgress, "gather", `Search failed, skipping: ${q.query}`);
+        emit(onProgress, stage, `Search failed, skipping: ${q.query}`);
         return { category: q.category, results: [] };
       }
     }
@@ -161,11 +204,11 @@ async function gatherStage(
   }
 
   if (!budget.shouldStop() && topUrlsForExtract.length > 0) {
-    emit(onProgress, "gather", `Reading ${topUrlsForExtract.length} full pages...`);
+    emit(onProgress, stage, `Reading ${topUrlsForExtract.length} full pages...`);
     try {
       const extracted = await tavilyExtract(topUrlsForExtract);
       budget.recordTavilyCredits(
-        "gather",
+        stage,
         tavilyExtractCredits(topUrlsForExtract.length),
         `extract ${topUrlsForExtract.length} urls`
       );
@@ -178,7 +221,7 @@ async function gatherStage(
       }
     } catch {
       // Sources keep their search snippets, which compress passes through verbatim.
-      emit(onProgress, "gather", "Full-page reading failed — continuing with search snippets");
+      emit(onProgress, stage, "Full-page reading failed — continuing with search snippets");
     }
   }
 
@@ -252,11 +295,27 @@ async function synthesizeStage(
   input: ResearchInput,
   notes: CompressedNote[],
   budget: BudgetTracker,
-  preset: EffortPreset
+  preset: EffortPreset,
+  broadened: boolean
 ): Promise<Report> {
   const evidenceBlock = notes
     .map((n, i) => `[${i + 1}] (${n.category}) ${n.sourceTitle} — ${n.sourceUrl}\n${n.summary}`)
     .join("\n\n");
+
+  // The relaxation block only enters the prompt when the proxy wave fired, so a
+  // well-documented company's synthesis is byte-identical to the strict past.
+  const basisRules = broadened
+    ? `- Direct interview evidence for this company is thin, so proxy evidence is included in
+  the notes under categories "founder_background", "funding_stage", "comparable_company",
+  and "role_norms". You may predict questions inferred from it. Set a question's "basis" to
+  "evidence" only when it is grounded in a direct account of interviewing at THIS company;
+  set "basis" to "inferred" when it derives from proxy evidence.
+- An inferred question must still cite the proxy-evidence URLs it rests on, and its
+  rationale must name the specific proxy signal it leans on (e.g. "the CTO ran Stripe's
+  infra loop 2019-2022, so expect practical systems questions" or "Series A infra startups
+  of this size typically run a take-home plus a pairing round"). An inferred question is
+  never confidence "high".`
+    : `- Set every question's "basis" to "evidence".`;
 
   // Only present on an extension run, where the caller wants fresh questions
   // rather than the ones the report already shows.
@@ -286,6 +345,7 @@ Rules:
 - Set each question's "category" to one of the round identifiers from "Rounds to scout",
   copied character-for-character. Never invent a new identifier or reformat an existing one.
 - Every question must cite at least one evidence URL from the notes it's grounded in.
+${basisRules}
 - If evidence for a requested round is thin, say so honestly in the rationale and
   mark confidence "low" rather than fabricating specifics.
 - If the loop-format evidence reveals a round type the user didn't request, include it
@@ -327,6 +387,10 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
     // The prompt requires every question to cite evidence; one that lost all
     // of its citations is ungrounded, so its confidence claim is too.
     if (q.evidenceUrls.length === 0) q.confidence = "low";
+    // Belt-and-suspenders on the basis label: default a missing one to the
+    // safe reading, and never let an inferred question claim high confidence.
+    if (!q.basis) q.basis = "evidence";
+    if (q.basis === "inferred" && q.confidence === "high") q.confidence = "medium";
   }
 
   // `claimed` spans both link sections, so a URL kept as an interview experience
@@ -370,13 +434,45 @@ export async function runResearchPipeline(
   const plan = await planStage(input, budget, preset);
 
   emit(onProgress, "gather", "Gathering evidence from the web...");
-  const sources = await gatherStage(plan, budget, onProgress, preset);
+  // Owned here so the proxy wave can dedupe its results against wave 1.
+  const seenUrls = new Set<string>();
+  const sources = await gatherStage(plan, budget, onProgress, preset, { seenUrls });
+
+  // When direct interview evidence is thin — an early-stage or low-profile
+  // company — broaden into proxy research rather than return an empty report.
+  // Skipped once the budget is stretched: a second wave is optional work.
+  let broadened = false;
+  const density = assessEvidenceDensity(sources);
+  if (density.sparse && !budget.shouldDegrade()) {
+    emit(
+      onProgress,
+      "broaden",
+      "Public interview data is thin — researching founders, funding stage, and similar companies..."
+    );
+    try {
+      const proxyPlan = await proxyPlanStage(input, sources, budget, preset);
+      const proxySources = await gatherStage(
+        proxyPlan,
+        budget,
+        onProgress,
+        { ...preset, extractLimit: preset.proxyExtractLimit },
+        { seenUrls, stage: "broaden" }
+      );
+      sources.push(...proxySources);
+      broadened = true;
+    } catch {
+      emit(onProgress, "broaden", "Broadened research failed — continuing with direct evidence");
+    }
+  }
 
   emit(onProgress, "compress", `Compressing ${sources.length} sources...`);
   const notes = await compressStage(sources, budget, onProgress);
 
   emit(onProgress, "synthesize", "Synthesizing final report...");
-  const report = await synthesizeStage(input, notes, budget, preset);
+  const report = await synthesizeStage(input, notes, budget, preset, broadened);
+  // Assigned in code, not trusted to the model: "sparse" exactly when the proxy
+  // wave ran, so the UI can flag inferred content honestly.
+  report.evidenceCoverage = broadened ? "sparse" : "rich";
 
   emit(onProgress, "done", `Done. Total cost: $${budget.totalUsd.toFixed(4)}`);
 

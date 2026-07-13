@@ -28,6 +28,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 import type { Effort } from "@/lib/research/budget";
 import {
+  BASIS_META,
   CONFIDENCE_META,
   categoryCode,
   categoryLabel,
@@ -313,6 +314,19 @@ export function ReportView({
       )}
       <Separator />
 
+      {/* Only present once the pipeline broadened into proxy research; legacy
+          and well-documented reports leave it unset and show nothing. */}
+      {current.evidenceCoverage === "sparse" && (
+        <div className="bg-primary/5 border-primary/40 mt-5 rounded-md border-l-2 px-4 py-3">
+          <SectionLabel>Limited public data</SectionLabel>
+          <p className="font-display text-foreground mt-1.5 text-[13.5px] leading-relaxed">
+            There is little first-hand interview data for this company. Some questions are inferred
+            from the founders&apos; backgrounds, comparable companies, and stage norms — look for
+            the <span className="font-semibold">Inferred</span> tag.
+          </p>
+        </div>
+      )}
+
       <section className="mt-5">
         <h2 className="font-display text-lg font-semibold tracking-tight">The company</h2>
         <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
@@ -452,13 +466,31 @@ export function ReportView({
                           <p className="font-display text-foreground text-[15px] leading-snug font-medium">
                             {q.question}
                           </p>
-                          <span
-                            className={`shrink-0 font-mono text-[13px] leading-none ${
-                              q.confidence === "low" ? "text-muted-foreground" : "text-primary"
-                            }`}
-                            title={`Confidence: ${CONFIDENCE_META[q.confidence].label}`}>
-                            {CONFIDENCE_META[q.confidence].signal}
-                          </span>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {q.basis === "inferred" && (
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={
+                                    <Badge
+                                      variant="outline"
+                                      className="text-muted-foreground cursor-default font-mono text-[10px]">
+                                      {BASIS_META.label}
+                                    </Badge>
+                                  }
+                                />
+                                <TooltipContent className="max-w-xs">
+                                  {BASIS_META.tooltip}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            <span
+                              className={`font-mono text-[13px] leading-none ${
+                                q.confidence === "low" ? "text-muted-foreground" : "text-primary"
+                              }`}
+                              title={`Confidence: ${CONFIDENCE_META[q.confidence].label}`}>
+                              {CONFIDENCE_META[q.confidence].signal}
+                            </span>
+                          </div>
                         </div>
                         <p className="font-display text-muted-foreground mt-2 text-[13.5px] leading-relaxed">
                           {q.rationale}

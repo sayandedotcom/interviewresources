@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { interviewerSchema, reportSchema, researchInputSchema, researchPlanSchema } from "./types";
+import {
+  interviewerSchema,
+  proxyPlanSchema,
+  reportSchema,
+  researchInputSchema,
+  researchPlanSchema,
+} from "./types";
 
 /**
  * researchInputSchema is the trust boundary: it parses the body of an
@@ -205,6 +211,7 @@ describe("reportSchema", () => {
     rationale: "Reported by three candidates",
     prepNote: "Discuss O(1) get/put",
     evidenceUrls: ["https://example.com/a"],
+    basis: "evidence" as const,
   };
 
   const validReport = {
@@ -253,5 +260,60 @@ describe("reportSchema", () => {
 
   it("permits an empty interviewExperiences array — no company has write-ups guaranteed", () => {
     expect(() => reportSchema.parse({ ...validReport, interviewExperiences: [] })).not.toThrow();
+  });
+
+  it("requires each question to declare its basis", () => {
+    const { basis: _omitted, ...noBasis } = question;
+    const bad = { ...validReport, questions: [noBasis] };
+    expect(() => reportSchema.parse(bad)).toThrow();
+  });
+
+  it("rejects a basis value that is neither evidence nor inferred", () => {
+    const bad = { ...validReport, questions: [{ ...question, basis: "guessed" }] };
+    expect(() => reportSchema.parse(bad)).toThrow();
+  });
+
+  it("accepts an inferred question", () => {
+    const inferred = { ...validReport, questions: [{ ...question, basis: "inferred" }] };
+    expect(reportSchema.parse(inferred).questions[0].basis).toBe("inferred");
+  });
+
+  it("treats evidenceCoverage as optional so legacy reports still parse", () => {
+    expect(reportSchema.parse(validReport).evidenceCoverage).toBeUndefined();
+    expect(
+      reportSchema.parse({ ...validReport, evidenceCoverage: "sparse" }).evidenceCoverage
+    ).toBe("sparse");
+  });
+});
+
+describe("proxyPlanSchema", () => {
+  const validProxyPlan = {
+    queries: [
+      {
+        query: "founder background",
+        purpose: "founders",
+        depth: "basic",
+        category: "founder_background",
+      },
+      {
+        query: "peer startup interviews",
+        purpose: "peers",
+        depth: "advanced",
+        category: "comparable_company",
+      },
+    ],
+  };
+
+  it("accepts a well-formed proxy plan", () => {
+    expect(() => proxyPlanSchema.parse(validProxyPlan)).not.toThrow();
+  });
+
+  it("requires at least two proxy queries", () => {
+    expect(() => proxyPlanSchema.parse({ queries: [validProxyPlan.queries[0]] })).toThrow();
+  });
+
+  it("caps the proxy plan at eight queries", () => {
+    const tooMany = { queries: Array.from({ length: 9 }, () => validProxyPlan.queries[0]) };
+    expect(() => proxyPlanSchema.parse(tooMany)).toThrow();
   });
 });

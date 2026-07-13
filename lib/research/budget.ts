@@ -38,6 +38,10 @@ export interface EffortPreset {
   searchResults: number;
   /** How many top URLs get their full page extracted. */
   extractLimit: number;
+  /** Query-count range for the proxy wave when direct evidence is sparse. */
+  proxyQueriesHint: string;
+  /** Full-page extracts allowed in the proxy wave — kept small; proxy pages are context, not primary evidence. */
+  proxyExtractLimit: number;
   /** Question-count range handed to the synthesize prompt. */
   questionTarget: string;
   /** Hard ceiling on importantLinks, and the range shown to the model. */
@@ -59,6 +63,8 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     queriesHint: "3-5",
     searchResults: 4,
     extractLimit: 3,
+    proxyQueriesHint: "2-3",
+    proxyExtractLimit: 1,
     questionTarget: "8-15",
     linksMax: 4,
     linksHint: "2-4",
@@ -70,6 +76,8 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     queriesHint: "4-8",
     searchResults: 5,
     extractLimit: 5,
+    proxyQueriesHint: "3-5",
+    proxyExtractLimit: 2,
     questionTarget: "15-30",
     linksMax: 6,
     linksHint: "3-6",
@@ -81,6 +89,8 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     queriesHint: "8-12",
     searchResults: 8,
     extractLimit: 8,
+    proxyQueriesHint: "5-8",
+    proxyExtractLimit: 3,
     questionTarget: "30-50",
     linksMax: 10,
     linksHint: "6-10",

@@ -67,6 +67,7 @@ const report: Report = {
       rationale: "r",
       prepNote: "p",
       evidenceUrls: ["https://a.dev"],
+      basis: "evidence",
     },
   ],
   prepPlan: ["Drill"],

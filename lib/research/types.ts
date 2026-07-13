@@ -110,6 +110,54 @@ export const researchPlanSchema = z.object({
 
 export type ResearchPlan = z.infer<typeof researchPlanSchema>;
 
+/**
+ * When direct interview evidence for a company is thin (early-stage startups,
+ * companies with no Glassdoor/Blind/Reddit footprint), the pipeline runs a
+ * second gather wave using these proxy angles instead of returning an empty
+ * report. Questions grounded in this evidence are labelled `basis: "inferred"`.
+ */
+export const PROXY_QUERY_CATEGORIES = [
+  "founder_background",
+  "funding_stage",
+  "comparable_company",
+  "role_norms",
+] as const;
+
+/** Stage output when the sparse-evidence pivot fires: the proxy search plan. */
+export const proxyPlanSchema = z.object({
+  queries: z
+    .array(
+      z.object({
+        query: z.string(),
+        purpose: z.string().describe("Which proxy signal this query targets"),
+        depth: z.enum(["basic", "advanced"]),
+        category: z
+          .string()
+          .describe(
+            'One of "founder_background", "funding_stage", "comparable_company", "role_norms"'
+          ),
+      })
+    )
+    .min(2)
+    .max(8),
+});
+
+export type ProxyPlan = z.infer<typeof proxyPlanSchema>;
+
+/**
+ * A single web source pulled during gather, before compression. Shared between
+ * the pipeline and the sparsity scorer, so it lives here rather than in
+ * pipeline.ts to avoid a circular import.
+ */
+export interface GatheredSource {
+  url: string;
+  title: string;
+  category: string;
+  content: string;
+  /** True once tavilyExtract replaced the search snippet with the full page. */
+  extracted: boolean;
+}
+
 /** Stage 3 output: one compressed note per source. */
 export interface CompressedNote {
   sourceUrl: string;
@@ -128,6 +176,13 @@ export const questionSchema = z.object({
   rationale: z.string().describe("Why we predict this — grounded in evidence, not vibes"),
   prepNote: z.string().describe("What a strong answer covers"),
   evidenceUrls: z.array(z.string()),
+  basis: z
+    .enum(["evidence", "inferred"])
+    .describe(
+      '"evidence" when grounded in direct accounts of interviewing at THIS company; ' +
+        '"inferred" when derived from proxy signals (founders\' prior companies, comparable ' +
+        "companies, funding-stage norms)"
+    ),
 });
 
 export type PredictedQuestion = z.infer<typeof questionSchema>;
@@ -164,12 +219,19 @@ export const reportSchema = z.object({
   importantLinks: z
     .array(importantLinkSchema)
     .describe("3-6 most valuable sources for the candidate to read, chosen from the evidence URLs"),
+  /**
+   * Assigned by the pipeline, never earned by the model: "sparse" once the
+   * proxy-research wave fired because direct evidence was thin, "rich"
+   * otherwise. Optional so reports stored before this field render without a
+   * coverage notice.
+   */
+  evidenceCoverage: z.enum(["rich", "sparse"]).optional(),
 });
 
 export type Report = z.infer<typeof reportSchema>;
 
 export interface PipelineProgressEvent {
-  stage: "plan" | "gather" | "compress" | "synthesize" | "done" | "error";
+  stage: "plan" | "gather" | "broaden" | "compress" | "synthesize" | "done" | "error";
   message: string;
   at: string;
 }

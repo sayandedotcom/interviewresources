@@ -11,6 +11,7 @@ function question(overrides: Partial<PredictedQuestion> = {}): PredictedQuestion
     rationale: "Reported by three candidates",
     prepNote: "Cover O(1) get and put",
     evidenceUrls: ["https://blind.com/post/1"],
+    basis: "evidence",
     ...overrides,
   };
 }

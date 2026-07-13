@@ -20,6 +20,7 @@ function question(overrides: Partial<PredictedQuestion> = {}): PredictedQuestion
     rationale: "Reported by three candidates",
     prepNote: "Cover O(1) get and put",
     evidenceUrls: ["https://www.blind.com/post/1"],
+    basis: "evidence",
     ...overrides,
   };
 }
@@ -96,6 +97,56 @@ describe("report body", () => {
     render(<ReportView {...base} report={report({ prepPlan: [] })} />);
 
     expect(screen.queryByText("Prep plan")).not.toBeInTheDocument();
+  });
+});
+
+describe("evidence coverage", () => {
+  it("shows the limited-data banner when the report was broadened", () => {
+    render(<ReportView {...base} report={report({ evidenceCoverage: "sparse" })} />);
+
+    expect(screen.getByText("Limited public data")).toBeInTheDocument();
+  });
+
+  it("hides the banner for a well-documented report", () => {
+    render(<ReportView {...base} report={report({ evidenceCoverage: "rich" })} />);
+
+    expect(screen.queryByText("Limited public data")).not.toBeInTheDocument();
+  });
+
+  it("hides the banner for a legacy report that predates the field", () => {
+    render(<ReportView {...base} report={report()} />);
+
+    expect(screen.queryByText("Limited public data")).not.toBeInTheDocument();
+  });
+
+  it("tags an inferred question", () => {
+    const r = report({
+      evidenceCoverage: "sparse",
+      questions: [question({ question: "Inferred one", basis: "inferred", confidence: "medium" })],
+    });
+    render(<ReportView {...base} report={r} />);
+
+    expect(screen.getAllByText("Inferred").length).toBeGreaterThan(0);
+  });
+
+  it("shows no inferred tag when every question is evidence-backed", () => {
+    const r = report({
+      questions: [
+        question({ question: "Direct one", basis: "evidence" }),
+        question({ question: "Another direct", basis: "evidence" }),
+      ],
+    });
+    render(<ReportView {...base} report={r} />);
+
+    expect(screen.queryByText("Inferred")).not.toBeInTheDocument();
+  });
+
+  it("shows no inferred tag for a legacy question missing the basis field", () => {
+    const legacy = question();
+    delete (legacy as Partial<PredictedQuestion>).basis;
+    render(<ReportView {...base} report={report({ questions: [legacy] })} />);
+
+    expect(screen.queryByText("Inferred")).not.toBeInTheDocument();
   });
 });
 
