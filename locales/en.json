@@ -1,0 +1,176 @@
+{
+  "common": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "home": "Home",
+    "pricing": "Pricing",
+    "howItWorks": "How it works",
+    "learnMore": "Learn more about how it works",
+    "getStarted": "Get started",
+    "joinNow": "Join now to start preparing",
+    "mostPopular": "Most popular",
+    "forCredits": "for {credits} credits",
+    "check": "—"
+  },
+  "nav": {
+    "home": "Home",
+    "howItWorks": "How it works",
+    "pricing": "Pricing"
+  },
+  "hero": {
+    "overline": "Reconnaissance before the interview",
+    "title": "Get the questions before they ask them.",
+    "subtitle": "Paste a company. We research its product, stack, engineering culture, reported interview loop, and — if you name one — the interviewer's public work, then predict the questions you're likely to face. Each one cites the evidence it came from.",
+    "usersCount": "{count} users"
+  },
+  "howItWorks": {
+    "overline": "How it works",
+    "title": "Three steps to interview prep",
+    "subtitle": "From company name to evidence-backed questions in minutes",
+    "step1Title": "Name your target",
+    "step1Desc": "Enter the company, add an interviewer if you know them, select your rounds",
+    "step2Title": "We research",
+    "step2Desc": "Our AI searches engineering blogs, interview reviews, and public data",
+    "step3Title": "Get your report",
+    "step3Desc": "Questions with confidence scores, evidence links, and prep notes"
+  },
+  "stats": {
+    "questionsPredicted": "Questions Predicted",
+    "companiesResearched": "Companies Researched",
+    "userSatisfaction": "User Satisfaction",
+    "avgResearchTime": "Avg. Research Time"
+  },
+  "companies": {
+    "overline": "Trusted for",
+    "title": "Prepare for top tech companies"
+  },
+  "comparison": {
+    "title": "Why {name}?",
+    "subtitle": "The smarter way to prepare for technical interviews",
+    "feature": "Feature",
+    "genericPrep": "Generic Prep",
+    "coachingLabel": "Coaching",
+    "us": "{name}",
+    "companySpecificQuestions": "Company-specific questions",
+    "evidenceBackedPredictions": "Evidence-backed predictions",
+    "liveResearchProcess": "Live research process",
+    "interviewerTargeting": "Interviewer targeting",
+    "prepTimePerCompany": "Prep time per company",
+    "startingPrice": "Starting price",
+    "sometimes": "Sometimes",
+    "expensiveAddOn": "Expensive add-on",
+    "minutes": "{time}",
+    "hours": "Hours",
+    "multipleSessions": "Multiple sessions",
+    "free": "Free",
+    "dollars": "${price}"
+  },
+  "testimonials": {
+    "overline": "Testimonials",
+    "title": "What our users are saying",
+    "subtitle": "Don't just take our word for it. Here's what some of our users have to say about {name}."
+  },
+  "faq": {
+    "overline": "FAQ",
+    "title": "Frequently Asked Questions",
+    "items": [
+      {
+        "question": "How does Scouting Report work?",
+        "answer": "You enter the company you're interviewing with, select the interview rounds you're preparing for, and we research publicly available information to predict the questions you might face. Each prediction comes with evidence and prep notes."
+      },
+      {
+        "question": "Is this legal? Do you scrape LinkedIn?",
+        "answer": "We only use publicly available web search results. We never scrape LinkedIn or access private profiles. Interviewer names are used only as a search seed to find their public work like talks or blog posts."
+      },
+      {
+        "question": "How accurate are the predictions?",
+        "answer": "Every question comes with a confidence score and evidence links. When evidence is strong, confidence is high. When we're working with limited data, we say so honestly."
+      },
+      {
+        "question": "What companies work best?",
+        "answer": "Tech companies with active engineering blogs, published interview processes, or candidates who share their experiences online tend to have the richest data."
+      },
+      {
+        "question": "Can I use this for any interview type?",
+        "answer": "Yes. We cover DSA, system design, behavioral, domain quizzes, take-home projects, pair programming, and HR/culture rounds."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Simple, transparent pricing",
+    "subtitle": "No plans, no subscription — just credits. Every feature is included in every pack. A report costs what it costs to research: typically about 46 credits, and never more than {maxCredits}.",
+    "plans": [
+      {
+        "name": "Starter",
+        "description": "Enough to try it out",
+        "features": [
+          "100 credits",
+          "About 2 research reports",
+          "Question predictions with evidence",
+          "Interviewer research",
+          "PDF and JSON export"
+        ]
+      },
+      {
+        "name": "Bundle",
+        "description": "Stock up, stop topping up",
+        "features": [
+          "550 credits",
+          "About 11 research reports",
+          "Everything in Starter",
+          "10% bonus credits — 500 paid, 550 granted"
+        ]
+      },
+      {
+        "name": "Max",
+        "description": "For a full interview season",
+        "features": [
+          "1200 credits",
+          "About 26 research reports",
+          "Everything in Bundle",
+          "20% bonus credits — 1000 paid, 1200 granted"
+        ]
+      }
+    ]
+  },
+  "cta": {
+    "title": "Ready to embark on your interview prep journey?",
+    "buttonText": "Start Exploring Resources"
+  },
+  "footer": {
+    "product": "Product",
+    "company": "Company",
+    "resources": "Resources",
+    "legal": "Legal",
+    "about": "About",
+    "blog": "Blog",
+    "contact": "Contact",
+    "changelog": "Changelog",
+    "help": "Help",
+    "howItWorks": "How it works",
+    "openSource": "Open Source",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "cookiePolicy": "Cookie Policy",
+    "security": "Security",
+    "twitter": "Twitter",
+    "github": "GitHub"
+  },
+  "cookieConsent": {
+    "title": "🍪 We value your privacy",
+    "message": "We use cookies to analyze traffic and improve your experience.",
+    "cookiePolicyLink": "Cookie Policy",
+    "reject": "Reject",
+    "accept": "Accept",
+    "close": "Close"
+  },
+  "copy": {
+    "tagline": "Get the questions before they ask them.",
+    "howItWorksTagline": "Get the questions before they ask them — backed by real evidence",
+    "subtagline": "Reconnaissance before the interview, grounded in evidence.",
+    "metaDescription": "Reconnaissance before the interview. Paste a company, get the questions they're likely to ask — grounded in evidence.",
+    "titleSuffix": "Interview Question Guesser",
+    "footerTagline": "Prep intelligence, not prophecy.",
+    "twitterCreator": "@sayandedotcom"
+  }
+}
