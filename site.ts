@@ -5,6 +5,7 @@ import { contactConfig } from "./config/contact";
 import { copyConfig } from "./config/copy";
 import { ctaConfig } from "./config/cta";
 import { faqsConfig } from "./config/faqs";
+import { keywordsConfig } from "./config/keywords";
 import { pricingConfig } from "./config/pricing";
 import { statsConfig } from "./config/stats";
 import { testimonialsConfig } from "./config/testimonials";
@@ -21,13 +22,7 @@ export const siteConfig = {
   waitlist: false,
   activeAuth: true,
   enablePayments: true,
-  keywords: [
-    "interview questions",
-    "interview prep",
-    "company research",
-    "technical interview",
-    "job interview",
-  ],
+  keywords: keywordsConfig.keywords,
   copy: copyConfig,
   brand: brandConfig,
   pricingPlans: pricingConfig.plans,
