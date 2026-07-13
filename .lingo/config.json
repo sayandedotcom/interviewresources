@@ -1,0 +1,8 @@
+{
+  "$schema": "https://raw.githubusercontent.com/lingodotdev/lingo/main/packages/cli/src/config-schema.json",
+  "orgId": "org_JZQuiuTrqnkouExpSJTd",
+  "engineId": "eng_SWqAXKDSsvJuB2FJNA3p",
+  "sourceLocale": "en",
+  "targetLocales": ["de"],
+  "files": [{ "pattern": "locales/en.json" }]
+}

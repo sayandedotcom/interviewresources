@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "files": {
+    "locales/de.json": {
+      "sha256": "773e16111e3314838945f367c36a82506736489f152e9f5e5b18cb9340621cd1"
+    },
+    "locales/en.json": {
+      "sha256": "7f4006f4ec81b385a1e8e7f842313457e1bafecc334a92e04ee412d3658421c0"
+    }
+  }
+}
