@@ -178,8 +178,11 @@ export function EstimatePanel({
             {/* The label is a heading, not a row of the stack — it wants more air
                 under it than the card's rhythm gives the rest. */}
             <div className="mb-2">
-              <h2 className="text-tertiary font-display text-lg font-medium capitalize flex items-center">
-                <Gauge className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]" aria-hidden="true" />
+              <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
+                <Gauge
+                  className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
+                  aria-hidden="true"
+                />
                 Estimate
               </h2>
             </div>

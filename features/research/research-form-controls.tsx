@@ -3,7 +3,6 @@
 import { RefreshCw, RotateCcw } from "lucide-react";
 import { type Control, useWatch } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import type { Effort } from "@/lib/research/budget";
@@ -82,14 +82,15 @@ export function ClearFormButton({
     <AlertDialog>
       <TooltipProvider>
         <Tooltip>
-          <AlertDialogTrigger render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground -mt-1 -mr-2"
-            />
-          }>
+          <AlertDialogTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground -mt-1 -mr-2"
+              />
+            }>
             <RotateCcw className="h-3.5 w-3.5" />
             <span className="font-display">Clear form</span>
           </AlertDialogTrigger>
@@ -120,7 +121,11 @@ export function RunButton({ control }: { control: Control<ResearchFormValues> })
   const [company, rounds] = useWatch({ control, name: ["company", "rounds"] });
 
   return (
-    <Button type="submit" size="lg" variant="tertiary" disabled={!company.trim() || rounds.length === 0}>
+    <Button
+      type="submit"
+      size="lg"
+      variant="tertiary"
+      disabled={!company.trim() || rounds.length === 0}>
       Run reconnaissance <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
     </Button>
   );

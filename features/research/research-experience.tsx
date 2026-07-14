@@ -250,13 +250,16 @@ export function ResearchExperience({
               <Card>
                 <CardContent>
                   <div className="flex items-center justify-between">
-                    <h2 className="text-tertiary font-display text-lg font-medium capitalize flex items-center">
-                      <Target className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]" aria-hidden="true" />
+                    <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
+                      <Target
+                        className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
+                        aria-hidden="true"
+                      />
                       Target
                     </h2>
                     <ClearFormButton control={control} onClear={clearForm} />
                   </div>
-                    <p className="text-muted-foreground font-display mt-1 text-xs">
+                  <p className="text-muted-foreground font-display mt-1 text-xs">
                     The company and role you are interviewing for, helps find relevant questions.
                   </p>
                   <div className="mt-4 grid gap-5 sm:grid-cols-2">
@@ -287,7 +290,11 @@ export function ResearchExperience({
                             </FormLabel>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger render={<Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />} />
+                                <TooltipTrigger
+                                  render={
+                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                  }
+                                />
                                 <TooltipContent>
                                   <span className="font-display">
                                     Helps find company-specific interview questions from public
@@ -344,7 +351,11 @@ export function ResearchExperience({
                             </FormLabel>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger render={<Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />} />
+                                <TooltipTrigger
+                                  render={
+                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                  }
+                                />
                                 <TooltipContent>
                                   <span className="font-display">
                                     The team or organization you'd work on — helps find relevant
@@ -385,7 +396,11 @@ export function ResearchExperience({
                             </FormLabel>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger render={<Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />} />
+                                <TooltipTrigger
+                                  render={
+                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                  }
+                                />
                                 <TooltipContent>
                                   <span className="font-display">
                                     Languages, frameworks, and tools the company uses — helps find
@@ -417,7 +432,11 @@ export function ResearchExperience({
                             </FormLabel>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger render={<Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />} />
+                                <TooltipTrigger
+                                  render={
+                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                  }
+                                />
                                 <TooltipContent>
                                   <span className="font-display">
                                     Paste the job posting to get questions tailored to the specific
@@ -451,7 +470,11 @@ export function ResearchExperience({
                             </FormLabel>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger render={<Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />} />
+                                <TooltipTrigger
+                                  render={
+                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                  }
+                                />
                                 <TooltipContent>
                                   <span className="font-display">
                                     What did the recruiter tell you about the process? Which rounds
@@ -480,7 +503,11 @@ export function ResearchExperience({
                         </Label>
                         <TooltipProvider>
                           <Tooltip>
-                                <TooltipTrigger render={<Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />} />
+                            <TooltipTrigger
+                              render={
+                                <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                              }
+                            />
                             <TooltipContent>
                               <span className="font-display">
                                 Names help personalize questions. URLs are used only as
@@ -602,7 +629,8 @@ export function ResearchExperience({
                  */}
                 {signedIn && !balanceKnown && (
                   <Button type="submit" size="lg" variant="tertiary" disabled>
-                    Run reconnaissance <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
+                    Run reconnaissance{" "}
+                    <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
                   </Button>
                 )}
 
@@ -672,7 +700,9 @@ function ProgressLog({ lines }: { lines: ProgressLine[] }) {
         <ul className="mt-3 space-y-1.5">
           {lines.map((line) => (
             <li key={line.id} className="text-foreground flex gap-3 font-mono text-[13px]">
-              <span className="text-tertiary/60 shrink-0 tracking-widest uppercase">{line.stage}</span>
+              <span className="text-tertiary/60 shrink-0 tracking-widest uppercase">
+                {line.stage}
+              </span>
               <span className="font-display">{line.message}</span>
             </li>
           ))}
