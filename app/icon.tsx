@@ -8,6 +8,8 @@ export const size = {
 };
 export const contentType = "image/png";
 
+// Simplified radar-scope mark: ring + lime dot blip. Crosshairs are dropped —
+// they turn to mush below ~48px.
 export default function Icon() {
   return new ImageResponse(
     <div
@@ -21,12 +23,25 @@ export default function Icon() {
       }}>
       <div
         style={{
-          width: "14px",
-          height: "14px",
-          transform: "rotate(45deg)",
-          backgroundColor: siteConfig.brand.colors.mark,
-        }}
-      />
+          width: "24px",
+          height: "24px",
+          borderRadius: "9999px",
+          border: `2px solid ${siteConfig.brand.colors.ring}`,
+          display: "flex",
+          position: "relative",
+        }}>
+        <div
+          style={{
+            position: "absolute",
+            left: "11px",
+            top: "3px",
+            width: "6px",
+            height: "6px",
+            borderRadius: "9999px",
+            backgroundColor: siteConfig.brand.colors.blip,
+          }}
+        />
+      </div>
     </div>,
     size
   );

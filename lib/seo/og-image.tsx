@@ -21,12 +21,47 @@ export function OgImageContent() {
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         <div
           style={{
-            width: "28px",
-            height: "28px",
-            transform: "rotate(45deg)",
-            backgroundColor: siteConfig.brand.colors.mark,
-          }}
-        />
+            width: "32px",
+            height: "32px",
+            borderRadius: "9999px",
+            border: `2px solid ${siteConfig.brand.colors.ring}`,
+            display: "flex",
+            position: "relative",
+          }}>
+          <div
+            style={{
+              position: "absolute",
+              left: "13px",
+              top: "0px",
+              width: "1px",
+              height: "28px",
+              opacity: 0.4,
+              backgroundColor: siteConfig.brand.colors.ring,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              left: "0px",
+              top: "13px",
+              width: "28px",
+              height: "1px",
+              opacity: 0.4,
+              backgroundColor: siteConfig.brand.colors.ring,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              left: "16px",
+              top: "5px",
+              width: "7px",
+              height: "7px",
+              borderRadius: "9999px",
+              backgroundColor: siteConfig.brand.colors.blip,
+            }}
+          />
+        </div>
         <span
           style={{
             fontSize: "32px",

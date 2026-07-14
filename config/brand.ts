@@ -10,5 +10,8 @@ export const brandConfig = {
     mark: "#eaeaea",
     ogForeground: "#fafafa",
     ogMuted: "#a1a1a1",
+    /** sRGB hex of the `--tertiary` theme token, oklch(0.84 0.19 112). */
+    blip: "#cfd500",
+    ring: "#a1a1a1",
   },
 };

@@ -47,7 +47,7 @@ export function Header() {
       <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2">
           <Link href="/" className="group flex items-center gap-2">
-            <LogoMark glowClassName="bg-tertiary/30 opacity-0 group-hover:opacity-100" />
+            <LogoMark size="lg" glowClassName="bg-tertiary/30 opacity-0 group-hover:opacity-100" />
             <span className="font-display text-sm font-semibold tracking-tight">
               {siteConfig.name}
             </span>
