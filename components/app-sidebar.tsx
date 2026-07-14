@@ -192,17 +192,31 @@ export function AppSidebar({
                 {siteConfig.name}
               </span>
             </Link>
-            <SidebarTrigger className="text-sidebar-foreground/70 hover:text-sidebar-foreground shrink-0 transition-opacity group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:inset-0 group-data-[collapsible=icon]:m-auto group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:group-hover/header:opacity-100" />
+            {/*
+             * Collapsed centering is split by axis on purpose. Horizontally the
+             * trigger is wider than the rail's content box, so auto margins lose to
+             * `left` and it has to be translated. Vertically it must NOT be
+             * translated: the button's `active:translate-y-px` press writes the same
+             * `--tw-translate-y`, so a `-translate-y-1/2` would be dropped on
+             * mousedown and the icon would jump half its height. Auto margins fit
+             * there anyway, since the row is taller than the button.
+             */}
+            <SidebarTrigger className="text-sidebar-foreground/70 hover:text-sidebar-foreground shrink-0 transition-opacity group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:inset-y-0 group-data-[collapsible=icon]:left-1/2 group-data-[collapsible=icon]:my-auto group-data-[collapsible=icon]:-translate-x-1/2 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:group-hover/header:opacity-100" />
           </div>
 
-          <SidebarMenu>
+          {/* Collapsed, the buttons shrink to a 2rem square; centering the items
+              lines them up under the brand mark instead of the header's padding. */}
+          <SidebarMenu className="group-data-[collapsible=icon]:items-center">
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="New session"
                 isActive={pathname === "/prepare"}
                 render={<Link href="/prepare" />}>
                 <PlusIcon />
-                <span className="font-display font-medium">New session</span>
+                {/* The menu button only truncates a span that is its *last* child, and
+                    here the pending hint is. Without this the label rewraps to two
+                    lines on its way out as the rail collapses. */}
+                <span className="font-display truncate font-medium">New session</span>
                 <NavPendingHint />
               </SidebarMenuButton>
             </SidebarMenuItem>
