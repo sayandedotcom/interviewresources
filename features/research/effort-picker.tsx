@@ -45,8 +45,10 @@ export function EffortPicker({
               <span className="flex w-full items-baseline justify-between gap-2">
                 <span className="font-display text-sm font-medium">{preset.label}</span>
                 {credits && (
-                  <span className={`font-mono text-[10px] font-medium ${on ? "opacity-70" : "text-tertiary"}`}>
-                    <ChevronLeft className="inline h-3 w-3" /><span className="font-bold">{credits[level]}</span>
+                  <span
+                    className={`font-mono text-[10px] font-medium ${on ? "opacity-70" : "text-tertiary"}`}>
+                    <ChevronLeft className="inline h-3 w-3" />
+                    <span className="font-bold">{credits[level]}</span>
                   </span>
                 )}
               </span>

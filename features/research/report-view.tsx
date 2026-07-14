@@ -674,11 +674,14 @@ export function ReportView({
           </h2>
           <Card className="mt-4">
             <CardContent>
-              <SectionLabel>
-                <Search className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+              <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
+                <Search
+                  className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
+                  aria-hidden="true"
+                />
                 Scout more rounds
-              </SectionLabel>
-              <p className="text-muted-foreground mt-1 text-xs">
+              </h2>
+              <p className="text-muted-foreground font-display mt-1 text-xs">
                 Forgot a round? Pick or create one and we&apos;ll research it into this report.
               </p>
               <div className="mt-4">
@@ -704,12 +707,15 @@ export function ReportView({
               </div>
 
               <div className="mt-4">
-                <SectionLabel>
-                  <Zap className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
+                  <Zap
+                    className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
+                    aria-hidden="true"
+                  />
                   Effort
-                </SectionLabel>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  How hard to search these rounds. Also applies to the “More” buttons above.
+                </h2>
+                <p className="text-muted-foreground font-display mt-1 text-xs">
+                  How wide to search. Higher effort finds more questions and costs more credits.
                 </p>
                 <div className="mt-3">
                   <EffortPicker
@@ -737,10 +743,12 @@ export function ReportView({
                 </span>
                 <Button
                   type="button"
+                  size="lg"
+                  variant="tertiary"
                   disabled={extraRounds.length === 0 || busy !== null}
                   onClick={() => extend(extraRounds, "__rounds__")}>
                   {busy === "__rounds__" && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-                  <span className="font-display">Scout these rounds →</span>
+                  Scout these rounds <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
                 </Button>
               </div>
             </CardContent>
