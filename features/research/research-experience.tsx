@@ -9,22 +9,18 @@ import {
   Building2,
   FileText,
   Hourglass,
-  LayoutList,
   Link as LinkIcon,
   MapPin,
   Mic,
   NotebookText,
   Plus,
   Radio,
-  RotateCcw,
-  Swords,
   Target,
   Users,
   Wrench,
   X,
-  Zap,
 } from "lucide-react";
-import { type Control, Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,25 +38,30 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
-import { EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
-import { estimateRun } from "@/lib/research/estimate";
-import type { PipelineProgressEvent, Report, ReportSection } from "@/lib/research/types";
+import type { Effort } from "@/lib/research/budget";
+import type { PipelineProgressEvent, Report } from "@/lib/research/types";
 import { zodFormResolver } from "@/lib/zod-form-resolver";
 
-import { EffortPicker } from "@/features/research/effort-picker";
-import { EstimatePanel } from "@/features/research/estimate-panel";
 import {
   type ResearchFormValues,
   clearDraft,
   emptyFormValues,
-  isDraftDirty,
   loadDraft,
   researchFormSchema,
   saveDraft,
 } from "@/features/research/form-schema";
 import { ReportView, SectionLabel } from "@/features/research/report-view";
-import { RoundPicker, isCustomRound } from "@/features/research/round-picker";
-import { SectionPicker } from "@/features/research/section-picker";
+import {
+  EffortCard,
+  EffortNote,
+  RoundsCard,
+  SectionsCard,
+} from "@/features/research/research-form-cards";
+import {
+  ClearFormButton,
+  LiveEstimate,
+  RunButton,
+} from "@/features/research/research-form-controls";
 import { explainError, streamSse } from "@/features/research/stream";
 
 type Phase = "form" | "running" | "done" | "error";
@@ -111,13 +112,13 @@ export function ResearchExperience({
     remove: removeInterviewer,
   } = useFieldArray({ control, name: "interviewers" });
 
-  // Only the fields the *parent* needs. Everything driven by keystrokes — the
-  // estimate, the clear button, the submit button's disabled state — subscribes
-  // in its own child below, so typing re-renders that child and nothing else.
-  // These three move on clicks, not keystrokes, so watching them here is cheap.
-  const rounds = watch("rounds");
-  const sections = watch("sections");
-  const effort = watch("effort");
+  // Deliberately no render-time `watch()` here. A bare `watch()` subscribes this
+  // component to every field, so it re-rendered the whole form — four cards, both
+  // pickers, every tooltip — on each keystroke anywhere in it. Each consumer now
+  // subscribes to just the fields it displays, with `useWatch` in its own child
+  // below, so a keystroke re-renders that child and nothing else. The estimate
+  // still reprices on every keystroke; it just no longer drags the form with it.
+  // (The callback form of `watch`, used for the draft save, never re-renders.)
 
   // Load any saved draft only on the client, after hydration, so the server-rendered
   // markup (always the pristine defaults) matches what React expects to see first.
@@ -158,9 +159,6 @@ export function ResearchExperience({
     };
   }, [session]);
 
-  const maxRunCredits = me?.maxRunCredits ?? 130;
-  /** Credit ceiling for the effort currently picked; the server is the source of truth. */
-  const effortCeiling = me?.effortCredits?.[effort] ?? maxRunCredits;
   const minRunCredits = me?.minRunCredits ?? 50;
   const balance = me?.balance ?? 0;
   // The server already resolved this where it could; `useSession` only overrides
@@ -173,37 +171,6 @@ export function ResearchExperience({
 
   /** No ring without a balance to measure against — signed out, or still loading. */
   const ringBalance = signedIn && balanceKnown ? balance : undefined;
-
-  function toggleCategory(cat: string) {
-    setValue("rounds", rounds.includes(cat) ? rounds.filter((c) => c !== cat) : [...rounds, cat], {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  }
-
-  function addCustomRound(round: string) {
-    if (!rounds.includes(round)) {
-      setValue("rounds", [...rounds, round], { shouldDirty: true, shouldValidate: true });
-    }
-  }
-
-  function removeCustomRound(round: string) {
-    if (isCustomRound(round)) {
-      setValue(
-        "rounds",
-        rounds.filter((c) => c !== round),
-        { shouldDirty: true, shouldValidate: true }
-      );
-    }
-  }
-
-  function toggleSection(section: ReportSection) {
-    setValue(
-      "sections",
-      sections.includes(section) ? sections.filter((s) => s !== section) : [...sections, section],
-      { shouldDirty: true, shouldValidate: true }
-    );
-  }
 
   function clearForm() {
     reset(emptyFormValues);
@@ -620,67 +587,15 @@ export function ResearchExperience({
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent>
-                  <SectionLabel>
-                    <LayoutList className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                    Report sections
-                  </SectionLabel>
-                  <p className="text-muted-foreground font-display mt-1 text-xs">
-                    Drop what you already know — you are only charged for what the run researches.
-                    Predicted questions, the prep plan, and worth reading are always included.
-                  </p>
-                  <div className="mt-4">
-                    <SectionPicker selected={sections} onToggle={toggleSection} />
-                  </div>
-                </CardContent>
-              </Card>
+              <SectionsCard control={control} setValue={setValue} />
 
-              <Card>
-                <CardContent>
-                  <SectionLabel>
-                    <Swords className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                    Rounds to scout
-                  </SectionLabel>
-                  <p className="text-muted-foreground font-display mt-1 text-xs">
-                    You can add more rounds later, from the finished report.
-                  </p>
-                  <div className="mt-4">
-                    <RoundPicker
-                      selected={rounds}
-                      onToggle={toggleCategory}
-                      onAddCustom={addCustomRound}
-                      onRemoveCustom={removeCustomRound}
-                    />
-                  </div>
-                  {formState.errors.rounds && (
-                    <p className="text-destructive font-display mt-2 text-xs">
-                      {formState.errors.rounds.message}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+              <RoundsCard
+                control={control}
+                setValue={setValue}
+                error={formState.errors.rounds?.message}
+              />
 
-              <Card>
-                <CardContent>
-                  <SectionLabel>
-                    <Zap className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                    Effort
-                  </SectionLabel>
-                  <p className="text-muted-foreground font-display mt-1 text-xs">
-                    How wide to search. Higher effort finds more questions and costs more credits.
-                  </p>
-                  <div className="mt-4">
-                    <EffortPicker
-                      value={effort}
-                      onChange={(level) =>
-                        setValue("effort", level, { shouldDirty: true, shouldValidate: true })
-                      }
-                      credits={me?.effortCredits}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              <EffortCard control={control} setValue={setValue} credits={me?.effortCredits} />
 
               <div className="flex items-center justify-between pt-2">
                 <div className="max-w-xs space-y-1">
@@ -689,12 +604,7 @@ export function ResearchExperience({
                     its source.
                   </p>
                   {signedIn && balanceKnown && (
-                    <p className="text-muted-foreground font-display text-[11px] leading-relaxed">
-                      {EFFORT_PRESETS[effort].label} effort: capped at{" "}
-                      <span className="text-tertiary">{Math.min(balance, effortCeiling)}</span>{" "}
-                      credits. You are charged only what the run actually spends. Balance:{" "}
-                      <span className="text-tertiary">{balance}</span>.
-                    </p>
+                    <EffortNote control={control} balance={balance} me={me} />
                   )}
                 </div>
 
@@ -728,7 +638,7 @@ export function ResearchExperience({
               </div>
             </div>
 
-            <LiveEstimate control={control} balance={ringBalance} ceiling={effortCeiling} />
+            <LiveEstimate control={control} balance={ringBalance} me={me} />
           </form>
         </Form>
       )}
