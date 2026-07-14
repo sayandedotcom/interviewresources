@@ -41,12 +41,12 @@ export function SectionsCard({
   return (
     <Card>
       <CardContent>
-        <SectionLabel>
-          <LayoutList className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-          Report sections
-        </SectionLabel>
+        <h2 className="text-tertiary font-display text-lg font-medium capitalize flex items-center">
+          <LayoutList className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]" aria-hidden="true" />
+          Report Sections
+        </h2>
         <p className="text-muted-foreground font-display mt-1 text-xs">
-          Drop what you already know — you are only charged for what the run researches. Predicted
+          Drop what you already know, you are only charged for what the run researches. Predicted
           questions, the prep plan, and worth reading are always included.
         </p>
         <div className="mt-4">
@@ -93,10 +93,10 @@ export function RoundsCard({
   return (
     <Card>
       <CardContent>
-        <SectionLabel>
-          <Swords className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-          Rounds to scout
-        </SectionLabel>
+        <h2 className="text-tertiary font-display text-lg font-medium capitalize flex items-center">
+          <Swords className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]" aria-hidden="true" />
+          Rounds to Scout
+        </h2>
         <p className="text-muted-foreground font-display mt-1 text-xs">
           You can add more rounds later, from the finished report.
         </p>
@@ -128,10 +128,10 @@ export function EffortCard({
   return (
     <Card>
       <CardContent>
-        <SectionLabel>
-          <Zap className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+        <h2 className="text-tertiary font-display text-lg font-medium capitalize flex items-center">
+          <Zap className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]" aria-hidden="true" />
           Effort
-        </SectionLabel>
+        </h2>
         <p className="text-muted-foreground font-display mt-1 text-xs">
           How wide to search. Higher effort finds more questions and costs more credits.
         </p>
@@ -160,7 +160,7 @@ export function EffortNote({
   const effort = useWatch({ control, name: "effort" });
 
   return (
-    <p className="text-muted-foreground font-display text-[11px] leading-relaxed">
+    <p className="text-muted-foreground font-display text-sm font-medium leading-relaxed">
       {EFFORT_PRESETS[effort].label} effort: capped at{" "}
       <span className="text-tertiary">{Math.min(balance, ceilingFor(effort, me))}</span> credits.
       You are charged only what the run actually spends. Balance:{" "}

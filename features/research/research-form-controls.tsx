@@ -1,9 +1,20 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { RefreshCw, RotateCcw } from "lucide-react";
 import { type Control, useWatch } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import type { Effort } from "@/lib/research/budget";
@@ -68,26 +79,38 @@ export function ClearFormButton({
   if (!isDraftDirty(values)) return null;
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger
-          render={
+    <AlertDialog>
+      <TooltipProvider>
+        <Tooltip>
+          <AlertDialogTrigger render={
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={onClear}
               className="text-muted-foreground hover:text-foreground -mt-1 -mr-2"
             />
           }>
-          <RotateCcw className="h-3.5 w-3.5" />
-          Clear form
-        </TooltipTrigger>
-        <TooltipContent>
-          <span className="font-display">Reset all fields to empty</span>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span className="font-display">Clear form</span>
+          </AlertDialogTrigger>
+          <TooltipContent>
+            <span className="font-display">Reset all fields to empty</span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear form?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will reset all fields to empty. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onClear}>Clear</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -97,8 +120,8 @@ export function RunButton({ control }: { control: Control<ResearchFormValues> })
   const [company, rounds] = useWatch({ control, name: ["company", "rounds"] });
 
   return (
-    <Button type="submit" size="lg" disabled={!company.trim() || rounds.length === 0}>
-      Run reconnaissance →
+    <Button type="submit" size="lg" variant="tertiary" disabled={!company.trim() || rounds.length === 0}>
+      Run reconnaissance <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
     </Button>
   );
 }

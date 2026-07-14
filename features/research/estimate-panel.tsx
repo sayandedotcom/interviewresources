@@ -25,14 +25,6 @@ function minuteRange(e: Estimate): string {
   return `${e.minMinutes}–${e.maxMinutes}`;
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-muted-foreground font-mono text-[11px] tracking-[0.18em] uppercase">
-      {children}
-    </span>
-  );
-}
-
 /**
  * The ring plus the two numbers. `stacked` is for the narrow rail, where the
  * ring sits above the figures; everywhere else they sit side by side.
@@ -186,10 +178,10 @@ export function EstimatePanel({
             {/* The label is a heading, not a row of the stack — it wants more air
                 under it than the card's rhythm gives the rest. */}
             <div className="mb-2">
-              <Label>
-                <Gauge className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+              <h2 className="text-tertiary font-display text-lg font-medium capitalize flex items-center">
+                <Gauge className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]" aria-hidden="true" />
                 Estimate
-              </Label>
+              </h2>
             </div>
             <Summary estimate={estimate} balance={balance} stacked />
             {balance !== undefined && (
