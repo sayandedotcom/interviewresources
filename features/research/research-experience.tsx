@@ -451,9 +451,7 @@ export function ResearchExperience({
                             </FormLabel>
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
-                                </TooltipTrigger>
+                                <TooltipTrigger render={<Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />} />
                                 <TooltipContent>
                                   <span className="font-display">
                                     What did the recruiter tell you about the process? Which rounds
