@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { RefreshCw, RotateCcw } from "lucide-react";
 import { type Control, useWatch } from "react-hook-form";
 
@@ -17,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-import type { Effort } from "@/lib/research/budget";
+import { EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
 import { estimateRun } from "@/lib/research/estimate";
 
 import { EstimatePanel } from "@/features/research/estimate-panel";
@@ -115,18 +117,93 @@ export function ClearFormButton({
   );
 }
 
-/** Owns its own `company` subscription so typing a company name re-renders the
- * button, not the form around it. */
-export function RunButton({ control }: { control: Control<ResearchFormValues> }) {
-  const [company, rounds] = useWatch({ control, name: ["company", "rounds"] });
+/**
+ * A run spends real credits, so the confirmation quotes the same numbers the
+ * estimate rail does. It watches every field that feeds the estimate, which is
+ * why it is its own component: the dialog content only mounts while the dialog
+ * is open, so those subscriptions cost nothing while the user is still typing.
+ */
+function RunConfirmDescription({
+  control,
+  company,
+  me,
+}: {
+  control: Control<ResearchFormValues>;
+  company: string;
+  me: Me | null;
+}) {
+  const [effort, rounds, sections, interviewers, jobDescription, companyUrl] = useWatch({
+    control,
+    name: ["effort", "rounds", "sections", "interviewers", "jobDescription", "companyUrl"],
+  });
+
+  const ceiling = ceilingFor(effort, me);
+  const estimate = estimateRun(
+    {
+      effort,
+      roundsCount: rounds.length,
+      sectionsCount: sections.length,
+      interviewersCount: interviewers.filter((i) => i.name.trim()).length,
+      jobDescriptionLength: jobDescription.length,
+      hasCompanyUrl: Boolean(companyUrl.trim()),
+    },
+    ceiling
+  );
 
   return (
-    <Button
-      type="submit"
-      size="lg"
-      variant="tertiary"
-      disabled={!company.trim() || rounds.length === 0}>
-      Run reconnaissance <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
-    </Button>
+    <AlertDialogDescription>
+      This runs a {EFFORT_PRESETS[effort].label.toLowerCase()}-effort reconnaissance on{" "}
+      <span className="text-foreground font-medium">{company.trim()}</span>, using an estimated{" "}
+      {estimate.minCredits}–{estimate.maxCredits} credits and capped at {ceiling}. You are charged
+      for what the run actually spends, never the estimate.
+    </AlertDialogDescription>
+  );
+}
+
+/** Owns its own `company` subscription so typing a company name re-renders the
+ * button, not the form around it. */
+export function RunButton({
+  control,
+  me,
+  onConfirm,
+}: {
+  control: Control<ResearchFormValues>;
+  me: Me | null;
+  onConfirm: () => void;
+}) {
+  const [company, rounds] = useWatch({ control, name: ["company", "rounds"] });
+  const [open, setOpen] = useState(false);
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger
+        render={
+          <Button
+            type="button"
+            size="lg"
+            variant="tertiary"
+            disabled={!company.trim() || rounds.length === 0}
+          />
+        }>
+        Run reconnaissance <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Start reconnaissance?</AlertDialogTitle>
+          <RunConfirmDescription control={control} company={company} me={me} />
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="tertiary"
+            onClick={() => {
+              setOpen(false);
+              onConfirm();
+            }}>
+            Run
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

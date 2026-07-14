@@ -84,6 +84,66 @@ describe("submit gate", () => {
   });
 });
 
+describe("run confirmation", () => {
+  /** Fills the one field the submit gate needs, then opens the confirm dialog. */
+  async function openConfirm(user: ReturnType<typeof userEvent.setup>) {
+    await renderForm();
+    await user.type(screen.getByPlaceholderText("Stripe"), "Stripe");
+
+    const run = screen.getByRole("button", { name: /run reconnaissance/i });
+    await waitFor(() => expect(run).toBeEnabled());
+    await user.click(run);
+
+    return screen.findByRole("alertdialog");
+  }
+
+  /** The run is only ever started by POSTing to /api/research. */
+  function researchCalls() {
+    return (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls.filter(
+      ([url]) => String(url) === "/api/research"
+    );
+  }
+
+  it("quotes the effort and the credit range before it spends anything", async () => {
+    const user = userEvent.setup();
+    const dialog = await openConfirm(user);
+
+    // Medium is the default effort, and its ceiling in `me` is 90 credits.
+    expect(dialog).toHaveTextContent(/medium-effort reconnaissance on\s+Stripe/i);
+    expect(dialog).toHaveTextContent(/\d+–\d+ credits and capped at 90/i);
+
+    // The dialog is a gate, not a receipt: nothing has run yet.
+    expect(researchCalls()).toHaveLength(0);
+  });
+
+  it("does not start the pipeline when the confirmation is cancelled", async () => {
+    const user = userEvent.setup();
+    await openConfirm(user);
+
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(researchCalls()).toHaveLength(0);
+    // The form is still there, still filled — cancelling is not a reset.
+    expect(screen.getByPlaceholderText("Stripe")).toHaveValue("Stripe");
+  });
+
+  it("starts the pipeline once the run is confirmed", async () => {
+    const user = userEvent.setup();
+    await openConfirm(user);
+
+    await user.click(screen.getByRole("button", { name: /^run$/i }));
+
+    await waitFor(() => expect(researchCalls()).toHaveLength(1));
+    const [, init] = researchCalls()[0];
+    expect(init).toMatchObject({ method: "POST" });
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      companyName: "Stripe",
+      effort: "medium",
+    });
+  });
+});
+
 describe("clear form", () => {
   it("appears only once a field diverges from the pristine defaults", async () => {
     const user = userEvent.setup();
@@ -95,7 +155,10 @@ describe("clear form", () => {
 
     const clear = await screen.findByRole("button", { name: /clear form/i });
 
+    // Clearing is confirmed, not immediate — the trigger only opens the dialog.
     await user.click(clear);
+    await screen.findByRole("alertdialog");
+    await user.click(screen.getByRole("button", { name: /^clear$/i }));
 
     await waitFor(() => expect(screen.getByPlaceholderText("Stripe")).toHaveValue(""));
     expect(screen.queryByRole("button", { name: /clear form/i })).not.toBeInTheDocument();

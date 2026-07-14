@@ -244,8 +244,11 @@ export function ResearchExperience({
         <Form {...form}>
           {/* `relative` anchors the estimate rail, which hangs in the page margin
               rather than taking a column — that keeps the form itself lined up
-              with the hero and the sections above and below it. */}
-          <form onSubmit={handleSubmit(onSubmit)} className="relative mt-6">
+              with the hero and the sections above and below it.
+
+              The run is started by RunButton's confirmation dialog, never by the
+              form itself, so an Enter keypress in a field must not slip past it. */}
+          <form onSubmit={(e) => e.preventDefault()} className="relative mt-6">
             <div className="space-y-4">
               <Card>
                 <CardContent>
@@ -628,7 +631,7 @@ export function ResearchExperience({
                  * disabled until we actually know.
                  */}
                 {signedIn && !balanceKnown && (
-                  <Button type="submit" size="lg" variant="tertiary" disabled>
+                  <Button type="button" size="lg" variant="tertiary" disabled>
                     Run reconnaissance{" "}
                     <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
                   </Button>
@@ -642,7 +645,9 @@ export function ResearchExperience({
                   </Link>
                 )}
 
-                {signedIn && balanceKnown && canAfford && <RunButton control={control} />}
+                {signedIn && balanceKnown && canAfford && (
+                  <RunButton control={control} me={me} onConfirm={handleSubmit(onSubmit)} />
+                )}
               </div>
             </div>
 
