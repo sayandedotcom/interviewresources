@@ -534,6 +534,15 @@ describe("extend controls", () => {
     });
   }
 
+  /**
+   * Neither extend button spends anything on its own — both only open the
+   * confirmation. This is the click that actually starts the pipeline.
+   */
+  async function confirmScout() {
+    await screen.findByRole("alertdialog");
+    await userEvent.click(screen.getByRole("button", { name: /^scout$/i }));
+  }
+
   it("hides the extend UI for a report that has no id yet", () => {
     render(<ReportView {...base} report={report()} />);
 
@@ -561,6 +570,7 @@ describe("extend controls", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /add more algorithmic coding questions/i })
     );
+    await confirmScout();
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0];
@@ -584,6 +594,7 @@ describe("extend controls", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /add more algorithmic coding questions/i })
     );
+    await confirmScout();
 
     expect(await screen.findByText(/not enough credits/i)).toBeInTheDocument();
     expect(screen.getByText("Implement an LRU cache")).toBeInTheDocument();
@@ -614,6 +625,7 @@ describe("extend controls", () => {
     const footer = screen.getByText("Scout more rounds").parentElement!;
     await userEvent.click(within(footer).getByRole("button", { name: /Behavioral/ }));
     await userEvent.click(screen.getByRole("button", { name: /scout these rounds/i }));
+    await confirmScout();
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       interviewTypes: ["behavioral"],
@@ -638,11 +650,56 @@ describe("extend controls", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /add more algorithmic coding questions/i })
     );
+    await confirmScout();
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       interviewTypes: ["dsa"],
       effort: "high",
     });
+    vi.unstubAllGlobals();
+  });
+
+  it("quotes the round and the credit range before an extension spends anything", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ReportView
+        {...base}
+        report={report()}
+        researchId="r-1"
+        extendCredits={{ low: 33, medium: 65, high: 130 }}
+      />
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /add more algorithmic coding questions/i })
+    );
+
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent(/medium-effort extension/i);
+    expect(dialog).toHaveTextContent(/Algorithmic Coding/);
+    expect(dialog).toHaveTextContent(/\d+–\d+ credits and capped at 65/);
+
+    // The dialog is a gate, not a receipt: nothing has run yet.
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("extends nothing when the confirmation is cancelled", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: /add more algorithmic coding questions/i })
+    );
+    await screen.findByRole("alertdialog");
+    await userEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(fetchMock).not.toHaveBeenCalled();
+    // Cancelling leaves the report exactly as it was.
+    expect(screen.getByText("Implement an LRU cache")).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
 

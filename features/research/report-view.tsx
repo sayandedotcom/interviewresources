@@ -28,6 +28,16 @@ import {
   Zap,
 } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -104,6 +114,10 @@ export function ReportView({
   // Which extend request is in flight: a category slug for a "More" click, or
   // the sentinel "__rounds__" for the footer form. Only one runs at a time.
   const [busy, setBusy] = useState<string | null>(null);
+  // The extension awaiting confirmation, in the same (rounds, token) shape
+  // `extend` takes. Both entry points — "More" and "Scout these rounds" — spend
+  // credits, so neither calls `extend` directly; they park the request here.
+  const [confirm, setConfirm] = useState<{ rounds: string[]; token: string } | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [extendError, setExtendError] = useState<string | null>(null);
   const [extraRounds, setExtraRounds] = useState<string[]>([]);
@@ -221,6 +235,13 @@ export function ReportView({
   const extendEstimate = extendCredits
     ? estimateExtend(Math.max(extraRounds.length, 1), effort, extendCredits[effort])
     : null;
+
+  // The same pricing, for whatever the confirmation is holding — which is one
+  // round for a "More" click and the whole picker for the footer button.
+  const confirmEstimate =
+    confirm && extendCredits
+      ? estimateExtend(Math.max(confirm.rounds.length, 1), effort, extendCredits[effort])
+      : null;
 
   const grouped = groupByCategory(current.questions);
   // The rounds already covered, which "Scout more rounds" must not offer again.
@@ -529,7 +550,7 @@ export function ReportView({
                               aria-label={`Add more ${categoryLabel(cat)} questions`}
                               className="bg-tertiary hover:bg-tertiary/90 h-7 shrink-0 px-2 text-black"
                               disabled={busy !== null}
-                              onClick={() => extend([cat], cat)}
+                              onClick={() => setConfirm({ rounds: [cat], token: cat })}
                             />
                           }>
                           {busy === cat ? (
@@ -746,7 +767,7 @@ export function ReportView({
                   size="lg"
                   variant="tertiary"
                   disabled={extraRounds.length === 0 || busy !== null}
-                  onClick={() => extend(extraRounds, "__rounds__")}>
+                  onClick={() => setConfirm({ rounds: extraRounds, token: "__rounds__" })}>
                   {busy === "__rounds__" && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
                   Scout these rounds <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
                 </Button>
@@ -755,6 +776,55 @@ export function ReportView({
           </Card>
         </section>
       )}
+
+      {/* One dialog for both entry points — they differ only in the rounds they
+          ask for, and only one extension can run at a time anyway. */}
+      <AlertDialog
+        open={confirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirm(null);
+        }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm && confirm.rounds.length > 1
+                ? "Scout these rounds?"
+                : "Scout more questions?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm && (
+                <>
+                  This runs a {effort}-effort extension on{" "}
+                  <span className="text-foreground font-medium">{company}</span> for{" "}
+                  <span className="text-foreground font-medium">
+                    {confirm.rounds.map(categoryLabel).join(", ")}
+                  </span>
+                  {confirmEstimate && extendCredits ? (
+                    <>
+                      , using an estimated {confirmEstimate.minCredits}–{confirmEstimate.maxCredits}{" "}
+                      credits and capped at {extendCredits[effort]}
+                    </>
+                  ) : null}
+                  . You are charged for what the run actually spends, never the estimate.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="tertiary"
+              onClick={() => {
+                if (!confirm) return;
+                const { rounds, token } = confirm;
+                setConfirm(null);
+                extend(rounds, token);
+              }}>
+              Scout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
