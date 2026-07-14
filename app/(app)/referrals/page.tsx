@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { env } from "@/env";
 import { EXPIRED_PARAM, REFERRAL_PARAM } from "@/proxy";
+import { siteConfig } from "@/site";
 
 import {
   REFEREE_BONUS_CREDITS,
@@ -38,7 +39,7 @@ export default async function ReferralsPage() {
         </p>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Refer a friend</h1>
         <p className="font-display text-muted-foreground mt-3 text-sm">
-          Invite people to Scouting Report and earn credits when they become customers.
+          Invite people to {siteConfig.name} and earn credits when they become customers.
         </p>
       </div>
 

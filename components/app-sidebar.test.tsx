@@ -1,3 +1,4 @@
+import { siteConfig } from "@/site";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -99,7 +100,7 @@ describe("header", () => {
     renderSidebar();
 
     // Both live in the header, above the new-session button.
-    expect(within(header()).getByText("Scouting Report")).toBeInTheDocument();
+    expect(within(header()).getByText(siteConfig.name)).toBeInTheDocument();
     expect(within(header()).getByRole("button", { name: /toggle sidebar/i })).toBeInTheDocument();
   });
 
@@ -107,7 +108,7 @@ describe("header", () => {
     stubFetch([]);
     renderSidebar();
 
-    expect(screen.getByRole("link", { name: /scouting report/i })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /interview scout/i })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: /new session/i })).toHaveAttribute("href", "/prepare");
   });
 });
