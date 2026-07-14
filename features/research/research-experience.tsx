@@ -43,10 +43,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
 import { EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
+import { estimateRun } from "@/lib/research/estimate";
 import type { PipelineProgressEvent, Report, ReportSection } from "@/lib/research/types";
 import { zodFormResolver } from "@/lib/zod-form-resolver";
 
 import { EffortPicker } from "@/features/research/effort-picker";
+import { EstimatePanel } from "@/features/research/estimate-panel";
 import {
   type ResearchFormValues,
   clearDraft,
@@ -167,6 +169,23 @@ export function ResearchExperience({
   /** Until the balance lands, `balance` is 0 — which is not the same as "cannot afford". */
   const balanceKnown = me !== null;
 
+  // Recomputed on every keystroke — it's a pure function over the form, and the
+  // whole point is that the price moves as the user picks fields. Advisory: the
+  // charge is metered from real usage, never from this.
+  const estimate = estimateRun(
+    {
+      effort,
+      roundsCount: rounds.length,
+      sectionsCount: sections.length,
+      interviewersCount: formValues.interviewers.filter((i) => i.name.trim()).length,
+      jobDescriptionLength: formValues.jobDescription.length,
+      hasCompanyUrl: Boolean(formValues.companyUrl.trim()),
+    },
+    effortCeiling
+  );
+  /** No ring without a balance to measure against — signed out, or still loading. */
+  const ringBalance = signedIn && balanceKnown ? balance : undefined;
+
   function toggleCategory(cat: string) {
     setValue("rounds", rounds.includes(cat) ? rounds.filter((c) => c !== cat) : [...rounds, cat], {
       shouldDirty: true,
@@ -283,292 +302,19 @@ export function ResearchExperience({
     <div className="mx-auto w-full max-w-3xl px-5 pb-24">
       {phase === "form" && (
         <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
-            <Card>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <SectionLabel>
-                    <Target className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                    Target
-                  </SectionLabel>
-                  {isDraftDirty(formValues) && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={clearForm}
-                              className="text-muted-foreground hover:text-foreground -mt-1 -mr-2"
-                            />
-                          }>
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          Clear form
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <span className="font-display">Reset all fields to empty</span>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={control}
-                    name="company"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel htmlFor="company">
-                          <Building2 className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                          Company
-                          <span className="text-tertiary">*</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input {...field} id="company" placeholder="Stripe" autoFocus />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="companyUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={<FormLabel htmlFor="companyUrl" className="cursor-help" />}>
-                              <LinkIcon className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                              Company URL <span className="opacity-60">· preferred</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <span className="font-display">
-                                Helps find company-specific interview questions from public sources
-                              </span>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <FormControl>
-                          <Input {...field} id="companyUrl" placeholder="https://stripe.com" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="role"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel htmlFor="role">
-                          <Briefcase className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                          Role / level <span className="opacity-60">· optional</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input {...field} id="role" placeholder="Senior Backend Engineer" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="yearsExperience"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel htmlFor="yearsExperience">
-                          <Hourglass className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                          Years of Experience <span className="opacity-60">· optional</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input {...field} id="yearsExperience" placeholder="3-5" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="techStack"
-                    render={({ field }) => (
-                      <FormItem>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={<FormLabel htmlFor="techStack" className="cursor-help" />}>
-                              <Wrench className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                              Tech Stack <span className="opacity-60">· optional</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <span className="font-display">
-                                Languages, frameworks, and tools the company uses — helps find
-                                relevant domain questions
-                              </span>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            id="techStack"
-                            placeholder="React, Node.js, PostgreSQL"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel htmlFor="location">
-                          <MapPin className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                          Location <span className="opacity-60">· optional</span>
-                        </FormLabel>
-                        <FormControl>
-                          <Input {...field} id="location" placeholder="Bengaluru, India" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="teamContext"
-                    render={({ field }) => (
-                      <FormItem>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={<FormLabel htmlFor="teamContext" className="cursor-help" />}>
-                              <Users className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                              Team / org <span className="opacity-60">· optional</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <span className="font-display">
-                                The team or organization you'd work on — helps find relevant system
-                                design questions
-                              </span>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <FormControl>
-                          <Input {...field} id="teamContext" placeholder="AWS EC2 · Ads Infra" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={control}
-                  name="jobDescription"
-                  render={({ field }) => (
-                    <FormItem className="mt-4">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={<FormLabel htmlFor="jobDescription" className="cursor-help" />}>
-                            <FileText className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                            Job Description <span className="opacity-60">· optional</span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span className="font-display">
-                              Paste the job posting to get questions tailored to the specific role
-                            </span>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          id="jobDescription"
-                          placeholder="Paste job posting or description"
-                          rows={4}
-                          className="placeholder:font-display max-h-40 resize-none overflow-y-auto"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={control}
-                  name="recruiterNotes"
-                  render={({ field }) => (
-                    <FormItem className="mt-4">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={<FormLabel htmlFor="recruiterNotes" className="cursor-help" />}>
-                            <NotebookText className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                            Recruiter notes <span className="opacity-60">· optional</span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span className="font-display">
-                              What did the recruiter tell you about the process? Which rounds to
-                              expect?
-                            </span>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          id="recruiterNotes"
-                          placeholder="What the recruiter told you about the process, e.g. phone screen done, next is 2 coding rounds + system design"
-                          rows={3}
-                          className="placeholder:font-display resize-none"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="mt-4 space-y-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Label className="text-muted-foreground cursor-help font-mono text-[10px] tracking-[0.16em] uppercase" />
-                        }>
-                        <Mic className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                        Interviewers <span className="opacity-60">· optional</span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <span className="font-display">
-                          Names help personalize questions. URLs are used only as public-search
-                          seeds and are never stored.
-                        </span>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  {interviewerFields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                      <Controller
-                        control={control}
-                        name={`interviewers.${index}.name`}
-                        render={({ field }) => (
-                          <Input
-                            {...field}
-                            placeholder="Name (used only as a public-search seed)"
-                            className="flex-1"
-                          />
-                        )}
-                      />
-                      <Controller
-                        control={control}
-                        name={`interviewers.${index}.url`}
-                        render={({ field }) => (
-                          <Input
-                            {...field}
-                            placeholder="LinkedIn or blog URL (optional)"
-                            className="flex-1"
-                          />
-                        )}
-                      />
+          {/* `relative` anchors the estimate rail, which hangs in the page margin
+              rather than taking a column — that keeps the form itself lined up
+              with the hero and the sections above and below it. */}
+          <form onSubmit={handleSubmit(onSubmit)} className="relative mt-6">
+            <div className="space-y-4">
+              <Card>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <SectionLabel>
+                      <Target className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                      Target
+                    </SectionLabel>
+                    {isDraftDirty(formValues) && (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger
@@ -576,160 +322,450 @@ export function ResearchExperience({
                               <Button
                                 type="button"
                                 variant="ghost"
-                                size="icon"
-                                onClick={() => removeInterviewer(index)}
-                                disabled={interviewerFields.length === 1}
+                                size="sm"
+                                onClick={clearForm}
+                                className="text-muted-foreground hover:text-foreground -mt-1 -mr-2"
                               />
                             }>
-                            <X className="h-4 w-4" />
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Clear form
                           </TooltipTrigger>
                           <TooltipContent>
-                            <span className="font-display">Remove interviewer</span>
+                            <span className="font-display">Reset all fields to empty</span>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    </div>
-                  ))}
-                  {formState.errors.interviewers && (
-                    <p className="text-destructive font-display text-xs">
-                      One of the interviewer URLs doesn&rsquo;t look valid.
+                    )}
+                  </div>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={control}
+                      name="company"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel htmlFor="company">
+                            <Building2 className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                            Company
+                            <span className="text-tertiary">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input {...field} id="company" placeholder="Stripe" autoFocus />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="companyUrl"
+                      render={({ field }) => (
+                        <FormItem>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={<FormLabel htmlFor="companyUrl" className="cursor-help" />}>
+                                <LinkIcon className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                                Company URL <span className="opacity-60">· preferred</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span className="font-display">
+                                  Helps find company-specific interview questions from public
+                                  sources
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <FormControl>
+                            <Input {...field} id="companyUrl" placeholder="https://stripe.com" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel htmlFor="role">
+                            <Briefcase className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                            Role / level <span className="opacity-60">· optional</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input {...field} id="role" placeholder="Senior Backend Engineer" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="yearsExperience"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel htmlFor="yearsExperience">
+                            <Hourglass className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                            Years of Experience <span className="opacity-60">· optional</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input {...field} id="yearsExperience" placeholder="3-5" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="techStack"
+                      render={({ field }) => (
+                        <FormItem>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={<FormLabel htmlFor="techStack" className="cursor-help" />}>
+                                <Wrench className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                                Tech Stack <span className="opacity-60">· optional</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span className="font-display">
+                                  Languages, frameworks, and tools the company uses — helps find
+                                  relevant domain questions
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              id="techStack"
+                              placeholder="React, Node.js, PostgreSQL"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel htmlFor="location">
+                            <MapPin className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                            Location <span className="opacity-60">· optional</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input {...field} id="location" placeholder="Bengaluru, India" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="teamContext"
+                      render={({ field }) => (
+                        <FormItem>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <FormLabel htmlFor="teamContext" className="cursor-help" />
+                                }>
+                                <Users className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                                Team / org <span className="opacity-60">· optional</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <span className="font-display">
+                                  The team or organization you'd work on — helps find relevant
+                                  system design questions
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <FormControl>
+                            <Input {...field} id="teamContext" placeholder="AWS EC2 · Ads Infra" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={control}
+                    name="jobDescription"
+                    render={({ field }) => (
+                      <FormItem className="mt-4">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <FormLabel htmlFor="jobDescription" className="cursor-help" />
+                              }>
+                              <FileText className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                              Job Description <span className="opacity-60">· optional</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span className="font-display">
+                                Paste the job posting to get questions tailored to the specific role
+                              </span>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            id="jobDescription"
+                            placeholder="Paste job posting or description"
+                            rows={4}
+                            className="placeholder:font-display max-h-40 resize-none overflow-y-auto"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name="recruiterNotes"
+                    render={({ field }) => (
+                      <FormItem className="mt-4">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <FormLabel htmlFor="recruiterNotes" className="cursor-help" />
+                              }>
+                              <NotebookText
+                                className="mr-1 inline h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                              Recruiter notes <span className="opacity-60">· optional</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span className="font-display">
+                                What did the recruiter tell you about the process? Which rounds to
+                                expect?
+                              </span>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            id="recruiterNotes"
+                            placeholder="What the recruiter told you about the process, e.g. phone screen done, next is 2 coding rounds + system design"
+                            rows={3}
+                            className="placeholder:font-display resize-none"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="mt-4 space-y-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Label className="text-muted-foreground cursor-help font-mono text-[10px] tracking-[0.16em] uppercase" />
+                          }>
+                          <Mic className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                          Interviewers <span className="opacity-60">· optional</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <span className="font-display">
+                            Names help personalize questions. URLs are used only as public-search
+                            seeds and are never stored.
+                          </span>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    {interviewerFields.map((field, index) => (
+                      <div key={field.id} className="flex items-center gap-2">
+                        <Controller
+                          control={control}
+                          name={`interviewers.${index}.name`}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              placeholder="Name (used only as a public-search seed)"
+                              className="flex-1"
+                            />
+                          )}
+                        />
+                        <Controller
+                          control={control}
+                          name={`interviewers.${index}.url`}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              placeholder="LinkedIn or blog URL (optional)"
+                              className="flex-1"
+                            />
+                          )}
+                        />
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeInterviewer(index)}
+                                  disabled={interviewerFields.length === 1}
+                                />
+                              }>
+                              <X className="h-4 w-4" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span className="font-display">Remove interviewer</span>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    ))}
+                    {formState.errors.interviewers && (
+                      <p className="text-destructive font-display text-xs">
+                        One of the interviewer URLs doesn&rsquo;t look valid.
+                      </p>
+                    )}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => appendInterviewer({ name: "", url: "" })}
+                            />
+                          }>
+                          <Plus className="mr-1 h-4 w-4" />
+                          Add interviewer
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <span className="font-display">
+                            Add another interviewer to personalize your report
+                          </span>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <SectionLabel>
+                    <LayoutList className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                    Report sections
+                  </SectionLabel>
+                  <p className="text-muted-foreground font-display mt-1 text-xs">
+                    Drop what you already know — you are only charged for what the run researches.
+                    Predicted questions, the prep plan, and worth reading are always included.
+                  </p>
+                  <div className="mt-4">
+                    <SectionPicker selected={sections} onToggle={toggleSection} />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <SectionLabel>
+                    <Swords className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                    Rounds to scout
+                  </SectionLabel>
+                  <p className="text-muted-foreground font-display mt-1 text-xs">
+                    You can add more rounds later, from the finished report.
+                  </p>
+                  <div className="mt-4">
+                    <RoundPicker
+                      selected={rounds}
+                      onToggle={toggleCategory}
+                      onAddCustom={addCustomRound}
+                      onRemoveCustom={removeCustomRound}
+                    />
+                  </div>
+                  {formState.errors.rounds && (
+                    <p className="text-destructive font-display mt-2 text-xs">
+                      {formState.errors.rounds.message}
                     </p>
                   )}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => appendInterviewer({ name: "", url: "" })}
-                          />
-                        }>
-                        <Plus className="mr-1 h-4 w-4" />
-                        Add interviewer
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <span className="font-display">
-                          Add another interviewer to personalize your report
-                        </span>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent>
-                <SectionLabel>
-                  <LayoutList className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                  Report sections
-                </SectionLabel>
-                <p className="text-muted-foreground font-display mt-1 text-xs">
-                  Drop what you already know — you are only charged for what the run researches.
-                  Predicted questions, the prep plan, and worth reading are always included.
-                </p>
-                <div className="mt-4">
-                  <SectionPicker selected={sections} onToggle={toggleSection} />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent>
-                <SectionLabel>
-                  <Swords className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                  Rounds to scout
-                </SectionLabel>
-                <p className="text-muted-foreground font-display mt-1 text-xs">
-                  You can add more rounds later, from the finished report.
-                </p>
-                <div className="mt-4">
-                  <RoundPicker
-                    selected={rounds}
-                    onToggle={toggleCategory}
-                    onAddCustom={addCustomRound}
-                    onRemoveCustom={removeCustomRound}
-                  />
-                </div>
-                {formState.errors.rounds && (
-                  <p className="text-destructive font-display mt-2 text-xs">
-                    {formState.errors.rounds.message}
+              <Card>
+                <CardContent>
+                  <SectionLabel>
+                    <Zap className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                    Effort
+                  </SectionLabel>
+                  <p className="text-muted-foreground font-display mt-1 text-xs">
+                    How wide to search. Higher effort finds more questions and costs more credits.
                   </p>
-                )}
-              </CardContent>
-            </Card>
+                  <div className="mt-4">
+                    <EffortPicker
+                      value={effort}
+                      onChange={(level) =>
+                        setValue("effort", level, { shouldDirty: true, shouldValidate: true })
+                      }
+                      credits={me?.effortCredits}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent>
-                <SectionLabel>
-                  <Zap className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-                  Effort
-                </SectionLabel>
-                <p className="text-muted-foreground font-display mt-1 text-xs">
-                  How wide to search. Higher effort finds more questions and costs more credits.
-                </p>
-                <div className="mt-4">
-                  <EffortPicker
-                    value={effort}
-                    onChange={(level) =>
-                      setValue("effort", level, { shouldDirty: true, shouldValidate: true })
-                    }
-                    credits={me?.effortCredits}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex items-center justify-between pt-2">
-              <div className="max-w-xs space-y-1">
-                <p className="text-muted-foreground font-display text-[11px] leading-relaxed">
-                  Predictions are grounded in public evidence — not prophecy. Every question cites
-                  its source.
-                </p>
-                {signedIn && balanceKnown && (
+              <div className="flex items-center justify-between pt-2">
+                <div className="max-w-xs space-y-1">
                   <p className="text-muted-foreground font-display text-[11px] leading-relaxed">
-                    {EFFORT_PRESETS[effort].label} effort: capped at{" "}
-                    <span className="text-tertiary">{Math.min(balance, effortCeiling)}</span>{" "}
-                    credits. You are charged only what the run actually spends. Balance:{" "}
-                    <span className="text-tertiary">{balance}</span>.
+                    Predictions are grounded in public evidence — not prophecy. Every question cites
+                    its source.
                   </p>
+                  {signedIn && balanceKnown && (
+                    <p className="text-muted-foreground font-display text-[11px] leading-relaxed">
+                      {EFFORT_PRESETS[effort].label} effort: capped at{" "}
+                      <span className="text-tertiary">{Math.min(balance, effortCeiling)}</span>{" "}
+                      credits. You are charged only what the run actually spends. Balance:{" "}
+                      <span className="text-tertiary">{balance}</span>.
+                    </p>
+                  )}
+                </div>
+
+                {!sessionPending && !signedIn && (
+                  <Button type="button" size="lg" onClick={() => signInWithGoogle()}>
+                    Sign in to run →
+                  </Button>
+                )}
+
+                {/*
+                 * A balance we haven't read yet is not a balance of zero. Showing
+                 * "Buy credits" here and swapping it out a second later reads as a
+                 * paywall the user then has to un-see, so we hold the run button
+                 * disabled until we actually know.
+                 */}
+                {signedIn && !balanceKnown && (
+                  <Button type="submit" size="lg" disabled>
+                    Run reconnaissance →
+                  </Button>
+                )}
+
+                {signedIn && balanceKnown && !canAfford && (
+                  <Link href="/payments">
+                    <Button type="button" size="lg">
+                      Buy credits →
+                    </Button>
+                  </Link>
+                )}
+
+                {signedIn && balanceKnown && canAfford && (
+                  <Button type="submit" size="lg" disabled={!company.trim() || rounds.length === 0}>
+                    Run reconnaissance →
+                  </Button>
                 )}
               </div>
-
-              {!sessionPending && !signedIn && (
-                <Button type="button" size="lg" onClick={() => signInWithGoogle()}>
-                  Sign in to run →
-                </Button>
-              )}
-
-              {/*
-               * A balance we haven't read yet is not a balance of zero. Showing
-               * "Buy credits" here and swapping it out a second later reads as a
-               * paywall the user then has to un-see, so we hold the run button
-               * disabled until we actually know.
-               */}
-              {signedIn && !balanceKnown && (
-                <Button type="submit" size="lg" disabled>
-                  Run reconnaissance →
-                </Button>
-              )}
-
-              {signedIn && balanceKnown && !canAfford && (
-                <Link href="/payments">
-                  <Button type="button" size="lg">
-                    Buy credits →
-                  </Button>
-                </Link>
-              )}
-
-              {signedIn && balanceKnown && canAfford && (
-                <Button type="submit" size="lg" disabled={!company.trim() || rounds.length === 0}>
-                  Run reconnaissance →
-                </Button>
-              )}
             </div>
+
+            <EstimatePanel estimate={estimate} balance={ringBalance} ceiling={effortCeiling} />
           </form>
         </Form>
       )}
@@ -762,6 +798,7 @@ export function ResearchExperience({
           onReset={resetRun}
           researchId={researchId ?? undefined}
           extendCredits={me?.extendCredits}
+          balance={ringBalance}
           roleContext={formValues.role.trim() || undefined}
         />
       )}
