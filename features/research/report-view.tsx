@@ -49,10 +49,12 @@ import {
   groupByCategory,
 } from "@/lib/research/display";
 import { downloadBlob, reportSlug } from "@/lib/research/download";
+import { estimateExtend } from "@/lib/research/estimate";
 import { buildAnswerPrompt, buildMockInterviewPrompt } from "@/lib/research/prompt";
 import type { ImportantLink, Report } from "@/lib/research/types";
 
 import { EffortPicker } from "@/features/research/effort-picker";
+import { EstimateInline } from "@/features/research/estimate-panel";
 import { RoundPicker, categoryIcon } from "@/features/research/round-picker";
 import { explainError, streamSse } from "@/features/research/stream";
 
@@ -72,6 +74,7 @@ export function ReportView({
   onReset,
   researchId,
   extendCredits,
+  balance,
   roleContext,
 }: {
   report: Report;
@@ -83,6 +86,8 @@ export function ReportView({
   researchId?: string;
   /** Per-effort credit ceiling for an extension; omitted until the balance loads. */
   extendCredits?: Record<Effort, number>;
+  /** What the user holds, for the extend estimate's ring. Omitted until it loads. */
+  balance?: number;
   /** The role the candidate is interviewing for, woven into the copy prompts. */
   roleContext?: string;
 }) {
@@ -209,6 +214,13 @@ export function ReportView({
       setProgress(null);
     }
   }
+
+  // Priced for whatever the footer's picker holds. An empty selection prices a
+  // single round, which is also what one "More" button up in the report costs —
+  // both run at the same effort.
+  const extendEstimate = extendCredits
+    ? estimateExtend(Math.max(extraRounds.length, 1), effort, extendCredits[effort])
+    : null;
 
   const grouped = groupByCategory(current.questions);
   // The rounds already covered, which "Scout more rounds" must not offer again.
@@ -708,6 +720,16 @@ export function ReportView({
                   />
                 </div>
               </div>
+
+              {extendEstimate && extendCredits && (
+                <div className="mt-4">
+                  <EstimateInline
+                    estimate={extendEstimate}
+                    balance={balance}
+                    ceiling={extendCredits[effort]}
+                  />
+                </div>
+              )}
 
               <div className="mt-4 flex items-center justify-between gap-3">
                 <span className="text-muted-foreground truncate font-mono text-[11px]">

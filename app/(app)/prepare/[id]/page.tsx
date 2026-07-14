@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { and, eq } from "drizzle-orm";
 
-import { extendCredits } from "@/lib/credits";
+import { extendCredits, getBalance } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
 import type { Report } from "@/lib/research/types";
@@ -32,6 +32,9 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   if (!row) notFound();
 
   const costUsd = (row.costCentsLlm + row.costCentsSearch) / 100;
+  // Read here rather than from /api/me: this page is already server-rendered for
+  // this user, so the extend estimate's ring lands with the first paint.
+  const balance = await getBalance(user.id);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-1 pb-24">
@@ -42,6 +45,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         company={row.companyName}
         researchId={id}
         extendCredits={extendCredits()}
+        balance={balance}
       />
     </div>
   );

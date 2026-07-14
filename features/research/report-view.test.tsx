@@ -665,6 +665,62 @@ describe("extend controls", () => {
 
     expect(screen.getByRole("button", { name: /scout these rounds/i })).toBeDisabled();
   });
+
+  it("estimates what an extension will cost, and says it is only an estimate", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report()}
+        researchId="r-1"
+        extendCredits={{ low: 33, medium: 65, high: 130 }}
+        balance={200}
+      />
+    );
+    const estimate = screen.getByTestId("estimate-inline");
+
+    expect(within(estimate).getByText(/credits/)).toBeInTheDocument();
+    expect(within(estimate).getByText(/min to generate/)).toBeInTheDocument();
+    expect(within(estimate).getByText(/Estimate only/)).toBeInTheDocument();
+  });
+
+  it("re-prices the extension when the user reaches for a heavier effort", async () => {
+    render(
+      <ReportView
+        {...base}
+        report={report()}
+        researchId="r-1"
+        extendCredits={{ low: 33, medium: 65, high: 130 }}
+        balance={200}
+      />
+    );
+    const estimate = () => screen.getByTestId("estimate-inline").textContent!;
+    const before = estimate();
+
+    const footer = screen.getByText("Scout more rounds").parentElement!;
+    await userEvent.click(within(footer).getByRole("button", { name: /High/ }));
+
+    expect(estimate()).not.toEqual(before);
+  });
+
+  it("warns before the user spends credits they do not have", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report()}
+        researchId="r-1"
+        extendCredits={{ low: 33, medium: 65, high: 130 }}
+        balance={5}
+      />
+    );
+
+    expect(screen.getByText(/could cost more than your 5 credits/)).toBeInTheDocument();
+  });
+
+  it("prices nothing until the extension ceilings arrive", () => {
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+
+    expect(screen.queryByTestId("estimate-inline")).not.toBeInTheDocument();
+  });
 });
 
 describe("copy as prompt", () => {
