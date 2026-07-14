@@ -1,1 +1,1 @@
-Scouting Report — Interview Question Guesser
+Interview Scout — Interview Question Guesser

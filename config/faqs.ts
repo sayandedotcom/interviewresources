@@ -1,6 +1,6 @@
 export const faqsConfig = [
   {
-    question: "How does Scouting Report work?",
+    question: "How does Interview Scout work?",
     answer:
       "You enter the company you're interviewing with, select the interview rounds you're preparing for, and we research publicly available information to predict the questions you might face. Each prediction comes with evidence and prep notes.",
   },

@@ -11,9 +11,9 @@ import { statsConfig } from "./config/stats";
 import { testimonialsConfig } from "./config/testimonials";
 
 export const siteConfig = {
-  name: "Scouting Report",
+  name: "Interview Scout",
   description: "Get the interview questions before they ask them.",
-  url: "https://interviewquestions.ai",
+  url: "https://interviewscout.app",
   emails: contactConfig,
   links: {
     twitter: "https://twitter.com/sayandedotcom",
