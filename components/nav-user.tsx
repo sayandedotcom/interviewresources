@@ -92,23 +92,20 @@ export function NavUser({ initialUser }: { initialUser: SessionUser | null }) {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              // A resting tint plus a border lifts the profile off the sidebar.
-              // The button's own `hover:bg-sidebar-accent` then takes it to full
-              // strength, so the row still reacts to a pointer.
               <SidebarMenuButton
                 size="lg"
-                className="bg-sidebar-accent/60 border-sidebar-border aria-expanded:bg-sidebar-accent border"
+                className="bg-sidebar-accent/60 border-sidebar-border aria-expanded:bg-sidebar-accent border group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!justify-center group-data-[collapsible=icon]:!p-0"
               />
             }>
-            <Avatar>
-              <AvatarImage src={user.image ?? undefined} alt={user.name} />
-              <AvatarFallback>{initials(user.name)}</AvatarFallback>
+            <Avatar className="rounded-md group-data-[collapsible=icon]:size-6">
+              <AvatarImage src={user.image ?? undefined} alt={user.name} className="rounded-md" />
+              <AvatarFallback className="rounded-md">{initials(user.name)}</AvatarFallback>
             </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
+            <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
               <span className="font-display truncate font-medium">{user.name}</span>
               <span className="font-display truncate text-xs">{user.email}</span>
             </div>
-            <ChevronsUpDownIcon className="ml-auto size-4" />
+            <ChevronsUpDownIcon className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-fit"
