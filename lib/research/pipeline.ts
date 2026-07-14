@@ -7,10 +7,12 @@ import { tavilyExtract, tavilyExtractCredits, tavilySearch, tavilySearchCredits 
 import {
   type CompressedNote,
   type GatheredSource,
+  type GeneratedReport,
   type ImportantLink,
   type PipelineProgressEvent,
   type ProxyPlan,
   type Report,
+  type ReportSection,
   type ResearchInput,
   type ResearchPlan,
   proxyPlanSchema,
@@ -20,10 +22,26 @@ import {
 
 type OnProgress = (event: PipelineProgressEvent) => void;
 
+/** The report fields a switched-off section removes from the generation schema. */
+type OptionalReportField =
+  | "companySnapshot"
+  | "companyExplainer"
+  | "likelyLoopStructure"
+  | "skillsRequired"
+  | "interviewExperiences";
+
 const noopProgress: OnProgress = () => {};
 
 function emit(onProgress: OnProgress, stage: PipelineProgressEvent["stage"], message: string) {
   onProgress({ stage, message, at: new Date().toISOString() });
+}
+
+/**
+ * The optional sections this run was asked for. Read through a helper rather
+ * than off the array directly so every stage agrees on what "off" means.
+ */
+function wants(input: ResearchInput, section: ReportSection): boolean {
+  return input.sections.includes(section);
 }
 
 /** Shared context block so plan and synthesize see the same picture of the candidate. */
@@ -50,6 +68,37 @@ async function planStage(
   budget: BudgetTracker,
   preset: EffortPreset
 ): Promise<ResearchPlan> {
+  const loop = wants(input, "loop");
+  // The skills section is inferred from what the company builds, so it needs the
+  // company evidence even when the company prose itself was switched off. Only
+  // when neither wants it is a "company" query genuinely wasted spend.
+  const companyEvidence = wants(input, "company") || wants(input, "skills");
+
+  const loopRule = loop
+    ? `Always include exactly one query with category "loop_format" whose purpose is
+discovering the company's actual interview process/rounds (e.g. "<company> interview
+process rounds") — this may surface rounds the user did not request.`
+    : `Do not plan any query with category "loop_format": the candidate did not ask for the
+interview-process section, so discovering the loop shape is not worth a search.`;
+
+  const companyRule = companyEvidence
+    ? `Use category "company" for queries about what the company builds, its stack, and its scale.`
+    : `Do not plan any query with category "company": the candidate did not ask for the company
+overview or the skills breakdown, so a company search is not worth its cost.`;
+
+  const recruiterRule = loop
+    ? `If recruiter notes already describe the process, the "loop_format" query should
+confirm and deepen those specific rounds rather than discover the process from scratch.`
+    : `If recruiter notes already describe the process, use them to make the round queries
+specific rather than searching for the process itself.`;
+
+  const allowedCategories = [
+    ...(companyEvidence ? ['"company"'] : []),
+    '"interviewer"',
+    ...(loop ? ['"loop_format"'] : []),
+    '"interview_experience"',
+  ].join(" / ");
+
   return generateStructured({
     model: "gemini-3.1-flash-lite-preview",
     stage: "plan",
@@ -57,25 +106,21 @@ async function planStage(
     budget,
     system: `You are a research planner for an interview-prep tool. Given a company and the
 rounds the candidate wants scouted, produce a compact search plan: ${preset.queriesHint} targeted web-search
-queries. Always include exactly one query with category "loop_format" whose purpose is
-discovering the company's actual interview process/rounds (e.g. "<company> interview
-process rounds") — this may surface rounds the user did not request. Always include one or
+queries. ${loopRule} Always include one or
 two queries with category "interview_experience" hunting for first-hand accounts from
 people who actually interviewed there — Glassdoor reviews, LeetCode Discuss threads, Blind
 posts, Reddit threads, personal blog write-ups — narrowed to the candidate's role and
-seniority. If interviewers are named, add one query per interviewer (max 2) with category
+seniority. ${companyRule} If interviewers are named, add one query per interviewer (max 2) with category
 "interviewer" seeking their public talks, writing, or open-source work — never target
 linkedin.com directly. Some rounds are custom identifiers rather than standard categories;
 plan a discovery query for each. Use the job description, tech stack, and years of
 experience to make queries specific: seniority and named technologies belong in the query
-text. If recruiter notes already describe the process, the "loop_format" query should
-confirm and deepen those specific rounds rather than discover the process from scratch.
+text. ${recruiterRule}
 Where location or team/org are provided, use them to narrow "interview_experience" queries
 to that geography or org. Prefer "basic" depth; reserve "advanced" for at most 2-3 of the
 highest-value queries (company tech stack, and the primary interview-experience query). Set
 each query's
-"category" to the round identifier it serves, or "company" / "interviewer" /
-"loop_format" / "interview_experience". Keep queries concrete and searchable, not vague.`,
+"category" to the round identifier it serves, or ${allowedCategories}. Keep queries concrete and searchable, not vague.`,
     prompt: describeInput(input),
   });
 }
@@ -325,10 +370,89 @@ async function synthesizeStage(
         .join("\n")}`
     : "";
 
-  const report = await generateStructured({
+  const company = wants(input, "company");
+  const loop = wants(input, "loop");
+  const skills = wants(input, "skills");
+  const experiences = wants(input, "experiences");
+
+  // A section the caller switched off is cut from the schema, so the model is
+  // never asked for it and never bills output tokens writing it. The matching
+  // rule is cut from the prompt for the same reason.
+  const omitMask: Partial<Record<OptionalReportField, true>> = {};
+  if (!company) {
+    omitMask.companySnapshot = true;
+    omitMask.companyExplainer = true;
+  }
+  if (!loop) omitMask.likelyLoopStructure = true;
+  if (!skills) omitMask.skillsRequired = true;
+  if (!experiences) omitMask.interviewExperiences = true;
+
+  // The cast keeps the full generated shape in the types: which keys the schema
+  // actually carries is a runtime decision, and the reads below are already
+  // guarded by the same flags that built the mask.
+  const genSchema = reportSchema.omit(omitMask) as unknown as z.ZodType<GeneratedReport>;
+
+  const rules = [
+    company &&
+      `- Write companyExplainer for someone who has never heard of the company: 2-3 sentences,
+  no jargon, no buzzwords, ending with one concrete everyday example of the product in
+  action (e.g. "When you buy shoes online and pay by card, Stripe is the service that
+  checks the card and moves the money to the store."). companySnapshot stays the
+  technical view: stack, scale signals, engineering culture.`,
+    `- Set each question's "category" to one of the round identifiers from "Rounds to scout",
+  copied character-for-character. Never invent a new identifier or reformat an existing one.`,
+    `- Every question must cite at least one evidence URL from the notes it's grounded in.`,
+    basisRules,
+    `- If evidence for a requested round is thin, say so honestly in the rationale and
+  mark confidence "low" rather than fabricating specifics.`,
+    loop &&
+      `- If the loop-format evidence reveals a round type the user didn't request, include it
+  anyway and note in the rationale that it wasn't explicitly requested.`,
+    `- Calibrate difficulty to the candidate's years of experience, and bias question topics
+  toward their tech stack and the job description when those are provided.`,
+    `- Summarize each named interviewer in interviewerSummary using only public evidence in the
+  notes; if several were named, cover each briefly.`,
+    `- Do not invent citations. Do not invent company facts not present in the notes.`,
+    `- Aim for ${preset.questionTarget} questions total across the requested rounds, prioritizing breadth
+  across rounds over depth in one. Do not pad: a question you cannot ground in the notes
+  does not belong in the report, even if that leaves you short of the range.`,
+    `- If an "Already predicted" list is present, treat those questions as taken: never repeat
+  one, and never restate one in different words. Cover different ground instead.`,
+    skills &&
+      `- In skillsRequired, name the skills this specific role actually demands. Do not merely
+  restate the job description's bullet list: the value is in the skills the posting leaves
+  implicit but the company's product makes unavoidable. If the evidence shows the company
+  builds autonomous web agents, a candidate needs to understand agent architecture, tool
+  calling, and browser automation, whether or not the posting says so. Work from what the
+  company builds, the stack the evidence reveals, the scale it operates at, and the job
+  description together. Each "why" is one sentence naming the reason the role needs it,
+  grounded in the evidence or the job description — never a restatement of the skill.
+  Order them most to least important, and keep each "skill" short enough to read as a
+  badge. Do not pad with generic filler ("communication", "problem solving") unless the
+  evidence specifically calls it out.`,
+    experiences &&
+      `- In interviewExperiences, list every first-hand account of interviewing at this company
+  that the notes contain — a candidate's write-up, a Glassdoor or Blind or Reddit or
+  LeetCode Discuss thread, a personal blog post — using only URLs that appear in the notes.
+  Write each "why" for the candidate, naming the role, the level, and how recent the
+  account is whenever the notes reveal them (e.g. "A 2024 E5 backend candidate's full loop
+  breakdown, round by round"). If the notes contain no first-hand account, return an empty
+  array — never invent one, and never fill it with generic listicles or job postings.`,
+    `- In importantLinks, pick the ${preset.linksHint} highest-value sources for the candidate to read before
+  the interview, using only URLs that appear in the evidence notes. Favour the company's
+  engineering blog, its public docs, and interviewer talks or writing over generic
+  listicles.${
+    experiences ? " Never repeat a URL you already placed in interviewExperiences." : ""
+  } Write each
+  "why" for the candidate, naming what they will get from it.`,
+  ]
+    .filter((rule): rule is string => Boolean(rule))
+    .join("\n");
+
+  const generated = await generateStructured({
     model: "gemini-3.1-pro-preview",
     stage: "synthesize",
-    schema: reportSchema,
+    schema: genSchema,
     budget,
     system: `You are an expert interview coach. Using ONLY the evidence notes provided,
 produce a report predicting likely interview questions for the given company and rounds.
@@ -337,46 +461,24 @@ pair_programming, behavioral, hr_culture. The candidate may also have added cust
 which appear verbatim in the "Rounds to scout" list.
 
 Rules:
-- Write companyExplainer for someone who has never heard of the company: 2-3 sentences,
-  no jargon, no buzzwords, ending with one concrete everyday example of the product in
-  action (e.g. "When you buy shoes online and pay by card, Stripe is the service that
-  checks the card and moves the money to the store."). companySnapshot stays the
-  technical view: stack, scale signals, engineering culture.
-- Set each question's "category" to one of the round identifiers from "Rounds to scout",
-  copied character-for-character. Never invent a new identifier or reformat an existing one.
-- Every question must cite at least one evidence URL from the notes it's grounded in.
-${basisRules}
-- If evidence for a requested round is thin, say so honestly in the rationale and
-  mark confidence "low" rather than fabricating specifics.
-- If the loop-format evidence reveals a round type the user didn't request, include it
-  anyway and note in the rationale that it wasn't explicitly requested.
-- Calibrate difficulty to the candidate's years of experience, and bias question topics
-  toward their tech stack and the job description when those are provided.
-- Summarize each named interviewer in interviewerSummary using only public evidence in the
-  notes; if several were named, cover each briefly.
-- Do not invent citations. Do not invent company facts not present in the notes.
-- Aim for ${preset.questionTarget} questions total across the requested rounds, prioritizing breadth
-  across rounds over depth in one. Do not pad: a question you cannot ground in the notes
-  does not belong in the report, even if that leaves you short of the range.
-- If an "Already predicted" list is present, treat those questions as taken: never repeat
-  one, and never restate one in different words. Cover different ground instead.
-- In interviewExperiences, list every first-hand account of interviewing at this company
-  that the notes contain — a candidate's write-up, a Glassdoor or Blind or Reddit or
-  LeetCode Discuss thread, a personal blog post — using only URLs that appear in the notes.
-  Write each "why" for the candidate, naming the role, the level, and how recent the
-  account is whenever the notes reveal them (e.g. "A 2024 E5 backend candidate's full loop
-  breakdown, round by round"). If the notes contain no first-hand account, return an empty
-  array — never invent one, and never fill it with generic listicles or job postings.
-- In importantLinks, pick the ${preset.linksHint} highest-value sources for the candidate to read before
-  the interview, using only URLs that appear in the evidence notes. Favour the company's
-  engineering blog, its public docs, and interviewer talks or writing over generic
-  listicles. Never repeat a URL you already placed in interviewExperiences. Write each
-  "why" for the candidate, naming what they will get from it.`,
+${rules}`,
     prompt: `${describeInput(input)}
 
 Evidence notes:
 ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everything low confidence)"}${excludeBlock}`,
   });
+
+  // Field by field, not a spread of defaults under the result: an omitted
+  // section must land as null even if the model (or a test double) hands back
+  // more than the schema asked for.
+  const report: Report = {
+    ...generated,
+    companySnapshot: company ? generated.companySnapshot : null,
+    companyExplainer: company ? generated.companyExplainer : null,
+    likelyLoopStructure: loop ? generated.likelyLoopStructure : null,
+    skillsRequired: skills ? generated.skillsRequired : null,
+    interviewExperiences: experiences ? generated.interviewExperiences : null,
+  };
 
   // A URL the notes never contained is a hallucination — strip it from both
   // question citations and importantLinks before it reaches the UI as a link.
@@ -408,7 +510,11 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
     return kept;
   };
 
-  report.interviewExperiences = keepLinks(report.interviewExperiences);
+  // Null stays null: an excluded section was never searched for, which is not
+  // the same claim as "we looked and found nothing".
+  if (report.interviewExperiences) {
+    report.interviewExperiences = keepLinks(report.interviewExperiences);
+  }
   report.importantLinks = keepLinks(report.importantLinks);
 
   return report;
@@ -432,6 +538,17 @@ export async function runResearchPipeline(
 
   emit(onProgress, "plan", "Building research plan...");
   const plan = await planStage(input, budget, preset);
+
+  // The planner is told not to produce queries for sections the caller switched
+  // off, but a query it plans anyway is a search we would pay for and then throw
+  // away. Enforce it here rather than trust the prompt. (Safe after parsing:
+  // researchPlanSchema's .min(3) only guards what the model returned.)
+  const companyEvidence = wants(input, "company") || wants(input, "skills");
+  plan.queries = plan.queries.filter(
+    (q) =>
+      (q.category !== "company" || companyEvidence) &&
+      (q.category !== "loop_format" || wants(input, "loop"))
+  );
 
   emit(onProgress, "gather", "Gathering evidence from the web...");
   // Owned here so the proxy wave can dedupe its results against wave 1.

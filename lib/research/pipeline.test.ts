@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { z } from "zod";
 
 import type { BudgetTracker, GeminiModel } from "./budget";
-import type {
-  PipelineProgressEvent,
-  ProxyPlan,
-  Report,
-  ResearchInput,
-  ResearchPlan,
+import {
+  type PipelineProgressEvent,
+  type ProxyPlan,
+  REPORT_SECTIONS,
+  type Report,
+  type ResearchInput,
+  type ResearchPlan,
 } from "./types";
 
 vi.mock("./gemini");
@@ -31,6 +33,7 @@ const input: ResearchInput = {
   fullLoop: false,
   excludeQuestions: [],
   effort: "medium",
+  sections: [...REPORT_SECTIONS],
 };
 
 function plan(overrides: Partial<ResearchPlan> = {}): ResearchPlan {
@@ -68,6 +71,7 @@ function report(overrides: Partial<Report> = {}): Report {
         basis: "evidence",
       },
     ],
+    skillsRequired: [{ skill: "Idempotency", why: "Payments retry" }],
     prepPlan: ["Drill LRU"],
     interviewExperiences: [],
     importantLinks: [],
@@ -751,7 +755,7 @@ describe("synthesize stage", () => {
 
     const { report: out } = await runResearchPipeline(input);
 
-    expect(out.interviewExperiences.map((l) => l.url)).toEqual(["https://a.dev"]);
+    expect(out.interviewExperiences?.map((l) => l.url)).toEqual(["https://a.dev"]);
   });
 
   it("caps interview experiences at the effort's link limit", async () => {
@@ -783,7 +787,7 @@ describe("synthesize stage", () => {
 
     const { report: out } = await runResearchPipeline(input);
 
-    expect(out.interviewExperiences.map((l) => l.url)).toEqual(["https://a.dev"]);
+    expect(out.interviewExperiences?.map((l) => l.url)).toEqual(["https://a.dev"]);
     expect(out.importantLinks.map((l) => l.url)).toEqual(["https://b.dev"]);
   });
 
@@ -1024,5 +1028,131 @@ describe("budget enforcement holes", () => {
     // plan $0.25 + searches + compress + synthesize ($2 + $1.20) ≫ $0.30.
     expect(budget.totalUsd).toBeGreaterThan(3);
     expect(budget.capUsd).toBe(0.3);
+  });
+});
+
+describe("optional report sections", () => {
+  /** What the synthesize call was actually asked to produce. */
+  function synthesizeSchemaKeys(): string[] {
+    const call = genMock.mock.calls.find((c) => c[0].stage === "synthesize")!;
+    return Object.keys((call[0].schema as unknown as z.ZodObject<z.ZodRawShape>).shape);
+  }
+
+  function systemFor(stage: string): string {
+    return genMock.mock.calls.find((c) => c[0].stage === stage)![0].system;
+  }
+
+  function searchedQueries(): string[] {
+    return searchMock.mock.calls.map((c) => c[0]);
+  }
+
+  it("produces every section by default", async () => {
+    stubStages({});
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.companySnapshot).toBe("Payments");
+    expect(out.likelyLoopStructure).toBe("Phone screen then onsite");
+    expect(out.skillsRequired).toEqual([{ skill: "Idempotency", why: "Payments retry" }]);
+    expect(out.interviewExperiences).toEqual([]);
+    expect(synthesizeSchemaKeys()).toEqual(
+      expect.arrayContaining([
+        "companySnapshot",
+        "companyExplainer",
+        "likelyLoopStructure",
+        "skillsRequired",
+        "interviewExperiences",
+      ])
+    );
+  });
+
+  it("drops the loop_format search and section when the loop is not wanted", async () => {
+    stubStages({});
+
+    const { report: out } = await runResearchPipeline({
+      ...input,
+      sections: ["company", "skills", "experiences"],
+    });
+
+    // The planner is told not to plan one — and the plan stub returns one anyway,
+    // which the pipeline must filter before it costs a search.
+    expect(systemFor("plan")).toContain('Do not plan any query with category "loop_format"');
+    expect(searchedQueries()).not.toContain("stripe interview process");
+
+    expect(synthesizeSchemaKeys()).not.toContain("likelyLoopStructure");
+    expect(out.likelyLoopStructure).toBeNull();
+  });
+
+  it("keeps company searches for the skills section even when the company prose is not wanted", async () => {
+    stubStages({});
+
+    const { report: out } = await runResearchPipeline({
+      ...input,
+      sections: ["loop", "skills", "experiences"],
+    });
+
+    // Skills are inferred from what the company builds, so the evidence still earns its cost.
+    expect(searchedQueries()).toContain("stripe tech stack");
+    expect(synthesizeSchemaKeys()).toContain("skillsRequired");
+    expect(synthesizeSchemaKeys()).not.toContain("companySnapshot");
+    expect(out.companySnapshot).toBeNull();
+    expect(out.companyExplainer).toBeNull();
+  });
+
+  it("drops the company search once neither the company prose nor the skills need it", async () => {
+    stubStages({});
+
+    const { report: out } = await runResearchPipeline({
+      ...input,
+      sections: ["loop", "experiences"],
+    });
+
+    expect(systemFor("plan")).toContain('Do not plan any query with category "company"');
+    expect(searchedQueries()).not.toContain("stripe tech stack");
+    expect(out.skillsRequired).toBeNull();
+  });
+
+  it("still hunts first-hand accounts when the experiences section is off", async () => {
+    // They are the primary evidence for predicting questions — only the section is dropped.
+    stubStages({
+      plan: plan({
+        queries: [
+          {
+            query: "stripe interview experience blind",
+            purpose: "accounts",
+            depth: "advanced",
+            category: "interview_experience",
+          },
+        ],
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline({
+      ...input,
+      sections: ["company", "loop", "skills"],
+    });
+
+    expect(searchedQueries()).toContain("stripe interview experience blind");
+    expect(systemFor("plan")).toContain('category "interview_experience"');
+    expect(synthesizeSchemaKeys()).not.toContain("interviewExperiences");
+    expect(systemFor("synthesize")).not.toContain("Never repeat a URL you already placed");
+    // Null, not []: we never looked for the section, which is not the same as
+    // having looked and found nothing.
+    expect(out.interviewExperiences).toBeNull();
+  });
+
+  it("nulls every optional section when the caller wants none of them", async () => {
+    stubStages({});
+
+    const { report: out } = await runResearchPipeline({ ...input, sections: [] });
+
+    expect(out.companySnapshot).toBeNull();
+    expect(out.companyExplainer).toBeNull();
+    expect(out.likelyLoopStructure).toBeNull();
+    expect(out.skillsRequired).toBeNull();
+    expect(out.interviewExperiences).toBeNull();
+    // What the caller still paid for, and still gets.
+    expect(out.questions).toHaveLength(1);
+    expect(out.prepPlan).toEqual(["Drill LRU"]);
   });
 });
