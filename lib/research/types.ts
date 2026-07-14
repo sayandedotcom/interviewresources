@@ -16,6 +16,16 @@ export const INTERVIEW_CATEGORIES = [
 export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
 
 /**
+ * The report sections a caller can switch off. Questions, prep plan, worth
+ * reading, and the interviewer summary are always produced — the rest cost real
+ * search and synthesis budget a candidate may not want to spend (the company
+ * overview is dead weight for a household-name employer).
+ */
+export const REPORT_SECTIONS = ["company", "loop", "skills", "experiences"] as const;
+
+export type ReportSection = (typeof REPORT_SECTIONS)[number];
+
+/**
  * Ceilings on caller-supplied free text. Every field below is interpolated into
  * the synthesize prompt, which is billed per input token on the priciest model,
  * and the BudgetTracker cannot help: it prices a call only after that call has
@@ -79,6 +89,12 @@ export const researchInputSchema = z.object({
     .default([]),
   /** How wide to search and how many questions to produce. See EFFORT_PRESETS. */
   effort: z.enum(EFFORT_LEVELS).default("medium"),
+  /**
+   * Which optional sections to produce. Defaulted rather than required so a
+   * caller predating the field — and the stored inputs of an older run — still
+   * gets the full report.
+   */
+  sections: z.array(z.enum(REPORT_SECTIONS)).default([...REPORT_SECTIONS]),
 });
 
 export type ResearchInput = z.infer<typeof researchInputSchema>;
@@ -195,6 +211,17 @@ export const importantLinkSchema = z.object({
 
 export type ImportantLink = z.infer<typeof importantLinkSchema>;
 
+export const requiredSkillSchema = z.object({
+  skill: z.string().describe("The skill itself, short enough to read as a badge (1-4 words)"),
+  why: z
+    .string()
+    .describe(
+      "One sentence: why this role needs it, grounded in the evidence or the job description"
+    ),
+});
+
+export type RequiredSkill = z.infer<typeof requiredSkillSchema>;
+
 export const reportSchema = z.object({
   companySnapshot: z.string().describe("What the company does, stack, scale signals"),
   companyExplainer: z
@@ -208,6 +235,14 @@ export const reportSchema = z.object({
     .describe("The reported interview process/rounds for this company, if discoverable"),
   interviewerSummary: z.string().nullable().describe("Null if no interviewer was provided"),
   questions: z.array(questionSchema).min(1),
+  skillsRequired: z
+    .array(requiredSkillSchema)
+    .describe(
+      "The skills this role actually demands — not a restatement of the job description's " +
+        "bullet list. Include the non-obvious ones implied by what the company builds (a " +
+        "company shipping web agents needs candidates who understand agent architecture, " +
+        "even where the posting never says so), its stack, and its scale"
+    ),
   prepPlan: z.array(z.string()).describe("Ordered list of prep priorities"),
   interviewExperiences: z
     .array(importantLinkSchema)
@@ -228,7 +263,27 @@ export const reportSchema = z.object({
   evidenceCoverage: z.enum(["rich", "sparse"]).optional(),
 });
 
-export type Report = z.infer<typeof reportSchema>;
+/**
+ * What a report looks like once stored and rendered, as opposed to what the
+ * model is asked to generate. A section the caller switched off is absent from
+ * the generation schema entirely and lands here as `null`.
+ *
+ * The distinction is load-bearing for the two array sections: `[]` means we
+ * looked and found nothing, `null` means we never looked. `skillsRequired` is
+ * additionally optional because reports stored before it existed lack the key.
+ */
+export const storedReportSchema = reportSchema.extend({
+  companySnapshot: reportSchema.shape.companySnapshot.nullable(),
+  companyExplainer: reportSchema.shape.companyExplainer.nullable(),
+  likelyLoopStructure: reportSchema.shape.likelyLoopStructure.nullable(),
+  skillsRequired: reportSchema.shape.skillsRequired.nullable().optional(),
+  interviewExperiences: reportSchema.shape.interviewExperiences.nullable(),
+});
+
+export type Report = z.infer<typeof storedReportSchema>;
+
+/** What stage 4 asks the model for, before omitted sections are nulled back in. */
+export type GeneratedReport = z.infer<typeof reportSchema>;
 
 export interface PipelineProgressEvent {
   stage: "plan" | "gather" | "broaden" | "compress" | "synthesize" | "done" | "error";

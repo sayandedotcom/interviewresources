@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  REPORT_SECTIONS,
   interviewerSchema,
   proxyPlanSchema,
   reportSchema,
   researchInputSchema,
   researchPlanSchema,
+  storedReportSchema,
 } from "./types";
 
 /**
@@ -47,6 +49,21 @@ describe("researchInputSchema", () => {
 
   it("rejects an effort level the presets have no entry for", () => {
     expect(() => researchInputSchema.parse({ ...validInput, effort: "extreme" })).toThrow();
+  });
+
+  it("defaults to every report section, so a caller predating the field loses nothing", () => {
+    expect(researchInputSchema.parse(validInput).sections).toEqual([...REPORT_SECTIONS]);
+  });
+
+  it("accepts a trimmed set of sections, including none at all", () => {
+    expect(researchInputSchema.parse({ ...validInput, sections: ["skills"] }).sections).toEqual([
+      "skills",
+    ]);
+    expect(researchInputSchema.parse({ ...validInput, sections: [] }).sections).toEqual([]);
+  });
+
+  it("rejects a section identifier the pipeline has no rules for", () => {
+    expect(() => researchInputSchema.parse({ ...validInput, sections: ["salary"] })).toThrow();
   });
 
   it("carries excludeQuestions through for an extension run", () => {
@@ -220,6 +237,7 @@ describe("reportSchema", () => {
     likelyLoopStructure: "Phone screen, then onsite",
     interviewerSummary: null,
     questions: [question],
+    skillsRequired: [{ skill: "Idempotency", why: "Every payment API retries" }],
     prepPlan: ["Drill LRU cache"],
     interviewExperiences: [{ title: "E", url: "https://example.com/e", why: "2024 E5 onsite" }],
     importantLinks: [{ title: "T", url: "https://example.com/a", why: "w" }],
@@ -227,6 +245,25 @@ describe("reportSchema", () => {
 
   it("accepts a well-formed report", () => {
     expect(() => reportSchema.parse(validReport)).not.toThrow();
+  });
+
+  it("does not let the model null out a section it was asked to write", () => {
+    expect(() => reportSchema.parse({ ...validReport, companySnapshot: null })).toThrow();
+  });
+
+  it("stores an excluded section as null, and a report predating skillsRequired without it", () => {
+    const excluded = {
+      ...validReport,
+      companySnapshot: null,
+      companyExplainer: null,
+      likelyLoopStructure: null,
+      skillsRequired: null,
+      interviewExperiences: null,
+    };
+    expect(() => storedReportSchema.parse(excluded)).not.toThrow();
+
+    const legacy = { ...validReport, skillsRequired: undefined };
+    expect(() => storedReportSchema.parse(legacy)).not.toThrow();
   });
 
   it("rejects a report with no questions — that is a failed run, not an empty one", () => {

@@ -9,6 +9,7 @@ import {
   MAX_TECH_STACK,
   MAX_URL,
   MAX_YEARS_EXPERIENCE,
+  REPORT_SECTIONS,
 } from "@/lib/research/types";
 
 /** Loose enough to accept "https://x.com" while still catching "not a url" typos. */
@@ -44,6 +45,9 @@ export const researchFormSchema = z.object({
   interviewers: z.array(formInterviewerSchema),
   rounds: z.array(z.string()).min(1, "Pick at least one round"),
   effort: z.enum(EFFORT_LEVELS),
+  // No .min(): dropping every optional section is a legitimate choice — the
+  // questions, prep plan, and links are produced either way.
+  sections: z.array(z.enum(REPORT_SECTIONS)),
 });
 
 export type ResearchFormValues = z.infer<typeof researchFormSchema>;
@@ -61,6 +65,7 @@ export const emptyFormValues: ResearchFormValues = {
   interviewers: [{ name: "", url: "" }],
   rounds: ["dsa", "system_design"],
   effort: "medium",
+  sections: [...REPORT_SECTIONS],
 };
 
 /**

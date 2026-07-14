@@ -34,6 +34,13 @@ describe("form draft persistence", () => {
     const draft = loadDraft();
     expect(draft?.company).toBe("Stripe");
     expect(draft?.rounds).toEqual(emptyFormValues.rounds);
+    // Saved before report sections were selectable: the draft still asks for all of them.
+    expect(draft?.sections).toEqual(emptyFormValues.sections);
+  });
+
+  it("round-trips a trimmed section selection", () => {
+    saveDraft({ ...emptyFormValues, company: "Stripe", sections: ["skills"] });
+    expect(loadDraft()?.sections).toEqual(["skills"]);
   });
 
   it("removes the draft on clear", () => {
