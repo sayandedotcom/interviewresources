@@ -75,7 +75,7 @@
     "title": "Häufig gestellte Fragen",
     "items": [
       {
-        "question": "Wie funktioniert Scouting Report?",
+        "question": "Wie funktioniert {name}?",
         "answer": "Du gibst das Unternehmen ein, bei dem du vorstellig wirst, wählst die Gesprächsrunden aus, auf die du dich vorbereitest, und wir recherchieren öffentlich verfügbare Informationen, um die Fragen vorherzusagen, denen du begegnen könntest. Jede Vorhersage enthält Belege und Vorbereitungshinweise."
       },
       {
