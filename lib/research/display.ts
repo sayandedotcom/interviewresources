@@ -1,4 +1,9 @@
-import { INTERVIEW_CATEGORIES, type InterviewCategory, type PredictedQuestion } from "./types";
+import {
+  INTERVIEW_CATEGORIES,
+  type InterviewCategory,
+  type PredictedQuestion,
+  type ReportSection,
+} from "./types";
 
 /** UI-facing labels and short codes for each interview category (PRD §5.3). */
 export const CATEGORY_META: Record<
@@ -12,6 +17,30 @@ export const CATEGORY_META: Record<
   pair_programming: { label: "Pair Programming", code: "PAIR", blurb: "Live collaborative coding" },
   behavioral: { label: "Behavioral", code: "BEH", blurb: "Values & past experience" },
   hr_culture: { label: "HR / Culture", code: "HR", blurb: "Recruiter screen & fit" },
+};
+
+/** UI-facing labels for the optional report sections the form lets a user drop. */
+export const SECTION_META: Record<ReportSection, { label: string; code: string; blurb: string }> = {
+  company: {
+    label: "The company",
+    code: "CO",
+    blurb: "What they build, their stack and scale — plus a plain-terms explainer",
+  },
+  loop: {
+    label: "The loop",
+    code: "LOOP",
+    blurb: "The interview process they actually run, as reported by candidates",
+  },
+  skills: {
+    label: "Skills required",
+    code: "SKL",
+    blurb: "What the role really demands, including what the job post leaves unsaid",
+  },
+  experiences: {
+    label: "Interview experiences",
+    code: "EXP",
+    blurb: "First-hand write-ups from people who interviewed here",
+  },
 };
 
 function isKnown(cat: string): cat is InterviewCategory {

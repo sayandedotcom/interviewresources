@@ -12,15 +12,23 @@ import type { Report } from "./types";
 function contextSections(report: Report, companyName: string): string[] {
   const parts: string[] = [];
 
-  parts.push(`## About ${companyName}\n\n${report.companySnapshot}`);
+  // Every section below is absent from a report that excluded it, and the
+  // company sections are additionally absent from reports predating them.
+  if (report.companySnapshot) {
+    parts.push(`## About ${companyName}\n\n${report.companySnapshot}`);
+  }
 
-  // Reports generated before companyExplainer existed are stored without it.
   if (report.companyExplainer) {
     parts.push(`In plain terms: ${report.companyExplainer}`);
   }
 
   if (report.likelyLoopStructure) {
     parts.push(`## The interview loop\n\n${report.likelyLoopStructure}`);
+  }
+
+  if (report.skillsRequired?.length) {
+    const skills = report.skillsRequired.map((s) => `- ${s.skill}: ${s.why}`).join("\n");
+    parts.push(`## Skills the role demands\n\n${skills}`);
   }
 
   if (report.interviewerSummary) {

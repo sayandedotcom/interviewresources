@@ -147,10 +147,12 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
 
   // ---- The company ------------------------------------------------------
 
-  heading("The company");
-  text(report.companySnapshot, { leading: 1.5 });
+  // Null on a report that excluded the section; absent on one predating it.
+  if (report.companySnapshot) {
+    heading("The company");
+    text(report.companySnapshot, { leading: 1.5 });
+  }
 
-  // Reports generated before companyExplainer existed are stored without it.
   if (report.companyExplainer) {
     y += 10;
     eyebrow("In plain terms");
@@ -160,6 +162,16 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
   if (report.likelyLoopStructure) {
     heading("The loop");
     text(report.likelyLoopStructure, { leading: 1.5 });
+  }
+
+  if (report.skillsRequired?.length) {
+    heading("Skills required");
+    for (const s of report.skillsRequired) {
+      ensure(30);
+      text(s.skill, { size: 10, style: "bold", leading: 1.3 });
+      text(s.why, { size: 9, color: MUTED, leading: 1.45 });
+      y += 6;
+    }
   }
 
   if (report.interviewerSummary) {
@@ -220,7 +232,7 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
 
   // ---- Link sections ----------------------------------------------------
 
-  function linkSection(title: string, items: ImportantLink[] | undefined) {
+  function linkSection(title: string, items: ImportantLink[] | null | undefined) {
     if (!items || items.length === 0) return;
     heading(title);
     for (const item of items) {
