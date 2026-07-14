@@ -24,7 +24,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { type Control, Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -104,18 +104,20 @@ export function ResearchExperience({
     defaultValues: emptyFormValues,
     mode: "onBlur",
   });
-  const { control, register, handleSubmit, watch, setValue, reset, formState } = form;
+  const { control, handleSubmit, watch, getValues, setValue, reset, formState } = form;
   const {
     fields: interviewerFields,
     append: appendInterviewer,
     remove: removeInterviewer,
   } = useFieldArray({ control, name: "interviewers" });
 
-  const company = watch("company");
+  // Only the fields the *parent* needs. Everything driven by keystrokes — the
+  // estimate, the clear button, the submit button's disabled state — subscribes
+  // in its own child below, so typing re-renders that child and nothing else.
+  // These three move on clicks, not keystrokes, so watching them here is cheap.
   const rounds = watch("rounds");
   const sections = watch("sections");
   const effort = watch("effort");
-  const formValues = watch();
 
   // Load any saved draft only on the client, after hydration, so the server-rendered
   // markup (always the pristine defaults) matches what React expects to see first.
@@ -169,20 +171,6 @@ export function ResearchExperience({
   /** Until the balance lands, `balance` is 0 — which is not the same as "cannot afford". */
   const balanceKnown = me !== null;
 
-  // Recomputed on every keystroke — it's a pure function over the form, and the
-  // whole point is that the price moves as the user picks fields. Advisory: the
-  // charge is metered from real usage, never from this.
-  const estimate = estimateRun(
-    {
-      effort,
-      roundsCount: rounds.length,
-      sectionsCount: sections.length,
-      interviewersCount: formValues.interviewers.filter((i) => i.name.trim()).length,
-      jobDescriptionLength: formValues.jobDescription.length,
-      hasCompanyUrl: Boolean(formValues.companyUrl.trim()),
-    },
-    effortCeiling
-  );
   /** No ring without a balance to measure against — signed out, or still loading. */
   const ringBalance = signedIn && balanceKnown ? balance : undefined;
 
@@ -261,10 +249,10 @@ export function ResearchExperience({
 
       await streamSse(res.body, (msg) => {
         if (msg.kind === "progress") {
-          setProgress((prev) => [
-            ...prev,
-            { ...(msg as unknown as PipelineProgressEvent), id: progressId.current++ },
-          ]);
+          // Bump the id outside the updater — React double-invokes updaters in
+          // StrictMode, and an id that advances twice per line is a wasted key.
+          const id = progressId.current++;
+          setProgress((prev) => [...prev, { ...(msg as unknown as PipelineProgressEvent), id }]);
         } else if (msg.kind === "report") {
           setReport(msg.report as Report);
           setCostUsd(msg.costUsd as number);
@@ -314,28 +302,7 @@ export function ResearchExperience({
                       <Target className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                       Target
                     </SectionLabel>
-                    {isDraftDirty(formValues) && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={clearForm}
-                                className="text-muted-foreground hover:text-foreground -mt-1 -mr-2"
-                              />
-                            }>
-                            <RotateCcw className="h-3.5 w-3.5" />
-                            Clear form
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span className="font-display">Reset all fields to empty</span>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
+                    <ClearFormButton control={control} onClear={clearForm} />
                   </div>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <FormField
@@ -757,15 +724,11 @@ export function ResearchExperience({
                   </Link>
                 )}
 
-                {signedIn && balanceKnown && canAfford && (
-                  <Button type="submit" size="lg" disabled={!company.trim() || rounds.length === 0}>
-                    Run reconnaissance →
-                  </Button>
-                )}
+                {signedIn && balanceKnown && canAfford && <RunButton control={control} />}
               </div>
             </div>
 
-            <EstimatePanel estimate={estimate} balance={ringBalance} ceiling={effortCeiling} />
+            <LiveEstimate control={control} balance={ringBalance} ceiling={effortCeiling} />
           </form>
         </Form>
       )}
@@ -789,17 +752,19 @@ export function ResearchExperience({
         </div>
       )}
 
+      {/* The form is unmounted here and nothing is editing it, so a one-shot read
+          beats a subscription. */}
       {phase === "done" && report && (
         <ReportView
           report={report}
           costUsd={costUsd}
           creditsCharged={creditsCharged}
-          company={formValues.company}
+          company={getValues("company")}
           onReset={resetRun}
           researchId={researchId ?? undefined}
           extendCredits={me?.extendCredits}
           balance={ringBalance}
-          roleContext={formValues.role.trim() || undefined}
+          roleContext={getValues("role").trim() || undefined}
         />
       )}
     </div>
