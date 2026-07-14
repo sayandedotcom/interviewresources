@@ -32,6 +32,7 @@ function report(overrides: Partial<Report> = {}): Report {
     likelyLoopStructure: "Recruiter screen, then a four-round onsite.",
     interviewerSummary: null,
     questions: [question()],
+    skillsRequired: [],
     prepPlan: ["Drill LRU cache", "Read the engineering blog"],
     interviewExperiences: [],
     importantLinks: [],
@@ -72,6 +73,15 @@ describe("report body", () => {
     expect(screen.queryByText("The loop")).not.toBeInTheDocument();
   });
 
+  it("hides the company section on a report that excluded it", () => {
+    render(
+      <ReportView {...base} report={report({ companySnapshot: null, companyExplainer: null })} />
+    );
+
+    expect(screen.queryByText("The company")).not.toBeInTheDocument();
+    expect(screen.queryByText("In plain terms")).not.toBeInTheDocument();
+  });
+
   it("hides the interviewer card when no interviewer was researched", () => {
     render(<ReportView {...base} report={report()} />);
 
@@ -84,6 +94,35 @@ describe("report body", () => {
     );
 
     expect(screen.getByText("Ada writes about Rust.")).toBeInTheDocument();
+  });
+
+  it("renders each required skill as a badge", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report({
+          skillsRequired: [
+            { skill: "Idempotency", why: "Every payment API retries" },
+            { skill: "Web agent architecture", why: "Their product drives a browser autonomously" },
+          ],
+        })}
+      />
+    );
+
+    expect(screen.getByText("Skills required")).toBeInTheDocument();
+    expect(screen.getByText("Idempotency")).toBeInTheDocument();
+    expect(screen.getByText("Web agent architecture")).toBeInTheDocument();
+  });
+
+  it("hides the skills section when the run excluded it, and on a report predating it", () => {
+    const { unmount } = render(<ReportView {...base} report={report({ skillsRequired: null })} />);
+    expect(screen.queryByText("Skills required")).not.toBeInTheDocument();
+    unmount();
+
+    const legacy = report();
+    delete (legacy as Partial<Report>).skillsRequired;
+    render(<ReportView {...base} report={legacy} />);
+    expect(screen.queryByText("Skills required")).not.toBeInTheDocument();
   });
 
   it("renders the prep plan as a numbered, zero-padded list", () => {

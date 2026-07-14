@@ -24,6 +24,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Wrench,
   Zap,
 } from "lucide-react";
 
@@ -213,9 +214,10 @@ export function ReportView({
   // The rounds already covered, which "Scout more rounds" must not offer again.
   const order = grouped.map((g) => g.cat);
 
-  // Reports generated before these sections existed are stored without the fields.
+  // Null when the run excluded the section, absent when the report predates it.
   const importantLinks = current.importantLinks ?? [];
   const interviewExperiences = current.interviewExperiences ?? [];
+  const skillsRequired = current.skillsRequired ?? [];
 
   return (
     <div className="mt-6">
@@ -346,27 +348,30 @@ export function ReportView({
         </div>
       )}
 
-      <section className="mt-5">
-        <h2 className="font-display text-lg font-semibold tracking-tight">
-          <Building2 className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
-          The company
-        </h2>
-        <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
-          {current.companySnapshot}
-        </p>
-        {/* Reports generated before companyExplainer existed are stored without it. */}
-        {current.companyExplainer && (
-          <div className="bg-tertiary/10 border-tertiary/40 mt-3 rounded-md border-l-2 px-4 py-3">
-            <SectionLabel>
-              <Lightbulb className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-              In plain terms
-            </SectionLabel>
-            <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
-              {current.companyExplainer}
-            </p>
-          </div>
-        )}
-      </section>
+      {/* Null once the section can be switched off at request time. */}
+      {current.companySnapshot && (
+        <section className="mt-5">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            <Building2 className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+            The company
+          </h2>
+          <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
+            {current.companySnapshot}
+          </p>
+          {/* Reports generated before companyExplainer existed are stored without it. */}
+          {current.companyExplainer && (
+            <div className="bg-tertiary/10 border-tertiary/40 mt-3 rounded-md border-l-2 px-4 py-3">
+              <SectionLabel>
+                <Lightbulb className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                In plain terms
+              </SectionLabel>
+              <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
+                {current.companyExplainer}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
 
       {current.likelyLoopStructure && (
         <section className="mt-6">
@@ -392,6 +397,39 @@ export function ReportView({
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Null on a report that excluded the section, absent on one generated
+          before it existed — either way there is nothing to show. */}
+      {skillsRequired.length > 0 && (
+        <section className="mt-8">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            <Wrench className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+            Skills required
+          </h2>
+          <p className="text-muted-foreground mt-1 text-xs">
+            What the role actually demands — including what the job post leaves unsaid. Hover a
+            skill for why it matters here.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {skillsRequired.map((s, i) => (
+              <Tooltip key={i}>
+                <TooltipTrigger
+                  render={
+                    <Badge
+                      variant="outline"
+                      className="hover:border-tertiary/50 hover:bg-tertiary/10 hover:text-tertiary cursor-help px-2.5 py-1 transition-colors"
+                    />
+                  }>
+                  <span className="font-display text-[13px]">{s.skill}</span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <span className="font-display">{s.why}</span>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </section>
       )}
 
       <section className="mt-8">

@@ -9,6 +9,7 @@ import {
   Building2,
   FileText,
   Hourglass,
+  LayoutList,
   Link as LinkIcon,
   MapPin,
   Mic,
@@ -42,7 +43,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
 import { EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
-import type { PipelineProgressEvent, Report } from "@/lib/research/types";
+import type { PipelineProgressEvent, Report, ReportSection } from "@/lib/research/types";
 import { zodFormResolver } from "@/lib/zod-form-resolver";
 
 import { EffortPicker } from "@/features/research/effort-picker";
@@ -57,6 +58,7 @@ import {
 } from "@/features/research/form-schema";
 import { ReportView, SectionLabel } from "@/features/research/report-view";
 import { RoundPicker, isCustomRound } from "@/features/research/round-picker";
+import { SectionPicker } from "@/features/research/section-picker";
 import { explainError, streamSse } from "@/features/research/stream";
 
 type Phase = "form" | "running" | "done" | "error";
@@ -109,6 +111,7 @@ export function ResearchExperience({
 
   const company = watch("company");
   const rounds = watch("rounds");
+  const sections = watch("sections");
   const effort = watch("effort");
   const formValues = watch();
 
@@ -187,6 +190,14 @@ export function ResearchExperience({
     }
   }
 
+  function toggleSection(section: ReportSection) {
+    setValue(
+      "sections",
+      sections.includes(section) ? sections.filter((s) => s !== section) : [...sections, section],
+      { shouldDirty: true, shouldValidate: true }
+    );
+  }
+
   function clearForm() {
     reset(emptyFormValues);
     clearDraft();
@@ -220,6 +231,7 @@ export function ResearchExperience({
           interviewTypes: values.rounds,
           roleContext: values.role.trim() || undefined,
           effort: values.effort,
+          sections: values.sections,
         }),
       });
 
@@ -604,6 +616,22 @@ export function ResearchExperience({
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent>
+                <SectionLabel>
+                  <LayoutList className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                  Report sections
+                </SectionLabel>
+                <p className="text-muted-foreground font-display mt-1 text-xs">
+                  Drop what you already know — you are only charged for what the run researches.
+                  Predicted questions, the prep plan, and worth reading are always included.
+                </p>
+                <div className="mt-4">
+                  <SectionPicker selected={sections} onToggle={toggleSection} />
                 </div>
               </CardContent>
             </Card>
