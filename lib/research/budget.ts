@@ -9,7 +9,7 @@
 // $/1M tokens. Model IDs match the @ai-sdk/google GoogleModelId union.
 // Keep in sync with PRD §7 — verify against current pricing before relying
 // on this for real budgeting decisions.
-const GEMINI_PRICES = {
+export const GEMINI_PRICES = {
   "gemini-3.1-pro-preview": { input: 2.0, output: 12.0 },
   "gemini-3.5-flash": { input: 1.5, output: 9.0 },
   "gemini-3-flash-preview": { input: 0.5, output: 3.0 },
@@ -19,7 +19,7 @@ const GEMINI_PRICES = {
 export type GeminiModel = keyof typeof GEMINI_PRICES;
 
 // Tavily credits: basic search = 1 credit, advanced = 2, extract = 1 per 5 URLs.
-const TAVILY_CREDIT_COST_USD = 0.008;
+export const TAVILY_CREDIT_COST_USD = 0.008;
 
 export const BUDGET_CAP_USD = 1.0;
 /** Degrade once 85% of the run's cap is spent. */
