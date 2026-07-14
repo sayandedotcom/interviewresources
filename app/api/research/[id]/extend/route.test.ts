@@ -285,7 +285,8 @@ describe("the extension run", () => {
 
   it("unions interviewExperiences without duplicating a url the report already lists", async () => {
     const events = await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
-    const merged = (events.find((e) => e.kind === "report")!.report as Report).interviewExperiences;
+    const merged = (events.find((e) => e.kind === "report")!.report as Report)
+      .interviewExperiences!;
 
     expect(merged.map((l) => l.url)).toEqual(["https://exp-a.dev", "https://exp-b.dev"]);
     expect(merged[0].title).toBe("Exp A"); // the original wins, not the duplicate
@@ -298,9 +299,32 @@ describe("the extension run", () => {
     stubSelect({ ...row, jsonPayload: legacy });
 
     const events = await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
-    const merged = (events.find((e) => e.kind === "report")!.report as Report).interviewExperiences;
+    const merged = (events.find((e) => e.kind === "report")!.report as Report)
+      .interviewExperiences!;
 
     expect(merged.map((l) => l.url)).toEqual(["https://exp-a.dev", "https://exp-b.dev"]);
+  });
+
+  it("asks the pipeline only for the sections an extension can actually merge", async () => {
+    await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
+
+    // The company, loop, and skills prose of an extension is discarded by the
+    // merge, so paying to regenerate it would be pure waste.
+    expect(pipelineMock.mock.calls[0][0].sections).toEqual(["experiences"]);
+  });
+
+  it("skips interview experiences on a report that excluded the section", async () => {
+    stubSelect({
+      ...row,
+      jsonPayload: { ...existingReport, interviewExperiences: null } satisfies Report,
+    });
+
+    const events = await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
+    const merged = events.find((e) => e.kind === "report")!.report as Report;
+
+    expect(pipelineMock.mock.calls[0][0].sections).toEqual([]);
+    // Excluded stays excluded: null, not an empty list, and not resurrected.
+    expect(merged.interviewExperiences).toBeNull();
   });
 
   it("adds newly scouted rounds to interviewType so the sidebar shows them", async () => {

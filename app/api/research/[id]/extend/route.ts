@@ -41,10 +41,13 @@ function costCents(entries: CostEntry[], kind: CostEntry["kind"]): number {
  * only a slice of the loop and its snapshot would be thinner.
  */
 function mergeReports(existing: Report, addition: Report): Report {
-  // `?? []` throughout: reports stored before a link section existed lack the field.
-  const mergeLinks = (a: ImportantLink[] = [], b: ImportantLink[] = []) => {
-    const links = [...a];
-    for (const link of b) {
+  // `null` means the original run excluded the section: it stays excluded, and
+  // no addition may resurrect it. `undefined` means the report predates the
+  // section, which extending it can legitimately fill in. Neither can be spread.
+  const mergeLinks = (a: ImportantLink[] | null | undefined, b: ImportantLink[] | null) => {
+    if (a === null) return null;
+    const links = [...(a ?? [])];
+    for (const link of b ?? []) {
       if (!links.some((l) => l.url === link.url)) links.push(link);
     }
     return links.slice(0, MAX_EFFORT_LINKS);
@@ -54,7 +57,7 @@ function mergeReports(existing: Report, addition: Report): Report {
     ...existing,
     questions: [...existing.questions, ...addition.questions],
     interviewExperiences: mergeLinks(existing.interviewExperiences, addition.interviewExperiences),
-    importantLinks: mergeLinks(existing.importantLinks, addition.importantLinks),
+    importantLinks: mergeLinks(existing.importantLinks, addition.importantLinks) ?? [],
   };
 }
 
@@ -127,6 +130,13 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
             interviewers: [],
             interviewTypes: body.interviewTypes,
             fullLoop: false,
+            // mergeReports keeps the original run's prose, so researching the
+            // company, the loop, and the skills again would be paid for and then
+            // discarded. Interview experiences do merge, so they are worth
+            // re-researching — unless this report explicitly excluded them.
+            // (Only `null` means excluded; a report predating the section has no
+            // key at all, and extending it should still surface experiences.)
+            sections: existing.interviewExperiences === null ? [] : ["experiences"],
             excludeQuestions: existing.questions.map((q) => q.question),
             // The caller picks how hard this extension searches, independent of
             // the original run's effort (which isn't persisted). The budget is
