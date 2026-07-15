@@ -1,18 +1,33 @@
 import Link from "next/link";
 
 import { siteConfig } from "@/site";
-import { Check } from "lucide-react";
+import { Infinity as InfinityIcon, Check, Coins, ShieldCheck } from "lucide-react";
 
 import { CtaSection } from "@/components/cta-section";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { HowAgentWorksSection } from "@/components/how-agent-works-section";
 import { HowItWorksSection } from "@/components/how-it-works-section";
+import { WhyNotChatgptSection } from "@/components/why-not-chatgpt-section";
 
 import { MAX_RUN_CREDITS } from "@/lib/credits";
 
 import { BuyCreditsButton } from "@/features/payments/buy-credits-button";
-import { ResearchExperience } from "@/features/research/research-experience";
+
+// import { ResearchExperience } from "@/features/research/research-experience";
+
+/** Renders "AI" and the price in the hero title with a glowing tertiary accent. */
+function emphasized(text: string) {
+  return text.split(/(\bAI\b|\$0\.50)/).map((part, i) =>
+    part === "AI" || part === "$0.50" ? (
+      <span key={i} className="text-tertiary [text-shadow:0_0_24px_var(--tertiary)]">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
 
 export default function Home() {
   const { landing } = siteConfig.copy;
@@ -37,11 +52,11 @@ export default function Home() {
           </div>
         </div>
         <h1 className="font-display mt-3 max-w-2xl text-4xl leading-[1.05] font-semibold tracking-tight sm:text-5xl">
-          {landing.heroTitle.line1}
+          {emphasized(landing.heroTitle.line1)}
           <br />
           {landing.heroTitle.line2}{" "}
           <span className="relative inline-block">
-            {landing.heroTitle.highlight}
+            {emphasized(landing.heroTitle.highlight)}
             <span className="bg-tertiary/20 absolute -bottom-1 left-0 h-3 w-full" />
           </span>
         </h1>
@@ -62,7 +77,11 @@ export default function Home() {
         </div>
       </section>
 
-      <ResearchExperience />
+      {/* <ResearchExperience /> */}
+
+      <HowItWorksSection />
+
+      <HowAgentWorksSection />
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="grid gap-8 sm:grid-cols-4">
@@ -82,10 +101,10 @@ export default function Home() {
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
-          <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
+          <p className="text-tertiary mb-3 font-mono text-xs font-semibold tracking-[0.25em] uppercase">
             {landing.companies.eyebrow}
           </p>
-          <h2 className="font-display text-xl font-semibold tracking-tight">
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             {landing.companies.title}
           </h2>
         </div>
@@ -100,13 +119,11 @@ export default function Home() {
         </div>
       </section>
 
-      <HowItWorksSection />
-
-      <HowAgentWorksSection />
+      <WhyNotChatgptSection />
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
-          <h2 className="font-display text-2xl font-semibold tracking-tight">
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Why {siteConfig.name}?
           </h2>
           <p className="font-display text-muted-foreground mt-2">{landing.comparison.sub}</p>
@@ -179,10 +196,10 @@ export default function Home() {
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
-          <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
+          <p className="text-tertiary mb-3 font-mono text-xs font-semibold tracking-[0.25em] uppercase">
             {landing.faq.eyebrow}
           </p>
-          <h2 className="font-display text-2xl font-semibold tracking-tight">
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             {landing.faq.title}
           </h2>
         </div>
@@ -195,6 +212,23 @@ export default function Home() {
               <p className="font-display text-muted-foreground mt-2 text-sm">{faq.answer}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {siteConfig.copy.guarantee.items.map((item, i) => {
+            const Icon = [Coins, ShieldCheck, InfinityIcon][i];
+            return (
+              <div key={item.title} className="bg-card rounded-xl border p-5">
+                <div className="bg-tertiary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                  <Icon className="text-tertiary h-5 w-5" />
+                </div>
+                <h3 className="font-display mt-4 text-base font-semibold">{item.title}</h3>
+                <p className="font-display text-muted-foreground mt-2 text-sm">{item.body}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 

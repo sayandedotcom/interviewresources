@@ -190,10 +190,12 @@ export function HowAgentWorksSection() {
   return (
     <section id="how-agent-works" className="mx-auto w-full max-w-5xl border-t px-5 py-16">
       <div className="mb-10 text-center">
-        <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
+        <p className="text-tertiary mb-3 font-mono text-xs font-semibold tracking-[0.25em] uppercase">
           {agent.eyebrow}
         </p>
-        <h2 className="font-display text-2xl font-semibold tracking-tight">{agent.title}</h2>
+        <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          {agent.title}
+        </h2>
         <p className="font-display text-muted-foreground mx-auto mt-2 max-w-xl">{agent.sub}</p>
       </div>
       <BentoGrid className="auto-rows-[19rem] grid-cols-1 md:grid-cols-3">

@@ -125,6 +125,60 @@ export const copyConfig = {
     ],
   },
 
+  // ── "Why not just ChatGPT?" comparison (landing) ────────────────
+  vsChatgpt: {
+    eyebrow: "The honest comparison",
+    title: "Why not just ask ChatGPT?",
+    sub: "A general chatbot can guess at interview questions. Here's what it can't do that we do.",
+    chatgptLabel: "Asking ChatGPT",
+    usLabel: "Interview Scout",
+    rows: [
+      {
+        point: "Where the answer comes from",
+        chatgpt: "Training data with a cutoff date, frozen months ago",
+        us: "The live web, researched the moment you hit scout",
+      },
+      {
+        point: "Can you verify it?",
+        chatgpt: "No sources; you take its word for it",
+        us: "Every question links to the exact evidence it came from",
+      },
+      {
+        point: "How sure is it?",
+        chatgpt: "Sounds equally confident whether right or wrong",
+        us: "A confidence level on each question; inferred content is labelled",
+      },
+      {
+        point: "How specific is it?",
+        chatgpt: "Generic advice for the role, not the company",
+        us: "Scoped to your company, chosen rounds, and report sections",
+      },
+      {
+        point: "What it costs you",
+        chatgpt: "A monthly subscription whether you interview or not",
+        us: "Metered credits with a hard cap per run; pay only when you scout",
+      },
+    ],
+  },
+
+  // ── Fair-billing guarantee strip (landing) ──────────────────────
+  guarantee: {
+    items: [
+      {
+        title: "Metered billing",
+        body: "You're charged only what a run actually spends, never a flat fee.",
+      },
+      {
+        title: "Hard cap every run",
+        body: "A run can never spend past its effort ceiling or your balance.",
+      },
+      {
+        title: "No subscription",
+        body: "Buy credits once and spend them only when you run a report.",
+      },
+    ],
+  },
+
   // ── CTA section (shared) ─────────────────────────────────────────
   cta: {
     title: "Know the questions before you walk in.",

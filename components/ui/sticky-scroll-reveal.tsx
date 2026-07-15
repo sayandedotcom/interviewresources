@@ -13,6 +13,29 @@ type Stage = {
   content?: React.ReactNode;
 };
 
+/** The active stage's eyebrow, title, and description, cross-fading on change.
+ * Rendered twice: in the xl+ margin rail and stacked below the panel otherwise. */
+function StageText({ stage, index }: { stage: Stage; index: number }) {
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={index}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.25 }}>
+        <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
+          {String(index + 1).padStart(2, "0")} · {stage.label}
+        </p>
+        <h3 className="font-display text-2xl font-semibold tracking-tight">{stage.title}</h3>
+        <p className="font-display text-muted-foreground mt-4 leading-relaxed">
+          {stage.description}
+        </p>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 /**
  * Scroll-pinned stepper. The section is tall enough to give each stage a full
  * screen of scroll; an inner sticky wrapper "locks" the stepper and the active
@@ -45,64 +68,57 @@ export const StickyScroll = ({
 
   return (
     <div ref={ref} style={{ height: `${cardLength * 90}vh` }} className="relative">
-      <div className="sticky top-16 flex flex-col gap-8">
-        {/* Stepper: numbered pills joined by a line that fills up to the active stage. */}
-        <div className="flex items-center">
-          {content.map((stage, index) => (
-            <React.Fragment key={stage.label}>
-              <div className="flex shrink-0 items-center gap-2.5">
-                <span
-                  className={cn(
-                    "font-display flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold transition-colors duration-300",
-                    index <= active
-                      ? "border-tertiary bg-tertiary text-tertiary-foreground"
-                      : "border-border text-muted-foreground"
-                  )}>
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <span
-                  className={cn(
-                    "font-display text-sm font-medium transition-colors duration-300",
-                    index === active ? "text-foreground" : "text-muted-foreground"
-                  )}>
-                  {stage.label}
-                </span>
-              </div>
-              {index < cardLength - 1 && (
-                <div className="bg-border relative mx-3 h-px flex-1">
-                  <motion.div
-                    className="bg-tertiary absolute inset-y-0 left-0"
-                    animate={{ width: index < active ? "100%" : "0%" }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </div>
-              )}
-            </React.Fragment>
-          ))}
+      {/* The stepper and panel stay centered where the section puts them; the
+          stage text hangs in the page's left margin (absolute, off the content's
+          left edge), the same trick as the estimate rail. Below xl there is no
+          margin to hang in, so the text stacks under the panel instead. */}
+      <div className="sticky top-10">
+        <div className="absolute top-16 right-full mr-12 hidden w-80 xl:block">
+          <StageText stage={content[active]} index={active} />
         </div>
 
-        {/* Active stage: heading/description, then the bespoke panel. */}
-        <div className="grid items-start gap-8 lg:grid-cols-2">
-          <div className="max-w-md">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={active}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25 }}>
-                <h3 className="font-display text-2xl font-semibold tracking-tight">
-                  {content[active].title}
-                </h3>
-                <p className="font-display text-muted-foreground mt-4 leading-relaxed">
-                  {content[active].description}
-                </p>
-              </motion.div>
-            </AnimatePresence>
+        <div className="flex flex-col gap-8">
+          {/* Stepper: numbered pills joined by a line that fills up to the active stage. */}
+          <div className="flex items-center">
+            {content.map((stage, index) => (
+              <React.Fragment key={stage.label}>
+                <div className="flex shrink-0 items-center gap-2.5">
+                  <span
+                    className={cn(
+                      "font-display flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold transition-colors duration-300",
+                      index <= active
+                        ? "border-tertiary bg-tertiary text-tertiary-foreground"
+                        : "border-border text-muted-foreground"
+                    )}>
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-display text-sm font-medium transition-colors duration-300",
+                      index === active ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                    {stage.label}
+                  </span>
+                </div>
+                {index < cardLength - 1 && (
+                  <div className="bg-border relative mx-3 h-px flex-1">
+                    <motion.div
+                      className="bg-tertiary absolute inset-y-0 left-0"
+                      animate={{ width: index < active ? "100%" : "0%" }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
           </div>
 
+          {/* The active stage's panel, spanning the stepper's full width. */}
           <div
-            className={cn("bg-card min-h-80 overflow-hidden rounded-xl border", contentClassName)}>
+            className={cn(
+              "bg-card flex h-[calc(100vh-10rem)] overflow-hidden rounded-xl border",
+              contentClassName
+            )}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={active}
@@ -110,10 +126,15 @@ export const StickyScroll = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25 }}
-                className="h-full">
+                className="h-full w-full">
                 {content[active].content ?? null}
               </motion.div>
             </AnimatePresence>
+          </div>
+
+          {/* Below xl the margin rail is hidden; the text stacks here instead. */}
+          <div className="xl:hidden">
+            <StageText stage={content[active]} index={active} />
           </div>
         </div>
       </div>
