@@ -54,16 +54,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { useSession } from "@/lib/auth-client";
 import { categoryLabel } from "@/lib/research/display";
+import type { ResearchSummary } from "@/lib/research/sessions";
 import type { SessionUser } from "@/lib/session";
 import { cn } from "@/lib/utils";
-
-interface ResearchSession {
-  id: string;
-  companyName: string;
-  interviewType: string;
-  status: string;
-  createdAt: string;
-}
 
 /**
  * Acknowledges the click while the destination renders. Must live inside the
@@ -88,14 +81,24 @@ function NavPendingHint({ className }: { className?: string }) {
 
 export function AppSidebar({
   initialUser,
+  initialBalance,
+  initialSessions,
+  initialLimit,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { initialUser: SessionUser | null }) {
+}: React.ComponentProps<typeof Sidebar> & {
+  initialUser: SessionUser | null;
+  initialBalance: number;
+  initialSessions: ResearchSummary[];
+  initialLimit: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { isMobile } = useSidebar();
   const { data: session, isPending } = useSession();
-  const [fetched, setFetched] = React.useState<ResearchSession[] | null>(null);
-  const [limit, setLimit] = React.useState<number | null>(null);
+  // Seeded from the server so the list is complete on first paint. The
+  // `useEffect` below still refetches on navigation to stay fresh.
+  const [fetched, setFetched] = React.useState<ResearchSummary[] | null>(initialSessions);
+  const [limit, setLimit] = React.useState<number | null>(initialLimit);
   const [pendingDelete, setPendingDelete] = React.useState<string | null>(null);
 
   // The server already knows who this is; `useSession` only overrides it once it
@@ -246,7 +249,7 @@ export function AppSidebar({
           <SidebarGroup className="px-3 group-data-[collapsible=icon]:hidden">
             <SidebarGroupLabel className="font-display justify-between">
               <span>Sessions</span>
-              {limit != null && sessions != null && (
+              {user && limit != null && sessions != null && (
                 <span
                   className={`font-mono text-[11px] tabular-nums ${
                     atLimit ? "text-tertiary" : "text-sidebar-foreground/50"
@@ -328,7 +331,7 @@ export function AppSidebar({
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <NavUser initialUser={initialUser} />
+          <NavUser initialUser={initialUser} initialBalance={initialBalance} />
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>

@@ -30,8 +30,7 @@ vi.mock("@/lib/auth-client", () => ({
   signOut: vi.fn(),
 }));
 
-// NavUser fetches /api/me and renders a dropdown of its own; it is not the
-// subject here.
+// NavUser renders a dropdown of its own; it is not the subject here.
 vi.mock("@/components/nav-user", () => ({ NavUser: () => null }));
 
 function session(id: string, companyName: string) {
@@ -59,10 +58,18 @@ function stubFetch(sessions: ReturnType<typeof session>[], limit = 10) {
   return fetchMock;
 }
 
-function renderSidebar(initialUser: typeof ada | null = ada) {
+function renderSidebar(
+  initialUser: typeof ada | null = ada,
+  initialSessions: ReturnType<typeof session>[] = []
+) {
   return render(
     <SidebarProvider>
-      <AppSidebar initialUser={initialUser} />
+      <AppSidebar
+        initialUser={initialUser}
+        initialBalance={0}
+        initialSessions={initialSessions}
+        initialLimit={10}
+      />
     </SidebarProvider>
   );
 }
@@ -114,26 +121,27 @@ describe("header", () => {
 });
 
 describe("session quota", () => {
-  it("shows how many of the allowed sessions are used", async () => {
+  it("shows how many of the allowed sessions are used", () => {
     stubFetch([session("r1", "Stripe")]);
-    renderSidebar();
+    renderSidebar(ada, [session("r1", "Stripe")]);
 
-    expect(await screen.findByText("1/10")).toBeInTheDocument();
+    expect(screen.getByText("1/10")).toBeInTheDocument();
   });
 
-  it("warns that the oldest goes when the user is at the limit", async () => {
-    stubFetch(Array.from({ length: 10 }, (_, i) => session(`r${i}`, `Co${i}`)));
-    renderSidebar();
+  it("warns that the oldest goes when the user is at the limit", () => {
+    const full = Array.from({ length: 10 }, (_, i) => session(`r${i}`, `Co${i}`));
+    stubFetch(full);
+    renderSidebar(ada, full);
 
-    expect(await screen.findByText(/10-session limit/)).toBeInTheDocument();
+    expect(screen.getByText(/10-session limit/)).toBeInTheDocument();
     expect(screen.getByText(/deletes your oldest/)).toBeInTheDocument();
   });
 
-  it("says nothing about eviction below the limit", async () => {
+  it("says nothing about eviction below the limit", () => {
     stubFetch([session("r1", "Stripe")]);
-    renderSidebar();
+    renderSidebar(ada, [session("r1", "Stripe")]);
 
-    await screen.findByText("1/10");
+    expect(screen.getByText("1/10")).toBeInTheDocument();
     expect(screen.queryByText(/deletes your oldest/)).not.toBeInTheDocument();
   });
 
@@ -148,14 +156,15 @@ describe("session quota", () => {
 });
 
 describe("first paint", () => {
-  it("lists sessions from the server's user, without waiting on useSession", async () => {
+  it("lists the server's sessions synchronously, without a fetch or useSession", () => {
     // What a real first load looks like: the client's session request is still
-    // in flight, but the server already resolved who this is.
+    // in flight, but the server already resolved who this is and seeded the list.
+    // The list is present on the very first paint — no skeleton, no roundtrip.
     useSessionMock.mockReturnValue({ data: null as never, isPending: true });
-    stubFetch([session("r1", "Stripe")]);
-    renderSidebar();
+    stubFetch([]);
+    renderSidebar(ada, [session("r1", "Stripe")]);
 
-    expect(await screen.findByText("Stripe")).toBeInTheDocument();
+    expect(screen.getByText("Stripe")).toBeInTheDocument();
     expect(screen.queryByText("Sign in to save sessions")).not.toBeInTheDocument();
   });
 
@@ -245,7 +254,7 @@ describe("delete", () => {
     await openRowMenu(user, "Stripe");
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
 
-    expect(screen.getByRole("dialog", { name: /delete this session/i })).toBeInTheDocument();
+    expect(screen.getByRole("alertdialog", { name: /delete this session/i })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(fetchMock).toHaveBeenCalledWith("/api/research/r1", { method: "DELETE" });
@@ -261,10 +270,10 @@ describe("delete", () => {
     await openRowMenu(user, "Stripe");
     await user.click(screen.getByRole("menuitem", { name: "Delete" }));
 
-    expect(screen.getByRole("dialog", { name: /delete this session/i })).toBeInTheDocument();
+    expect(screen.getByRole("alertdialog", { name: /delete this session/i })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(screen.getByText("Stripe")).toBeInTheDocument();
   });
 
