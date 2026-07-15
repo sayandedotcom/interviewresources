@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,9 +10,9 @@ import { NavUser } from "./nav-user";
 
 /**
  * The profile row used to render nothing at all until `/api/me` came back — two
- * database roundtrips deep — which is why it took so long to appear. It must now
- * paint from whatever the server already knows, and treat the balance as an
- * extra that arrives late.
+ * database roundtrips deep — which is why it took so long to appear. It now
+ * paints entirely from what the server already resolved: the user and the
+ * balance both arrive as props, so there is no client fetch at all.
  */
 
 const signIn = vi.fn();
@@ -26,24 +26,10 @@ vi.mock("@/lib/auth-client", () => ({
 
 const ada: SessionUser = { id: "u1", name: "Ada Lovelace", email: "ada@example.com", image: null };
 
-/** Resolves `/api/me` only when `release()` is called, so the pending state is observable. */
-function deferredMe(balance = 420) {
-  let release!: () => void;
-  const gate = new Promise<void>((r) => (release = r));
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => {
-      await gate;
-      return { json: async () => ({ signedIn: true, balance }) };
-    })
-  );
-  return release;
-}
-
-function renderNav(initialUser: SessionUser | null) {
+function renderNav(initialUser: SessionUser | null, initialBalance = 420) {
   return render(
     <SidebarProvider>
-      <NavUser initialUser={initialUser} />
+      <NavUser initialUser={initialUser} initialBalance={initialBalance} />
     </SidebarProvider>
   );
 }
@@ -51,9 +37,13 @@ function renderNav(initialUser: SessionUser | null) {
 beforeEach(() => {
   vi.clearAllMocks();
   useSessionMock.mockReturnValue({ data: { user: ada }, isPending: false });
+  // The row must never touch the network; a stub here turns any stray fetch
+  // into a visible failure rather than a silent pass.
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => ({ json: async () => ({ signedIn: true, balance: 420 }) }))
+    vi.fn(() => {
+      throw new Error("NavUser should not fetch");
+    })
   );
 });
 
@@ -66,13 +56,12 @@ describe("first paint", () => {
     expect(screen.getByText("ada@example.com")).toBeInTheDocument();
   });
 
-  it("does not wait on /api/me to render the row", () => {
-    deferredMe();
+  it("renders the row from props without any fetch", () => {
     useSessionMock.mockReturnValue({ data: null, isPending: true });
     renderNav(ada);
 
-    // The balance request is still in flight, and the row is already there.
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("offers sign-in immediately when the server says nobody is signed in", () => {
@@ -81,20 +70,6 @@ describe("first paint", () => {
 
     expect(screen.getByRole("link", { name: /sign in/i })).toBeInTheDocument();
     expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
-  });
-
-  it("asks for the balance once, for the signed-in user", async () => {
-    renderNav(ada);
-
-    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/me"));
-    expect(fetch).toHaveBeenCalledOnce();
-  });
-
-  it("never asks for a balance nobody can see", () => {
-    useSessionMock.mockReturnValue({ data: null, isPending: false });
-    renderNav(null);
-
-    expect(fetch).not.toHaveBeenCalled();
   });
 });
 
@@ -119,26 +94,19 @@ describe("useSession overrides the server", () => {
 });
 
 describe("balance", () => {
-  it("labels the menu item before the balance lands, then fills it in", async () => {
+  it("shows the server's balance in the menu on first open", async () => {
     const user = userEvent.setup();
-    const release = deferredMe(420);
-    renderNav(ada);
+    renderNav(ada, 420);
 
     await user.click(screen.getByRole("button", { name: /ada lovelace/i }));
-    expect(await screen.findByText("Credits · buy more")).toBeInTheDocument();
-
-    release();
     expect(await screen.findByText("420 credits · buy more")).toBeInTheDocument();
   });
 
-  it("survives a failing /api/me rather than blanking the row", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => Promise.reject(new Error("offline")))
-    );
-    renderNav(ada);
+  it("shows a zero balance as a real number, not a placeholder", async () => {
+    const user = userEvent.setup();
+    renderNav(ada, 0);
 
-    await waitFor(() => expect(fetch).toHaveBeenCalled());
-    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /ada lovelace/i }));
+    expect(await screen.findByText("0 credits · buy more")).toBeInTheDocument();
   });
 });

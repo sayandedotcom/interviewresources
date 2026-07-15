@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import Link from "next/link";
 
@@ -45,32 +45,23 @@ function initials(name: string): string {
   );
 }
 
-/** `initialUser` is the server's answer: a `SessionUser`, or null for signed out. */
-export function NavUser({ initialUser }: { initialUser: SessionUser | null }) {
+/** `initialUser` is the server's answer: a `SessionUser`, or null for signed out.
+ * `initialBalance` is the server's credit count, so the menu shows the real
+ * number on first paint instead of fetching `/api/me` after hydration. */
+export function NavUser({
+  initialUser,
+  initialBalance,
+}: {
+  initialUser: SessionUser | null;
+  initialBalance: number;
+}) {
   const { isMobile } = useSidebar();
   const { data: session, isPending } = useSession();
-  const [balance, setBalance] = useState<number | null>(null);
+  const [balance] = useState(initialBalance);
 
   // Until `useSession` has an answer of its own, the server's stands. After that
   // it wins, so signing out empties the row instead of stranding a stale name.
   const user = isPending ? initialUser : (session?.user ?? null);
-  const userId = user?.id ?? null;
-
-  // Only the balance needs `/api/me`, and it lives one click deep in the menu.
-  // Blocking the whole row on it is what made the profile take so long to appear.
-  useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-    fetch("/api/me")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!cancelled && data.signedIn) setBalance(data.balance);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
 
   if (!user) {
     return (
@@ -130,9 +121,7 @@ export function NavUser({ initialUser }: { initialUser: SessionUser | null }) {
             <DropdownMenuGroup>
               <DropdownMenuItem render={<Link href="/payments" />}>
                 <CreditCardIcon />
-                <span className="font-display">
-                  {balance == null ? "Credits · buy more" : `${balance} credits · buy more`}
-                </span>
+                <span className="font-display">{`${balance} credits · buy more`}</span>
               </DropdownMenuItem>
               <DropdownMenuItem render={<Link href="/referrals" />}>
                 <GiftIcon />
