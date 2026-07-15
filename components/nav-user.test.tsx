@@ -17,11 +17,21 @@ import { NavUser } from "./nav-user";
 
 const signIn = vi.fn();
 const useSessionMock = vi.fn();
+const push = vi.fn();
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+}));
+
+// Better-auth's `signOut` clears the cookie and fires `fetchOptions.onSuccess`;
+// the mock invokes it so the component's post-signout navigation is observable.
+const signOutMock = vi.fn((opts?: { fetchOptions?: { onSuccess?: () => void } }) =>
+  opts?.fetchOptions?.onSuccess?.()
+);
 vi.mock("@/lib/auth-client", () => ({
   useSession: () => useSessionMock(),
   signInWithGoogle: (...args: unknown[]) => signIn(...args),
-  signOut: vi.fn(),
+  signOut: (opts?: { fetchOptions?: { onSuccess?: () => void } }) => signOutMock(opts),
 }));
 
 const ada: SessionUser = { id: "u1", name: "Ada Lovelace", email: "ada@example.com", image: null };
@@ -70,6 +80,18 @@ describe("first paint", () => {
 
     expect(screen.getByRole("link", { name: /sign in/i })).toBeInTheDocument();
     expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
+  });
+});
+
+describe("sign out", () => {
+  it("navigates home once signed out, rather than stranding the user on /prepare", async () => {
+    const user = userEvent.setup();
+    renderNav(ada);
+
+    await user.click(screen.getByRole("button", { name: /ada lovelace/i }));
+    await user.click(await screen.findByText("Log out"));
+
+    expect(push).toHaveBeenCalledWith("/");
   });
 });
 

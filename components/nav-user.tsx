@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   ChevronsUpDownIcon,
@@ -56,6 +57,7 @@ export function NavUser({
   initialBalance: number;
 }) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
   const { data: session, isPending } = useSession();
   const [balance] = useState(initialBalance);
 
@@ -133,7 +135,11 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut()}>
+            {/* `signOut` only clears the cookie; the `/prepare` → `/` redirect
+                lives in proxy.ts and won't fire until a new request. Navigate
+                on success so logout lands home immediately, not on refresh. */}
+            <DropdownMenuItem
+              onClick={() => signOut({ fetchOptions: { onSuccess: () => router.push("/") } })}>
               <LogOutIcon />
               <span className="font-display">Log out</span>
             </DropdownMenuItem>
