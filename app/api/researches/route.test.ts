@@ -27,10 +27,14 @@ const user: SessionUser = {
 
 const req = () => new Request("https://test.local/api/researches");
 
+// The `created_at` column comes back as a `Date`; the helper serialises it to an
+// ISO string so the shape matches whether it crosses the wire or an RSC boundary.
+const createdAt = new Date("2026-01-02T03:04:05.000Z");
+
 beforeEach(() => {
   vi.clearAllMocks();
   sessionMock.mockResolvedValue(user);
-  limit.mockResolvedValue([{ id: "r1", companyName: "Stripe", status: "done" }]);
+  limit.mockResolvedValue([{ id: "r1", companyName: "Stripe", status: "done", createdAt }]);
 });
 
 describe("authorization", () => {
@@ -57,7 +61,9 @@ describe("authorization", () => {
 describe("listing", () => {
   it("returns the user's runs", async () => {
     await expect((await GET(req())).json()).resolves.toEqual({
-      sessions: [{ id: "r1", companyName: "Stripe", status: "done" }],
+      sessions: [
+        { id: "r1", companyName: "Stripe", status: "done", createdAt: createdAt.toISOString() },
+      ],
       limit: MAX_SESSIONS_PER_USER,
     });
   });
