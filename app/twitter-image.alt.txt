@@ -1,1 +1,1 @@
-Scouting Report — Interview Question Guesser
+Interview Scout — AI predicts your interview questions for under $0.50, each backed by evidence.

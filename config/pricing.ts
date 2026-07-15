@@ -14,7 +14,7 @@ export const pricingConfig = {
       name: "Starter",
       price: 1,
       credits: 100,
-      description: "Enough to try it out",
+      description: "Try it for $1 — about two reports",
       features: [
         "100 credits",
         "About 2 research reports",

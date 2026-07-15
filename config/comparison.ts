@@ -31,7 +31,7 @@ export const comparisonConfig = [
   },
   {
     feature: "Starting price",
-    us: "$1",
+    us: "$1 (≈2 reports)",
     genericPrep: "Free",
     coaching: "$200+",
   },

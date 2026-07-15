@@ -4,7 +4,7 @@ import { siteConfig } from "@/site";
 
 import { OgImageContent, ogImageSize } from "@/lib/seo/og-image";
 
-export const alt = `${siteConfig.name} — Interview Question Guesser`;
+export const alt = siteConfig.copy.ogAlt;
 export const size = ogImageSize;
 export const contentType = "image/png";
 

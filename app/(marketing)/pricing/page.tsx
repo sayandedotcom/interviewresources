@@ -16,12 +16,10 @@ export default function PricingPage() {
       <section className="mx-auto w-full max-w-3xl px-5 py-16">
         <div className="text-center">
           <h1 className="font-display text-4xl font-semibold tracking-tight">
-            Simple, transparent pricing
+            {siteConfig.copy.landing.pricing.title}
           </h1>
           <p className="font-display text-muted-foreground mt-4">
-            No plans, no subscription — just credits. Every feature is included in every pack. A
-            report costs what it costs to research: typically about 46 credits, and never more than{" "}
-            {MAX_RUN_CREDITS}.
+            {siteConfig.copy.landing.pricing.subBeforeCap} {MAX_RUN_CREDITS}.
           </p>
         </div>
 

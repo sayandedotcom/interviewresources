@@ -6,7 +6,6 @@ import { ArrowRight, Check } from "lucide-react";
 import { CtaSection } from "@/components/cta-section";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { MAX_RUN_CREDITS } from "@/lib/credits";
 
@@ -14,6 +13,8 @@ import { BuyCreditsButton } from "@/features/payments/buy-credits-button";
 import { ResearchExperience } from "@/features/research/research-experience";
 
 export default function Home() {
+  const { landing } = siteConfig.copy;
+
   return (
     <main className="flex flex-1 flex-col">
       <Header />
@@ -21,32 +22,40 @@ export default function Home() {
       <section className="mx-auto w-full max-w-3xl px-5 pt-12 pb-2">
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground font-mono text-[11px] tracking-[0.22em] uppercase">
-            Reconnaissance before the interview
+            {landing.eyebrow}
           </p>
           <div className="bg-card flex items-center gap-2 rounded-full border px-3 py-1.5">
             <span className="relative flex h-2 w-2">
               <span className="bg-tertiary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"></span>
               <span className="bg-tertiary relative inline-flex h-2 w-2 rounded-full"></span>
             </span>
-            <span className="text-muted-foreground font-mono text-[10px]">
-              {siteConfig.userCount} users
-            </span>
+            <span className="text-muted-foreground font-mono text-[10px]">{landing.badge}</span>
           </div>
         </div>
         <h1 className="font-display mt-3 max-w-2xl text-4xl leading-[1.05] font-semibold tracking-tight sm:text-5xl">
-          Get the questions
+          {landing.heroTitle.line1}
           <br />
-          before they ask{" "}
+          {landing.heroTitle.line2}{" "}
           <span className="relative inline-block">
-            them.
+            {landing.heroTitle.highlight}
             <span className="bg-tertiary/20 absolute -bottom-1 left-0 h-3 w-full" />
           </span>
         </h1>
         <p className="font-display text-muted-foreground mt-4 max-w-xl text-[15px] leading-relaxed">
-          Paste a company. We research its product, stack, engineering culture, reported interview
-          loop, and — if you name one — the interviewer&rsquo;s public work, then predict the
-          questions you&rsquo;re likely to face. Each one cites the evidence it came from.
+          {landing.heroSub}
         </p>
+        <div className="mt-6 flex gap-4">
+          <Link
+            href={landing.heroCtaPrimary.href}
+            className="bg-tertiary font-display text-tertiary-foreground hover:bg-tertiary/90 cursor-pointer rounded-lg px-6 py-2.5 text-sm font-medium transition-colors">
+            {landing.heroCtaPrimary.label}
+          </Link>
+          <Link
+            href={landing.heroCtaSecondary.href}
+            className="border-border font-display hover:bg-muted cursor-pointer rounded-lg border px-6 py-2.5 text-sm font-medium transition-colors">
+            {landing.heroCtaSecondary.label}
+          </Link>
+        </div>
       </section>
 
       <ResearchExperience />
@@ -70,10 +79,10 @@ export default function Home() {
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
           <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
-            Trusted for
+            {landing.companies.eyebrow}
           </p>
           <h2 className="font-display text-xl font-semibold tracking-tight">
-            Prepare for top tech companies
+            {landing.companies.title}
           </h2>
         </div>
         <div className="flex flex-wrap justify-center gap-3">
@@ -90,14 +99,12 @@ export default function Home() {
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
           <p className="text-muted-foreground mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
-            How it works
+            {landing.steps.eyebrow}
           </p>
           <h2 className="font-display text-2xl font-semibold tracking-tight">
-            Three steps to interview prep
+            {landing.steps.title}
           </h2>
-          <p className="font-display text-muted-foreground mt-2">
-            From company name to evidence-backed questions in minutes
-          </p>
+          <p className="font-display text-muted-foreground mt-2">{landing.steps.sub}</p>
         </div>
         <div className="relative">
           <div className="bg-border absolute top-12 left-1/2 hidden h-0.5 w-full -translate-x-1/2 sm:block" />
@@ -146,9 +153,7 @@ export default function Home() {
           <h2 className="font-display text-2xl font-semibold tracking-tight">
             Why {siteConfig.name}?
           </h2>
-          <p className="font-display text-muted-foreground mt-2">
-            The smarter way to prepare for technical interviews
-          </p>
+          <p className="font-display text-muted-foreground mt-2">{landing.comparison.sub}</p>
         </div>
         <div className="overflow-hidden rounded-xl border">
           <table className="w-full">
@@ -219,46 +224,10 @@ export default function Home() {
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
           <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
-            Testimonials
+            {landing.faq.eyebrow}
           </p>
           <h2 className="font-display text-2xl font-semibold tracking-tight">
-            What our users are saying
-          </h2>
-          <p className="font-display text-muted-foreground mt-2">
-            Don&apos;t just take our word for it. Here&apos;s what some of our users have to say
-            about {siteConfig.name}.
-          </p>
-        </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {siteConfig.testimonials.map((testimonial, i) => (
-            <div
-              key={i}
-              className="bg-card border-border hover:border-tertiary/30 rounded-xl border p-5 transition-colors">
-              <p className="font-display text-foreground text-sm">
-                &ldquo;{testimonial.content}&rdquo;
-              </p>
-              <div className="mt-4 flex items-center gap-3">
-                <Avatar size="sm">
-                  <AvatarImage src={testimonial.image ?? undefined} />
-                  <AvatarFallback>{testimonial.name[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-display text-sm font-semibold">{testimonial.name}</p>
-                  <p className="text-muted-foreground font-mono text-[10px]">{testimonial.role}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
-        <div className="mb-8 text-center">
-          <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
-            FAQ
-          </p>
-          <h2 className="font-display text-2xl font-semibold tracking-tight">
-            Frequently Asked Questions
+            {landing.faq.title}
           </h2>
         </div>
         <div className="space-y-4">
@@ -276,12 +245,10 @@ export default function Home() {
       <section id="pricing" className="mx-auto w-full max-w-3xl border-t px-5 py-16">
         <div className="text-center">
           <h1 className="font-display text-4xl font-semibold tracking-tight">
-            Simple, transparent pricing
+            {landing.pricing.title}
           </h1>
           <p className="font-display text-muted-foreground mt-4">
-            No plans, no subscription — just credits. Every feature is included in every pack. A
-            report costs what it costs to research: typically about 46 credits, and never more than{" "}
-            {MAX_RUN_CREDITS}.
+            {landing.pricing.subBeforeCap} {MAX_RUN_CREDITS}.
           </p>
         </div>
 
