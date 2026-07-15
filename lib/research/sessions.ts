@@ -10,6 +10,36 @@ import { creditsLedger, questionFeedback, reports, researches } from "@/lib/db/s
  */
 export const MAX_SESSIONS_PER_USER = 10;
 
+/** One row of the sidebar's recent-work list. `createdAt` is an ISO string so
+ * the shape is identical whether it crossed the RSC boundary as a prop or the
+ * `/api/researches` JSON — the sidebar seeds one and refetches the other. */
+export interface ResearchSummary {
+  id: string;
+  companyName: string;
+  interviewType: string;
+  status: string;
+  createdAt: string;
+}
+
+/** The user's most recent runs for the sidebar. Shared by the `(app)` layout
+ * (initial server render) and the `/api/researches` route (client refetch). */
+export async function getUserResearches(userId: string): Promise<ResearchSummary[]> {
+  const rows = await db
+    .select({
+      id: researches.id,
+      companyName: researches.companyName,
+      interviewType: researches.interviewType,
+      status: researches.status,
+      createdAt: researches.createdAt,
+    })
+    .from(researches)
+    .where(eq(researches.userId, userId))
+    .orderBy(desc(researches.createdAt))
+    .limit(MAX_SESSIONS_PER_USER);
+
+  return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
+}
+
 /**
  * How long a `running` row keeps blocking new runs. Matches the research route's
  * `maxDuration`, which is the longest a run can legitimately still be alive.
