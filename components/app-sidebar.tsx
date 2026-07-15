@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { LogoMark } from "@/components/logo";
+import { NavCredits } from "@/components/nav-credits";
 import { NavUser } from "@/components/nav-user";
 import {
   AlertDialog,
@@ -331,6 +332,7 @@ export function AppSidebar({
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
+          {user && <NavCredits balance={initialBalance} />}
           <NavUser initialUser={initialUser} initialBalance={initialBalance} />
         </SidebarFooter>
         <SidebarRail />
