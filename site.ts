@@ -11,6 +11,8 @@ export const siteConfig = {
   description:
     "AI predicts the interview questions you'll face — under $0.50 a report, every question backed by evidence.",
   url: "https://interviewscout.app",
+  /** Shown in the landing page hero badge, e.g. "34,345 users". Edit freely. */
+  userCount: "34,345",
   emails: contactConfig,
   links: {
     twitter: "https://twitter.com/sayandedotcom",

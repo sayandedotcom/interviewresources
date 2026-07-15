@@ -20,7 +20,6 @@ export const copyConfig = {
   // ── Landing page ─────────────────────────────────────────────────
   landing: {
     eyebrow: "AI reconnaissance before the interview",
-    badge: "Reports in ~3 min",
     heroTitle: {
       line1: "AI predicts your",
       line2: "interview questions.",

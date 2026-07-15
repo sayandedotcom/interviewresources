@@ -29,7 +29,9 @@ export default function Home() {
               <span className="bg-tertiary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"></span>
               <span className="bg-tertiary relative inline-flex h-2 w-2 rounded-full"></span>
             </span>
-            <span className="text-muted-foreground font-mono text-[10px]">{landing.badge}</span>
+            <span className="text-muted-foreground font-mono text-[10px]">
+              {siteConfig.userCount} users
+            </span>
           </div>
         </div>
         <h1 className="font-display mt-3 max-w-2xl text-4xl leading-[1.05] font-semibold tracking-tight sm:text-5xl">
