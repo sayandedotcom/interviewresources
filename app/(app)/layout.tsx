@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { EXPIRED_PARAM } from "@/proxy";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { DotBackground } from "@/components/dot-background";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 import { getBalance } from "@/lib/credits";
@@ -29,7 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         initialLimit={MAX_SESSIONS_PER_USER}
       />
       <SidebarInset>
-        <div className="flex flex-1 flex-col p-4 pt-0">{children}</div>
+        <DotBackground className="flex flex-1 flex-col p-4 pt-0">{children}</DotBackground>
       </SidebarInset>
     </SidebarProvider>
   );
