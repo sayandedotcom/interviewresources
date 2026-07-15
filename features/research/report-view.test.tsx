@@ -559,6 +559,52 @@ describe("extend controls", () => {
     ).toBeInTheDocument();
   });
 
+  it("hides the Report Sections card when the report already has every section", () => {
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+
+    expect(screen.queryByText("Report Sections")).not.toBeInTheDocument();
+  });
+
+  it("offers only the sections this report is missing", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report({
+          companySnapshot: null,
+          companyExplainer: null,
+          interviewExperiences: null,
+        })}
+        researchId="r-1"
+      />
+    );
+
+    expect(screen.getByText("Report Sections")).toBeInTheDocument();
+    // company and experiences are missing; loop and skills are present.
+    expect(screen.getByRole("button", { name: /the company/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /interview experiences/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /the loop/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /skills required/i })).not.toBeInTheDocument();
+  });
+
+  it("scouts a chosen missing section through the extend route", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, body: sseBody(report()) } as unknown as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ReportView {...base} report={report({ skillsRequired: null })} researchId="r-1" />);
+    await userEvent.click(screen.getByRole("button", { name: /skills required/i }));
+    await userEvent.click(screen.getByRole("button", { name: /scout these rounds/i }));
+    await confirmScout();
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      interviewTypes: [],
+      sections: ["skills"],
+      effort: "medium",
+    });
+    vi.unstubAllGlobals();
+  });
+
   it("asks the extend route for more questions in just that section's category", async () => {
     const merged = report({ questions: [question(), question({ question: "Two sum" })] });
     const fetchMock = vi
@@ -575,7 +621,11 @@ describe("extend controls", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/research/r-1/extend");
-    expect(JSON.parse(init.body)).toEqual({ interviewTypes: ["dsa"], effort: "medium" });
+    expect(JSON.parse(init.body)).toEqual({
+      interviewTypes: ["dsa"],
+      sections: [],
+      effort: "medium",
+    });
 
     // The merged report replaces what was rendered.
     expect(await screen.findByText("Two sum")).toBeInTheDocument();
@@ -629,6 +679,7 @@ describe("extend controls", () => {
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       interviewTypes: ["behavioral"],
+      sections: [],
       effort: "medium",
     });
     expect(await screen.findByText("Conflict story")).toBeInTheDocument();
@@ -661,6 +712,7 @@ describe("extend controls", () => {
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       interviewTypes: ["dsa"],
+      sections: [],
       effort: "high",
     });
     vi.unstubAllGlobals();

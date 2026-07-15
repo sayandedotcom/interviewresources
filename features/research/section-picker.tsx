@@ -25,14 +25,18 @@ export function SectionPicker({
   selected,
   onToggle,
   disabled = false,
+  options = REPORT_SECTIONS,
 }: {
   selected: ReportSection[];
   onToggle: (section: ReportSection) => void;
   disabled?: boolean;
+  /** Which sections to offer. Defaults to all; the report page passes only the
+      sections missing from the finished report. */
+  options?: readonly ReportSection[];
 }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {REPORT_SECTIONS.map((section) => {
+      {options.map((section) => {
         const on = selected.includes(section);
         const meta = SECTION_META[section];
         const Icon = SECTION_ICON[section];

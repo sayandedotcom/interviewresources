@@ -12,18 +12,32 @@ import {
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
 import { type CostEntry, EFFORT_LEVELS, MAX_EFFORT_LINKS } from "@/lib/research/budget";
+import { missingSections } from "@/lib/research/display";
 import { runResearchPipeline } from "@/lib/research/pipeline";
-import type { ImportantLink, Report } from "@/lib/research/types";
+import {
+  type ImportantLink,
+  REPORT_SECTIONS,
+  type Report,
+  type ReportSection,
+} from "@/lib/research/types";
 import { getSessionUser } from "@/lib/session";
 
 // Same constraints as the full run: this calls Gemini + Tavily inline.
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const extendBodySchema = z.object({
-  interviewTypes: z.array(z.string().min(1)).min(1).max(5),
-  effort: z.enum(EFFORT_LEVELS).default("medium"),
-});
+// A round adds questions; a section fills prose the original run declined. An
+// extension may do either or both, so neither list is required on its own — but
+// an extension that scouts nothing is a paid no-op, so at least one must be set.
+const extendBodySchema = z
+  .object({
+    interviewTypes: z.array(z.string().min(1)).max(5).default([]),
+    sections: z.array(z.enum(REPORT_SECTIONS)).default([]),
+    effort: z.enum(EFFORT_LEVELS).default("medium"),
+  })
+  .refine((body) => body.interviewTypes.length > 0 || body.sections.length > 0, {
+    message: "Pick at least one round or section to scout.",
+  });
 
 function sse(data: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
@@ -35,17 +49,26 @@ function costCents(entries: CostEntry[], kind: CostEntry["kind"]): number {
 }
 
 /**
- * Folds a fresh pipeline result into the report already on disk. Questions are
- * appended (the pipeline was told not to repeat the existing ones); the prose
- * sections stay as the original run wrote them, since the extension researched
- * only a slice of the loop and its snapshot would be thinner.
+ * Folds a fresh pipeline result into the report already on disk. New questions
+ * are appended when rounds were scouted (the pipeline was told not to repeat the
+ * existing ones); a prose section the original run declined is filled in when
+ * the caller scouted it, while a section the original already wrote is kept as
+ * is — the extension only researched a slice, so its version would be thinner.
  */
-function mergeReports(existing: Report, addition: Report): Report {
-  // `null` means the original run excluded the section: it stays excluded, and
-  // no addition may resurrect it. `undefined` means the report predates the
-  // section, which extending it can legitimately fill in. Neither can be spread.
-  const mergeLinks = (a: ImportantLink[] | null | undefined, b: ImportantLink[] | null) => {
-    if (a === null) return null;
+function mergeReports(
+  existing: Report,
+  addition: Report,
+  opts: { addedRounds: boolean; sections: ReportSection[] }
+): Report {
+  // `null` means the original run excluded the section: it stays excluded unless
+  // this extension explicitly scouted it in (`force`). `undefined` means the
+  // report predates the section, which extending it can legitimately fill in.
+  const mergeLinks = (
+    a: ImportantLink[] | null | undefined,
+    b: ImportantLink[] | null,
+    force: boolean
+  ) => {
+    if (a === null && !force) return null;
     const links = [...(a ?? [])];
     for (const link of b ?? []) {
       if (!links.some((l) => l.url === link.url)) links.push(link);
@@ -55,9 +78,21 @@ function mergeReports(existing: Report, addition: Report): Report {
 
   return {
     ...existing,
-    questions: [...existing.questions, ...addition.questions],
-    interviewExperiences: mergeLinks(existing.interviewExperiences, addition.interviewExperiences),
-    importantLinks: mergeLinks(existing.importantLinks, addition.importantLinks) ?? [],
+    // A hole the original left null is filled by the freshly scouted section;
+    // prose the original already wrote wins over the extension's thinner take.
+    companySnapshot: existing.companySnapshot ?? addition.companySnapshot,
+    companyExplainer: existing.companyExplainer ?? addition.companyExplainer,
+    likelyLoopStructure: existing.likelyLoopStructure ?? addition.likelyLoopStructure,
+    skillsRequired: existing.skillsRequired ?? addition.skillsRequired,
+    questions: opts.addedRounds
+      ? [...existing.questions, ...addition.questions]
+      : existing.questions,
+    interviewExperiences: mergeLinks(
+      existing.interviewExperiences,
+      addition.interviewExperiences,
+      opts.sections.includes("experiences")
+    ),
+    importantLinks: mergeLinks(existing.importantLinks, addition.importantLinks, true) ?? [],
   };
 }
 
@@ -120,6 +155,19 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
 
   const existing = row.jsonPayload as Report;
 
+  // Only sections the report is actually missing are worth paying to research —
+  // re-scouting a section the original already wrote would be discarded by the
+  // merge. The UI offers only these, but the server does not trust that.
+  const missing = missingSections(existing);
+  const addSections = body.sections.filter((section) => missing.includes(section));
+
+  // Interview experiences merge additively, so an extension of a report that
+  // already has them refreshes the list — unchanged behavior. On top of that,
+  // fold in any missing section the caller explicitly chose to scout in.
+  const pipelineSections = new Set<ReportSection>(addSections);
+  if (existing.interviewExperiences !== null) pipelineSections.add("experiences");
+  const sections = [...pipelineSections];
+
   const stream = new ReadableStream({
     async start(controller) {
       try {
@@ -130,13 +178,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
             interviewers: [],
             interviewTypes: body.interviewTypes,
             fullLoop: false,
-            // mergeReports keeps the original run's prose, so researching the
-            // company, the loop, and the skills again would be paid for and then
-            // discarded. Interview experiences do merge, so they are worth
-            // re-researching — unless this report explicitly excluded them.
-            // (Only `null` means excluded; a report predating the section has no
-            // key at all, and extending it should still surface experiences.)
-            sections: existing.interviewExperiences === null ? [] : ["experiences"],
+            sections,
             excludeQuestions: existing.questions.map((q) => q.question),
             // The caller picks how hard this extension searches, independent of
             // the original run's effort (which isn't persisted). The budget is
@@ -147,7 +189,10 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
           capUsd
         );
 
-        const merged = mergeReports(existing, addition);
+        const merged = mergeReports(existing, addition, {
+          addedRounds: body.interviewTypes.length > 0,
+          sections,
+        });
         const entries = budget.breakdown();
         const creditsCharged = usdToCredits(budget.totalUsd);
 

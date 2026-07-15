@@ -16,6 +16,7 @@ import {
   FileJson,
   FileText,
   HelpCircle,
+  LayoutList,
   Lightbulb,
   Link as LinkIcon,
   Loader2,
@@ -54,18 +55,21 @@ import type { Effort } from "@/lib/research/budget";
 import {
   BASIS_META,
   CONFIDENCE_META,
+  SECTION_META,
   categoryCode,
   categoryLabel,
   groupByCategory,
+  missingSections,
 } from "@/lib/research/display";
 import { downloadBlob, reportSlug } from "@/lib/research/download";
 import { estimateExtend } from "@/lib/research/estimate";
 import { buildAnswerPrompt, buildMockInterviewPrompt } from "@/lib/research/prompt";
-import type { ImportantLink, Report } from "@/lib/research/types";
+import type { ImportantLink, Report, ReportSection } from "@/lib/research/types";
 
 import { EffortPicker } from "@/features/research/effort-picker";
 import { EstimatePanel } from "@/features/research/estimate-panel";
 import { RoundPicker, categoryIcon } from "@/features/research/round-picker";
+import { SectionPicker } from "@/features/research/section-picker";
 import { explainError, streamSse } from "@/features/research/stream";
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -114,13 +118,19 @@ export function ReportView({
   // Which extend request is in flight: a category slug for a "More" click, or
   // the sentinel "__rounds__" for the footer form. Only one runs at a time.
   const [busy, setBusy] = useState<string | null>(null);
-  // The extension awaiting confirmation, in the same (rounds, token) shape
-  // `extend` takes. Both entry points — "More" and "Scout these rounds" — spend
-  // credits, so neither calls `extend` directly; they park the request here.
-  const [confirm, setConfirm] = useState<{ rounds: string[]; token: string } | null>(null);
+  // The extension awaiting confirmation, in the same shape `extend` takes. Both
+  // entry points — "More" and "Scout these rounds" — spend credits, so neither
+  // calls `extend` directly; they park the request here.
+  const [confirm, setConfirm] = useState<{
+    rounds: string[];
+    sections: ReportSection[];
+    token: string;
+  } | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [extendError, setExtendError] = useState<string | null>(null);
   const [extraRounds, setExtraRounds] = useState<string[]>([]);
+  // Sections the finished report is missing that the user has chosen to scout in.
+  const [extraSections, setExtraSections] = useState<ReportSection[]>([]);
   // How hard every extension (both "More" and "Scout these rounds") searches.
   const [effort, setEffort] = useState<Effort>("medium");
 
@@ -193,7 +203,7 @@ export function ReportView({
     }
   }
 
-  async function extend(interviewTypes: string[], token: string) {
+  async function extend(interviewTypes: string[], sections: ReportSection[], token: string) {
     if (!researchId || busy) return;
     setBusy(token);
     setProgress(null);
@@ -203,7 +213,7 @@ export function ReportView({
       const res = await fetch(`/api/research/${researchId}/extend`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ interviewTypes, effort }),
+        body: JSON.stringify({ interviewTypes, sections, effort }),
       });
 
       if (!res.ok || !res.body) {
@@ -217,6 +227,7 @@ export function ReportView({
         } else if (msg.kind === "report") {
           setCurrent(msg.report as Report);
           setExtraRounds([]);
+          setExtraSections([]);
         } else if (msg.kind === "error") {
           setExtendError(String(msg.message ?? "Extend failed."));
         }
@@ -229,18 +240,31 @@ export function ReportView({
     }
   }
 
-  // Priced for whatever the footer's picker holds. An empty selection prices a
-  // single round, which is also what one "More" button up in the report costs —
-  // both run at the same effort.
+  // The sections this finished report never got — the ones "Report Sections"
+  // offers to scout in. Re-derived each render so an extension that fills one
+  // drops it from the card.
+  const missing = missingSections(current);
+
+  // Priced for whatever the footer's pickers hold: each round and each added
+  // section is a unit of research. An empty selection prices a single unit,
+  // which is also what one "More" button up in the report costs.
   const extendEstimate = extendCredits
-    ? estimateExtend(Math.max(extraRounds.length, 1), effort, extendCredits[effort])
+    ? estimateExtend(
+        Math.max(extraRounds.length + extraSections.length, 1),
+        effort,
+        extendCredits[effort]
+      )
     : null;
 
-  // The same pricing, for whatever the confirmation is holding — which is one
-  // round for a "More" click and the whole picker for the footer button.
+  // The same pricing, for whatever the confirmation is holding — one round for a
+  // "More" click, the whole selection for the footer button.
   const confirmEstimate =
     confirm && extendCredits
-      ? estimateExtend(Math.max(confirm.rounds.length, 1), effort, extendCredits[effort])
+      ? estimateExtend(
+          Math.max(confirm.rounds.length + confirm.sections.length, 1),
+          effort,
+          extendCredits[effort]
+        )
       : null;
 
   const grouped = groupByCategory(current.questions);
@@ -550,7 +574,9 @@ export function ReportView({
                               aria-label={`Add more ${categoryLabel(cat)} questions`}
                               className="bg-tertiary hover:bg-tertiary/90 h-7 shrink-0 px-2 text-black"
                               disabled={busy !== null}
-                              onClick={() => setConfirm({ rounds: [cat], token: cat })}
+                              onClick={() =>
+                                setConfirm({ rounds: [cat], sections: [], token: cat })
+                              }
                             />
                           }>
                           {busy === cat ? (
@@ -693,6 +719,41 @@ export function ReportView({
             <RefreshCw className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             Keep on Generating
           </h2>
+
+          {/* Sections the original run skipped can still be scouted in. Only
+              shown when something is actually missing; the "Scout these rounds"
+              button below sends whatever is picked here alongside the rounds. */}
+          {missing.length > 0 && (
+            <Card className="mt-4">
+              <CardContent>
+                <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
+                  <LayoutList
+                    className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
+                    aria-hidden="true"
+                  />
+                  Report Sections
+                </h2>
+                <p className="text-muted-foreground font-display mt-1 text-xs">
+                  This report skipped these. Pick any you want and we&apos;ll research them into it.
+                </p>
+                <div className="mt-4">
+                  <SectionPicker
+                    selected={extraSections}
+                    options={missing}
+                    disabled={busy !== null}
+                    onToggle={(section) =>
+                      setExtraSections((prev) =>
+                        prev.includes(section)
+                          ? prev.filter((s) => s !== section)
+                          : [...prev, section]
+                      )
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="mt-4">
             <CardContent>
               <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
@@ -735,8 +796,16 @@ export function ReportView({
                   type="button"
                   size="lg"
                   variant="tertiary"
-                  disabled={extraRounds.length === 0 || busy !== null}
-                  onClick={() => setConfirm({ rounds: extraRounds, token: "__rounds__" })}>
+                  disabled={
+                    (extraRounds.length === 0 && extraSections.length === 0) || busy !== null
+                  }
+                  onClick={() =>
+                    setConfirm({
+                      rounds: extraRounds,
+                      sections: extraSections,
+                      token: "__rounds__",
+                    })
+                  }>
                   {busy === "__rounds__" && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
                   Scout these rounds <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
                 </Button>
@@ -791,8 +860,8 @@ export function ReportView({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirm && confirm.rounds.length > 1
-                ? "Scout these rounds?"
+              {confirm && confirm.rounds.length + confirm.sections.length > 1
+                ? "Scout these?"
                 : "Scout more questions?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -801,7 +870,10 @@ export function ReportView({
                   This runs a {effort}-effort extension on{" "}
                   <span className="text-foreground font-medium">{company}</span> for{" "}
                   <span className="text-foreground font-medium">
-                    {confirm.rounds.map(categoryLabel).join(", ")}
+                    {[
+                      ...confirm.rounds.map(categoryLabel),
+                      ...confirm.sections.map((s) => SECTION_META[s].label),
+                    ].join(", ")}
                   </span>
                   {confirmEstimate && extendCredits ? (
                     <>
@@ -820,9 +892,9 @@ export function ReportView({
               variant="tertiary"
               onClick={() => {
                 if (!confirm) return;
-                const { rounds, token } = confirm;
+                const { rounds, sections, token } = confirm;
                 setConfirm(null);
-                extend(rounds, token);
+                extend(rounds, sections, token);
               }}>
               Scout
             </AlertDialogAction>

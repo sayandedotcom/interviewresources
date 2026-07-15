@@ -2,6 +2,8 @@ import {
   INTERVIEW_CATEGORIES,
   type InterviewCategory,
   type PredictedQuestion,
+  REPORT_SECTIONS,
+  type Report,
   type ReportSection,
 } from "./types";
 
@@ -42,6 +44,28 @@ export const SECTION_META: Record<ReportSection, { label: string; code: string; 
     blurb: "First-hand write-ups from people who interviewed here",
   },
 };
+
+/**
+ * The optional sections a report does not currently carry — the ones a finished
+ * report can still scout in. `null` means the original run declined the section
+ * (or, for legacy reports, `undefined` — the field predates it); an empty string
+ * or absent prose reads the same to the reader. `experiences`/`skills` use `== null`
+ * so an empty array (looked, found nothing) counts as present, not missing.
+ */
+export function missingSections(report: Report): ReportSection[] {
+  return REPORT_SECTIONS.filter((section) => {
+    switch (section) {
+      case "company":
+        return !report.companySnapshot;
+      case "loop":
+        return !report.likelyLoopStructure;
+      case "skills":
+        return report.skillsRequired == null;
+      case "experiences":
+        return report.interviewExperiences == null;
+    }
+  });
+}
 
 function isKnown(cat: string): cat is InterviewCategory {
   // hasOwn, not `in`: custom rounds are user-supplied, and `"toString" in

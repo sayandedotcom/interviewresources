@@ -327,6 +327,41 @@ describe("the extension run", () => {
     expect(merged.interviewExperiences).toBeNull();
   });
 
+  it("scouts a missing section the caller chose, alongside the experiences refresh", async () => {
+    // existingReport has no skillsRequired key, so "skills" is a missing section.
+    await readSse(await POST(post({ sections: ["skills"] }), ctx));
+
+    const input = pipelineMock.mock.calls[0][0];
+    expect([...input.sections].sort()).toEqual(["experiences", "skills"]);
+    expect(input.interviewTypes).toEqual([]);
+  });
+
+  it("ignores a chosen section the report already carries", async () => {
+    // The company snapshot is already present, so re-scouting it would be waste.
+    await readSse(await POST(post({ interviewTypes: ["dsa"], sections: ["company"] }), ctx));
+
+    expect(pipelineMock.mock.calls[0][0].sections).toEqual(["experiences"]);
+  });
+
+  it("fills a declined section into the merged report without touching questions", async () => {
+    const skills = [{ skill: "Idempotency", why: "Every payment API retries" }];
+    pipelineMock.mockResolvedValue({
+      report: { ...additionReport, skillsRequired: skills },
+      budget: budgetCosting(0.15),
+    });
+
+    const events = await readSse(await POST(post({ sections: ["skills"] }), ctx));
+    const merged = events.find((e) => e.kind === "report")!.report as Report;
+
+    expect(merged.skillsRequired).toEqual(skills);
+    // A sections-only extension scouts no new rounds, so the questions are left be.
+    expect(merged.questions.map((q) => q.question)).toEqual(["LRU cache"]);
+  });
+
+  it("rejects an extension that scouts neither a round nor a section", async () => {
+    expect((await POST(post({ interviewTypes: [], sections: [] }), ctx)).status).toBe(400);
+  });
+
   it("adds newly scouted rounds to interviewType so the sidebar shows them", async () => {
     const updates = stubUpdate();
 
