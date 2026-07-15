@@ -15,4 +15,12 @@ export const companiesConfig = [
   "Notion",
   "Slack",
   "Dropbox",
+  "OpenAI",
+  "Anthropic",
+  "Perplexity",
+  "Vercel",
+  "Ramp",
+  "Cursor",
+  "Mistral",
+  "Scale AI",
 ];
