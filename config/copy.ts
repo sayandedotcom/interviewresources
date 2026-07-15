@@ -37,7 +37,7 @@ export const copyConfig = {
     ],
     companies: {
       eyebrow: "Trusted for",
-      title: "Prepare for top tech companies",
+      title: "Prepare for top tech companies & also for any staged startups",
     },
     comparison: {
       sub: "AI research built for your exact interview, compared to the alternatives",
