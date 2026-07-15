@@ -15,13 +15,6 @@ export function Footer() {
             <ul className="mt-3 space-y-2">
               <li>
                 <Link
-                  href="/"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/#pricing"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   Pricing
@@ -74,7 +67,7 @@ export function Footer() {
             <ul className="mt-3 space-y-2">
               <li>
                 <Link
-                  href="/how-it-works"
+                  href="/#how-it-works"
                   className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
                   How it works
                 </Link>

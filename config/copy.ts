@@ -1,6 +1,6 @@
 /**
  * Single source of truth for all marketing prose on the site — landing page,
- * how-it-works page, CTA section, FAQs, stats strip, footer, and SEO/OG
+ * how-it-works section, CTA section, FAQs, stats strip, footer, and SEO/OG
  * metadata. Edit strings here; the pages just render them.
  */
 export const copyConfig = {
@@ -28,7 +28,7 @@ export const copyConfig = {
     heroSub:
       "Paste a company name. Our AI researches its stack, culture, and real interview reports — then predicts the questions you'll face, each backed by evidence.",
     heroCtaPrimary: { label: "Try it for $1", href: "/#pricing" },
-    heroCtaSecondary: { label: "See how it works", href: "/how-it-works" },
+    heroCtaSecondary: { label: "See how it works", href: "/#how-it-works" },
     stats: [
       { value: "<$0.50", label: "Per report" },
       { value: "~3 min", label: "Start to finish" },
@@ -38,11 +38,6 @@ export const copyConfig = {
     companies: {
       eyebrow: "Trusted for",
       title: "Prepare for top tech companies",
-    },
-    steps: {
-      eyebrow: "How it works",
-      title: "Three steps to an AI scouting report",
-      sub: "From company name to evidence-backed questions in about 3 minutes",
     },
     comparison: {
       sub: "AI research built for your exact interview — compared to the alternatives",
@@ -58,33 +53,37 @@ export const copyConfig = {
     },
   },
 
-  // ── How-it-works page ────────────────────────────────────────────
+  // ── How-it-works section (landing, scroll-pinned stepper) ────────
   howItWorks: {
-    metaTitle: "How it works",
-    heroTitle: "How our AI predicts your interview questions",
-    heroSub:
-      "Instead of spending your evenings hunting through blogs, forums, and Glassdoor threads, you paste one company name. Our AI does the digging and hands you the questions you're most likely to face — each one backed by real evidence you can check yourself, for under $0.50 a report.",
-    benefits: [
+    eyebrow: "How it works",
+    title: "From company name to evidence-backed questions",
+    sub: "Four steps, one AI agent, about three minutes.",
+    stages: [
       {
-        title: "Save hours of research",
-        body: "What normally takes an evening of manual searching takes about 3 minutes. You get a finished report while you grab a coffee.",
+        label: "Target",
+        title: "Name your target",
+        description:
+          "Type the company you're interviewing with — that's all we really need. Add an interviewer to factor in their public talks and writing, then pick the rounds you care about: coding, system design, behavioral, or the whole loop.",
       },
       {
-        title: "Costs less than a coffee",
-        body: "A full report runs under $0.50 — no subscription, no coaching fees, no hourly rate. You only pay for the reports you actually run.",
+        label: "Research",
+        title: "Our AI reads the public web",
+        description:
+          "In about three minutes, our AI scans engineering blogs, job descriptions, first-hand interview reviews, and public talks — then connects the company's product, stack, and culture to work out what they're likely to ask.",
       },
       {
-        title: "Prep with confidence",
-        body: "Stop guessing what to study. Focus your limited prep time on the questions most likely to come up — and know why each one made the list.",
+        label: "Report",
+        title: "Your personalized report",
+        description:
+          "You get the questions you're most likely to hear, grouped by round. Every prediction carries a confidence level, the evidence it came from so you can verify it yourself, and prep notes on what a strong answer covers.",
+      },
+      {
+        label: "Prep",
+        title: "Show up prepared",
+        description:
+          "Study in the order that counts most, starting with the near-certain questions. Afterward, mark what actually came up — it takes a second and makes every future prediction sharper.",
       },
     ],
-    stepsOverline: "From company name to a prep plan in four steps",
-    ctaBox: {
-      title: "Your next interview is worth 3 minutes",
-      sub: "Enter a company name and see the questions that might be coming. A typical report is under $0.50 — the $1 Starter pack covers about two.",
-      primary: { label: "Try it for $1", href: "/#pricing" },
-      secondary: { label: "Run a report", href: "/" },
-    },
   },
 
   // ── CTA section (shared) ─────────────────────────────────────────

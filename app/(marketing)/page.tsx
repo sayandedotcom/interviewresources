@@ -1,11 +1,12 @@
 import Link from "next/link";
 
 import { siteConfig } from "@/site";
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 
 import { CtaSection } from "@/components/cta-section";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { HowItWorksSection } from "@/components/how-it-works-section";
 
 import { MAX_RUN_CREDITS } from "@/lib/credits";
 
@@ -98,57 +99,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
-        <div className="mb-8 text-center">
-          <p className="text-muted-foreground mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
-            {landing.steps.eyebrow}
-          </p>
-          <h2 className="font-display text-2xl font-semibold tracking-tight">
-            {landing.steps.title}
-          </h2>
-          <p className="font-display text-muted-foreground mt-2">{landing.steps.sub}</p>
-        </div>
-        <div className="relative">
-          <div className="bg-border absolute top-12 left-1/2 hidden h-0.5 w-full -translate-x-1/2 sm:block" />
-          <div className="grid gap-8 sm:grid-cols-3">
-            <div className="relative text-center">
-              <div className="bg-tertiary/10 ring-background mx-auto flex h-12 w-12 items-center justify-center rounded-full ring-4">
-                <span className="font-display text-tertiary text-lg font-bold">1</span>
-              </div>
-              <h3 className="font-display mt-4 text-sm font-semibold">Name your target</h3>
-              <p className="font-display text-muted-foreground mt-2 text-xs">
-                Enter the company, add an interviewer if you know them, select your rounds
-              </p>
-            </div>
-            <div className="relative text-center">
-              <div className="bg-tertiary/10 ring-background mx-auto flex h-12 w-12 items-center justify-center rounded-full ring-4">
-                <span className="font-display text-tertiary text-lg font-bold">2</span>
-              </div>
-              <h3 className="font-display mt-4 text-sm font-semibold">We research</h3>
-              <p className="font-display text-muted-foreground mt-2 text-xs">
-                Our AI searches engineering blogs, interview reviews, and public data
-              </p>
-            </div>
-            <div className="relative text-center">
-              <div className="bg-tertiary/10 ring-background mx-auto flex h-12 w-12 items-center justify-center rounded-full ring-4">
-                <span className="font-display text-tertiary text-lg font-bold">3</span>
-              </div>
-              <h3 className="font-display mt-4 text-sm font-semibold">Get your report</h3>
-              <p className="font-display text-muted-foreground mt-2 text-xs">
-                Questions with confidence scores, evidence links, and prep notes
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="mt-8 text-center">
-          <Link
-            href="/how-it-works"
-            className="font-display text-tertiary inline-flex items-center gap-2 text-sm hover:underline">
-            Learn more about how it works
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
+      <HowItWorksSection />
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
