@@ -5,7 +5,7 @@ import { Check, FileSearch, Link2, Terminal } from "lucide-react";
 
 import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
 
-/** 01 · Target — the scout form: company, interviewer, round chips. */
+/** 01 · Target: the scout form: company, interviewer, round chips. */
 function TargetPanel() {
   const rounds = [
     { label: "Coding", on: true },
@@ -55,7 +55,7 @@ function TargetPanel() {
   );
 }
 
-/** 02 · Research — a terminal streaming the sources the AI reads. */
+/** 02 · Research: a terminal streaming the sources the AI reads. */
 function ResearchPanel() {
   const lines = [
     { text: "scanning stripe.com/blog…", note: "3 posts", muted: true },
@@ -89,7 +89,7 @@ function ResearchPanel() {
   );
 }
 
-/** 03 · Report — a predicted-question card with confidence, evidence, prep note. */
+/** 03 · Report: a predicted-question card with confidence, evidence, prep note. */
 function ReportPanel() {
   return (
     <div className="flex h-full flex-col gap-3 p-5">
@@ -108,7 +108,7 @@ function ReportPanel() {
         <p className="text-muted-foreground font-mono text-[10px] tracking-widest uppercase">
           Evidence
         </p>
-        {["Stripe Engineering blog — Idempotency", "Interview review · levels.fyi"].map((src) => (
+        {["Stripe Engineering blog · Idempotency", "Interview review · levels.fyi"].map((src) => (
           <div key={src} className="text-tertiary flex items-center gap-2 text-xs">
             <Link2 className="h-3.5 w-3.5 shrink-0" />
             <span className="hover:underline">{src}</span>
@@ -125,7 +125,7 @@ function ReportPanel() {
   );
 }
 
-/** 04 · Prep — a likelihood-ordered checklist you tick off after the interview. */
+/** 04 · Prep: a likelihood-ordered checklist you tick off after the interview. */
 function PrepPanel() {
   const items = [
     { q: "Idempotency in the payments API", done: true },
@@ -160,7 +160,7 @@ function PrepPanel() {
         ))}
       </ul>
       <p className="text-muted-foreground font-display mt-auto text-xs">
-        Mark what actually came up — it sharpens every future prediction.
+        Mark what actually came up; it sharpens every future prediction.
       </p>
     </div>
   );

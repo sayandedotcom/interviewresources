@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { CtaSection } from "@/components/cta-section";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { HowAgentWorksSection } from "@/components/how-agent-works-section";
 import { HowItWorksSection } from "@/components/how-it-works-section";
 
 import { MAX_RUN_CREDITS } from "@/lib/credits";
@@ -100,6 +101,8 @@ export default function Home() {
       </section>
 
       <HowItWorksSection />
+
+      <HowAgentWorksSection />
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
