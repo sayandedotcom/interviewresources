@@ -64,7 +64,7 @@ import { buildAnswerPrompt, buildMockInterviewPrompt } from "@/lib/research/prom
 import type { ImportantLink, Report } from "@/lib/research/types";
 
 import { EffortPicker } from "@/features/research/effort-picker";
-import { EstimateInline } from "@/features/research/estimate-panel";
+import { EstimatePanel } from "@/features/research/estimate-panel";
 import { RoundPicker, categoryIcon } from "@/features/research/round-picker";
 import { explainError, streamSse } from "@/features/research/stream";
 
@@ -253,7 +253,7 @@ export function ReportView({
   const skillsRequired = current.skillsRequired ?? [];
 
   return (
-    <div className="mt-6">
+    <div className="relative mt-6">
       <div className="flex items-center justify-between pb-3">
         <SectionLabel>
           <Search className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
@@ -727,37 +727,6 @@ export function ReportView({
                 />
               </div>
 
-              <div className="mt-4">
-                <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
-                  <Zap
-                    className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
-                    aria-hidden="true"
-                  />
-                  Effort
-                </h2>
-                <p className="text-muted-foreground font-display mt-1 text-xs">
-                  How wide to search. Higher effort finds more questions and costs more credits.
-                </p>
-                <div className="mt-3">
-                  <EffortPicker
-                    value={effort}
-                    onChange={setEffort}
-                    credits={extendCredits}
-                    disabled={busy !== null}
-                  />
-                </div>
-              </div>
-
-              {extendEstimate && extendCredits && (
-                <div className="mt-4">
-                  <EstimateInline
-                    estimate={extendEstimate}
-                    balance={balance}
-                    ceiling={extendCredits[effort]}
-                  />
-                </div>
-              )}
-
               <div className="mt-4 flex items-center justify-between gap-3">
                 <span className="text-muted-foreground truncate font-mono text-[11px]">
                   {busy === "__rounds__" ? (progress ?? "Starting…") : ""}
@@ -775,6 +744,41 @@ export function ReportView({
             </CardContent>
           </Card>
         </section>
+      )}
+
+      {/* The effort + cost for an extension follow the reader down the report: a
+          sticky rail in the right margin on wide screens, a bottom bar below.
+          The Effort picker rides along so any "More" click — wherever it is on
+          the page — shows the effort and price it will run at. */}
+      {researchId && extendEstimate && extendCredits && (
+        <EstimatePanel
+          estimate={extendEstimate}
+          balance={balance}
+          ceiling={extendCredits[effort]}
+          controls={
+            <div>
+              <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
+                <Zap
+                  className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
+                  aria-hidden="true"
+                />
+                Effort
+              </h2>
+              <p className="text-muted-foreground font-display mt-1 text-xs">
+                How wide to search. Higher effort finds more questions and costs more credits.
+              </p>
+              <div className="mt-3">
+                <EffortPicker
+                  value={effort}
+                  onChange={setEffort}
+                  credits={extendCredits}
+                  disabled={busy !== null}
+                  stacked
+                />
+              </div>
+            </div>
+          }
+        />
       )}
 
       {/* One dialog for both entry points — they differ only in the rounds they

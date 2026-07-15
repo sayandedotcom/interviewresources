@@ -642,11 +642,18 @@ describe("extend controls", () => {
       .mockResolvedValue({ ok: true, body: sseBody(merged) } as unknown as Response);
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<ReportView {...base} report={report()} researchId="r-1" />);
-    const footer = screen.getByText("Scout more rounds").parentElement!;
-    await userEvent.click(within(footer).getByRole("button", { name: /High/ }));
+    render(
+      <ReportView
+        {...base}
+        report={report()}
+        researchId="r-1"
+        extendCredits={{ low: 33, medium: 65, high: 130 }}
+      />
+    );
+    const rail = screen.getByTestId("estimate-rail");
+    await userEvent.click(within(rail).getByRole("button", { name: /High/ }));
 
-    // A "More" click uses the same shared effort state as the footer form.
+    // A "More" click uses the same shared effort state as the estimate rail.
     await userEvent.click(
       screen.getByRole("button", { name: /add more algorithmic coding questions/i })
     );
@@ -712,9 +719,10 @@ describe("extend controls", () => {
         extendCredits={{ low: 33, medium: 65, high: 130 }}
       />
     );
-    const footer = screen.getByText("Scout more rounds").parentElement!;
+    const rail = screen.getByTestId("estimate-rail");
 
-    expect(within(footer).getByText("≤130")).toBeInTheDocument();
+    // The effort picker shows each level's ceiling; "high" caps at 130.
+    expect(within(rail).getByText("130")).toBeInTheDocument();
   });
 
   it("keeps the scout button disabled until a round is picked", () => {
@@ -733,9 +741,9 @@ describe("extend controls", () => {
         balance={200}
       />
     );
-    const estimate = screen.getByTestId("estimate-inline");
+    const estimate = screen.getByTestId("estimate-rail");
 
-    expect(within(estimate).getByText(/credits/)).toBeInTheDocument();
+    expect(within(estimate).getByText("credits")).toBeInTheDocument();
     expect(within(estimate).getByText(/min to generate/)).toBeInTheDocument();
     expect(within(estimate).getByText(/Estimate only/)).toBeInTheDocument();
   });
@@ -750,11 +758,11 @@ describe("extend controls", () => {
         balance={200}
       />
     );
-    const estimate = () => screen.getByTestId("estimate-inline").textContent!;
+    const estimate = () => screen.getByTestId("estimate-rail").textContent!;
     const before = estimate();
 
-    const footer = screen.getByText("Scout more rounds").parentElement!;
-    await userEvent.click(within(footer).getByRole("button", { name: /High/ }));
+    const rail = screen.getByTestId("estimate-rail");
+    await userEvent.click(within(rail).getByRole("button", { name: /High/ }));
 
     expect(estimate()).not.toEqual(before);
   });
@@ -776,7 +784,7 @@ describe("extend controls", () => {
   it("prices nothing until the extension ceilings arrive", () => {
     render(<ReportView {...base} report={report()} researchId="r-1" />);
 
-    expect(screen.queryByTestId("estimate-inline")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("estimate-rail")).not.toBeInTheDocument();
   });
 });
 

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Estimate } from "@/lib/research/estimate";
 
-import { EstimateInline, EstimatePanel } from "./estimate-panel";
+import { EstimatePanel } from "./estimate-panel";
 
 const estimate: Estimate = { minCredits: 29, maxCredits: 54, minMinutes: 2, maxMinutes: 5 };
 
@@ -67,31 +67,18 @@ describe("EstimatePanel", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(within(bar).getByText(/Estimate only/)).toBeInTheDocument();
   });
-});
 
-describe("EstimateInline", () => {
-  it("prices an extension, disclaimer and all", () => {
+  it("renders extra controls in the rail, and in the bar once opened", async () => {
     render(
-      <EstimateInline
-        estimate={{ minCredits: 17, maxCredits: 31, minMinutes: 1, maxMinutes: 4 }}
-        balance={200}
-      />
+      <EstimatePanel estimate={estimate} balance={200} controls={<p>Effort picker slot</p>} />
     );
 
-    const inline = screen.getByTestId("estimate-inline");
-    expect(within(inline).getByText(/~17–31/)).toBeInTheDocument();
-    expect(within(inline).getByText(/~1–4 min/)).toBeInTheDocument();
-    expect(within(inline).getByText(/Estimate only/)).toBeInTheDocument();
-  });
+    const rail = screen.getByTestId("estimate-rail");
+    expect(within(rail).getByText("Effort picker slot")).toBeInTheDocument();
 
-  it("warns when an extension could outrun the balance", () => {
-    render(
-      <EstimateInline
-        estimate={{ minCredits: 17, maxCredits: 31, minMinutes: 1, maxMinutes: 4 }}
-        balance={25}
-      />
-    );
-
-    expect(screen.getByText(/could cost more than your 25 credits/)).toBeInTheDocument();
+    const bar = screen.getByTestId("estimate-bar");
+    expect(within(bar).queryByText("Effort picker slot")).not.toBeInTheDocument();
+    await userEvent.click(within(bar).getByRole("button"));
+    expect(within(bar).getByText("Effort picker slot")).toBeInTheDocument();
   });
 });

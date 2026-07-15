@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AlertTriangle, ChevronUp, Clock, Coins, Gauge } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import type { Estimate } from "@/lib/research/estimate";
@@ -151,11 +152,15 @@ export function EstimatePanel({
   estimate,
   balance,
   ceiling,
+  controls,
 }: {
   estimate: Estimate;
   balance?: number;
   /** The effort's credit ceiling — the most this run can possibly spend. */
   ceiling?: number;
+  /** Optional extra controls (e.g. the report's Effort picker) shown above the
+      summary in the rail and inside the expanded bottom bar. */
+  controls?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -194,6 +199,12 @@ export function EstimatePanel({
               </>
             )}
             <Disclaimer />
+            {controls && (
+              <>
+                <Separator />
+                {controls}
+              </>
+            )}
           </CardContent>
         </Card>
       </aside>
@@ -228,37 +239,15 @@ export function EstimatePanel({
               </>
             )}
             <Disclaimer />
+            {controls && (
+              <>
+                <Separator />
+                {controls}
+              </>
+            )}
           </div>
         )}
       </div>
     </>
-  );
-}
-
-/**
- * The same estimate, sized for the report's "Scout more rounds" footer, where
- * it sits inline above the button rather than following the scroll.
- */
-export function EstimateInline({
-  estimate,
-  balance,
-  ceiling,
-}: {
-  estimate: Estimate;
-  balance?: number;
-  /** The extension's credit ceiling for the chosen effort. */
-  ceiling?: number;
-}) {
-  return (
-    <div data-testid="estimate-inline" className="bg-muted/50 space-y-2.5 rounded-lg border p-3">
-      <Summary estimate={estimate} balance={balance} />
-      {balance !== undefined && (
-        <>
-          <BalanceLine balance={balance} ceiling={ceiling} />
-          <BudgetWarning estimate={estimate} balance={balance} />
-        </>
-      )}
-      <Disclaimer />
-    </div>
   );
 }

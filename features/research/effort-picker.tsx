@@ -17,15 +17,18 @@ export function EffortPicker({
   onChange,
   credits,
   disabled,
+  stacked,
 }: {
   value: Effort;
   onChange: (effort: Effort) => void;
   /** Per-level credit ceiling to show; omitted until the balance is known. */
   credits?: Record<Effort, number>;
   disabled?: boolean;
+  /** Keep the levels in a single column, for the narrow report estimate rail. */
+  stacked?: boolean;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
+    <div className={stacked ? "grid gap-2" : "grid gap-2 sm:grid-cols-3"}>
       {EFFORT_LEVELS.map((level) => {
         const preset = EFFORT_PRESETS[level];
         const on = value === level;
