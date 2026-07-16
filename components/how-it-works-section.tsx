@@ -496,8 +496,8 @@ export function HowItWorksSection() {
   const stages = howItWorks.stages.map((stage, i) => ({ ...stage, content: PANELS[i] }));
 
   return (
-    <section id="how-it-works" className="mx-auto w-full max-w-3xl border-t px-5 py-12">
-      <div className="mb-8 text-center">
+    <section id="how-it-works" className="mx-auto w-full max-w-3xl border-t px-5 pt-20 pb-12">
+      <div className="mb-14 text-center">
         <p className="text-tertiary mb-3 font-mono text-xs font-semibold tracking-[0.25em] uppercase">
           {howItWorks.eyebrow}
         </p>

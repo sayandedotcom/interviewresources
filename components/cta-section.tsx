@@ -25,6 +25,9 @@ export function CtaSection() {
             {session ? siteConfig.cta.signedInLabel : siteConfig.cta.signedOutLabel}
           </Link>
         </div>
+        <p className="font-display text-muted-foreground mt-8 text-lg font-medium italic">
+          {siteConfig.cta.closer}
+        </p>
       </div>
     </section>
   );

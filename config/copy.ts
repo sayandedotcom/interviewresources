@@ -29,6 +29,8 @@ export const copyConfig = {
       "Paste a company name. Our AI researches its stack, culture, and real interview reports, then predicts the questions you'll face, each backed by evidence.",
     heroCtaPrimary: { label: "Try it for $1", href: "/#pricing" },
     heroCtaSecondary: { label: "See how it works", href: "/#how-it-works" },
+    heroFomo:
+      "Someone else interviewing for your role is already prepping with the questions. Are you?",
     stats: [
       { value: "<$0.50", label: "Per report" },
       { value: "~3 min", label: "Start to finish" },
@@ -47,6 +49,7 @@ export const copyConfig = {
       title: "Frequently Asked Questions",
     },
     pricing: {
+      fomo: "Every interview you take unprepared is a $100K coin flip.",
       title: "Simple, transparent pricing",
       subBeforeCap:
         "No plans, no subscription, just credits. Every feature is included in every pack. A report costs what it costs to research: typically about 46 credits, under $0.50, and never more than",
@@ -185,6 +188,7 @@ export const copyConfig = {
     subtitle: "AI-researched, evidence-backed reports for under $0.50 each. No subscription.",
     signedOutLabel: "Try it for $1",
     signedInLabel: "Get started",
+    closer: "Can't you spend $1 for your $100K job?",
   },
 
   // ── FAQs ──────────────────────────────────────────────────────────

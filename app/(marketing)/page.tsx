@@ -36,7 +36,7 @@ export default function Home() {
     <main className="flex flex-1 flex-col">
       <Header />
 
-      <section className="mx-auto w-full max-w-3xl px-5 pt-12 pb-2">
+      <section className="mx-auto w-full max-w-3xl px-5 pt-20 pb-24">
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground font-mono text-[11px] tracking-[0.22em] uppercase">
             {landing.eyebrow}
@@ -60,10 +60,10 @@ export default function Home() {
             <span className="bg-tertiary/20 absolute -bottom-1 left-0 h-3 w-full" />
           </span>
         </h1>
-        <p className="font-display text-muted-foreground mt-4 max-w-xl text-[15px] leading-relaxed">
+        <p className="font-display text-muted-foreground mt-6 max-w-xl text-[15px] leading-relaxed">
           {landing.heroSub}
         </p>
-        <div className="mt-6 flex gap-4">
+        <div className="mt-8 flex gap-4">
           <Link
             href={landing.heroCtaPrimary.href}
             className="bg-tertiary font-display text-tertiary-foreground hover:bg-tertiary/90 cursor-pointer rounded-lg px-6 py-2.5 text-sm font-medium transition-colors">
@@ -75,6 +75,7 @@ export default function Home() {
             {landing.heroCtaSecondary.label}
           </Link>
         </div>
+        <p className="font-display text-muted-foreground mt-6 text-sm italic">{landing.heroFomo}</p>
       </section>
 
       {/* <ResearchExperience /> */}
@@ -234,6 +235,9 @@ export default function Home() {
 
       <section id="pricing" className="mx-auto w-full max-w-3xl border-t px-5 py-16">
         <div className="text-center">
+          <p className="font-display text-muted-foreground mb-4 text-lg font-medium italic">
+            {landing.pricing.fomo}
+          </p>
           <h1 className="font-display text-4xl font-semibold tracking-tight">
             {landing.pricing.title}
           </h1>
