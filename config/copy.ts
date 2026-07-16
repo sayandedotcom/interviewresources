@@ -164,6 +164,37 @@ export const copyConfig = {
     ],
   },
 
+  // ── Confidence explainer (landing) ───────────────────────────────
+  confidence: {
+    eyebrow: "Reading a report",
+    title: "What the confidence badges mean",
+    sub: "Every predicted question carries a signal for how sure the agent is, so you know where to spend your prep time.",
+    levels: [
+      {
+        label: "High",
+        signal: "●●●",
+        body: "Multiple independent sources agree. Study these first; they're the safest bet.",
+        sample: "Design a rate limiter for the payments API.",
+      },
+      {
+        label: "Medium",
+        signal: "●●○",
+        body: "Grounded in real evidence, but from fewer or weaker sources. Worth your time, just not first.",
+        sample: "Tell me about a time you shipped under an ambiguous deadline.",
+      },
+      {
+        label: "Low",
+        signal: "●○○",
+        body: "A longer shot. Good for a skim, not where your limited prep hours should go.",
+        sample: "How would you improve our onboarding flow?",
+      },
+    ],
+    inferred: {
+      label: "Inferred",
+      body: "When public interview data for a company is thin, the agent researches proxy signals instead: founders' backgrounds, comparable companies, and stage norms. Anything built this way is labelled Inferred, so you always know whether a question comes from a first-hand account or an educated guess.",
+    },
+  },
+
   // ── Fair-billing guarantee strip (landing) ──────────────────────
   guarantee: {
     items: [
@@ -180,6 +211,17 @@ export const copyConfig = {
         body: "Buy credits once and spend them only when you run a report.",
       },
     ],
+  },
+
+  // ── Founder note (landing, right before the final CTA) ──────────
+  founderNote: {
+    eyebrow: "A note from the builder",
+    paragraphs: [
+      "I built this after one too many evenings lost to Glassdoor threads and half-updated Reddit posts, trying to guess what an interview would actually cover. A coaching call cost more than the job hunt could justify, and a generic question bank never knew which company I was even talking to.",
+      "So Interview Scout does the digging I used to do by hand, shows its sources instead of asking you to trust it, and costs less than a coffee per report. If the public data on a company is thin, it says so instead of pretending otherwise. That's the whole promise: real research, shown honestly, priced fairly.",
+    ],
+    name: "Sayan De",
+    role: "Builder, Interview Scout",
   },
 
   // ── CTA section (shared) ─────────────────────────────────────────

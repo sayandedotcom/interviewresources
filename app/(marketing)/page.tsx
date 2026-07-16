@@ -3,8 +3,10 @@ import Link from "next/link";
 import { siteConfig } from "@/site";
 import { Infinity as InfinityIcon, Check, Coins, ShieldCheck } from "lucide-react";
 
+import { ConfidenceExplainerSection } from "@/components/confidence-explainer-section";
 import { CtaSection } from "@/components/cta-section";
 import { Footer } from "@/components/footer";
+import { FounderNoteSection } from "@/components/founder-note-section";
 import { Header } from "@/components/header";
 import { HowAgentWorksSection } from "@/components/how-agent-works-section";
 import { HowItWorksSection } from "@/components/how-it-works-section";
@@ -121,6 +123,8 @@ export default function Home() {
       </section>
 
       <WhyNotChatgptSection />
+
+      <ConfidenceExplainerSection />
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="mb-8 text-center">
@@ -295,6 +299,8 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <FounderNoteSection />
 
       <CtaSection />
 
