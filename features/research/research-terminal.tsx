@@ -130,7 +130,7 @@ export function ResearchTerminal({
   const currentIdx = TRACKED_STAGES.indexOf(current);
 
   return (
-    <div className="overflow-hidden rounded-xl bg-neutral-950 font-mono text-xs text-neutral-300 ring-1 ring-neutral-800">
+    <div className="flex h-[calc(100dvh-10rem)] min-h-[28rem] flex-col overflow-hidden rounded-xl bg-neutral-950 font-mono text-xs text-neutral-300 ring-1 ring-neutral-800">
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-2.5">
         <Terminal className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
         <span className="text-[11px] text-neutral-500">interview-scout · {session}</span>
@@ -139,7 +139,7 @@ export function ResearchTerminal({
         </span>
       </div>
 
-      <div ref={bodyRef} className="h-64 overflow-y-auto p-3 sm:h-72" aria-live="polite">
+      <div ref={bodyRef} className="flex-1 overflow-y-auto p-3" aria-live="polite">
         <ul className="space-y-1">
           {lines.map((line, i) => (
             <LogLine key={line.id} line={line} latest={i === lines.length - 1} failed={failed} />
