@@ -43,6 +43,11 @@ export const SECTION_META: Record<ReportSection, { label: string; code: string; 
     code: "EXP",
     blurb: "First-hand write-ups from people who interviewed here",
   },
+  recruiter: {
+    label: "Impress the recruiter",
+    code: "REC",
+    blurb: "Who their recruiters are looking for, and how to present yourself to match",
+  },
 };
 
 /**
@@ -63,6 +68,8 @@ export function missingSections(report: Report): ReportSection[] {
         return report.skillsRequired == null;
       case "experiences":
         return report.interviewExperiences == null;
+      case "recruiter":
+        return report.recruiterPitch == null;
     }
   });
 }

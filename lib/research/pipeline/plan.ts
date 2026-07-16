@@ -18,9 +18,11 @@ export async function planStage(
 ): Promise<ResearchPlan> {
   const loop = wants(input, "loop");
   // The skills section is inferred from what the company builds, so it needs the
-  // company evidence even when the company prose itself was switched off. Only
-  // when neither wants it is a "company" query genuinely wasted spend.
-  const companyEvidence = wants(input, "company") || wants(input, "skills");
+  // company evidence even when the company prose itself was switched off — and
+  // the recruiter pitch likewise leans on what the company builds and values.
+  // Only when none of them wants it is a "company" query genuinely wasted spend.
+  const companyEvidence =
+    wants(input, "company") || wants(input, "skills") || wants(input, "recruiter");
 
   const loopRule = loop
     ? `Always include exactly one query with category "loop_format" whose purpose is

@@ -174,6 +174,17 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
     }
   }
 
+  if (report.recruiterPitch) {
+    heading("How to impress the recruiter");
+    text(report.recruiterPitch.candidateProfile, { leading: 1.5 });
+    y += 4;
+    for (const tip of report.recruiterPitch.presentationTips) {
+      ensure(24);
+      text(`- ${tip}`, { size: 9, leading: 1.45 });
+      y += 2;
+    }
+  }
+
   if (report.interviewerSummary) {
     heading("The interviewer");
     text(report.interviewerSummary, { leading: 1.5 });

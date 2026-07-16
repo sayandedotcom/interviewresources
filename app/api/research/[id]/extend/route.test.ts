@@ -358,6 +358,44 @@ describe("the extension run", () => {
     expect(merged.questions.map((q) => q.question)).toEqual(["LRU cache"]);
   });
 
+  it("scouts the recruiter pitch into a report that never had one", async () => {
+    // existingReport predates recruiterPitch, so "recruiter" is a missing section.
+    const pitch = {
+      candidateProfile: "Product-minded engineers",
+      presentationTips: ["Lead with impact"],
+    };
+    pipelineMock.mockResolvedValue({
+      report: { ...additionReport, recruiterPitch: pitch },
+      budget: budgetCosting(0.15),
+    });
+
+    const events = await readSse(await POST(post({ sections: ["recruiter"] }), ctx));
+    const merged = events.find((e) => e.kind === "report")!.report as Report;
+
+    const input = pipelineMock.mock.calls[0][0];
+    expect([...input.sections].sort()).toEqual(["experiences", "recruiter"]);
+    expect(merged.recruiterPitch).toEqual(pitch);
+  });
+
+  it("leaves a declined recruiter pitch null when the extension did not scout it", async () => {
+    stubSelect({
+      ...row,
+      jsonPayload: { ...existingReport, recruiterPitch: null } satisfies Report,
+    });
+    // The pipeline nulls a section it was not asked for, so the merge's ?? has
+    // nothing to fill the declined hole with.
+    pipelineMock.mockResolvedValue({
+      report: { ...additionReport, recruiterPitch: null },
+      budget: budgetCosting(0.15),
+    });
+
+    const events = await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
+    const merged = events.find((e) => e.kind === "report")!.report as Report;
+
+    expect(pipelineMock.mock.calls[0][0].sections).toEqual(["experiences"]);
+    expect(merged.recruiterPitch).toBeNull();
+  });
+
   it("rejects an extension that scouts neither a round nor a section", async () => {
     expect((await POST(post({ interviewTypes: [], sections: [] }), ctx)).status).toBe(400);
   });

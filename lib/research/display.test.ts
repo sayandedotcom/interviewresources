@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { CATEGORY_META, CONFIDENCE_META, categoryCode, categoryLabel } from "./display";
-import { INTERVIEW_CATEGORIES } from "./types";
+import {
+  CATEGORY_META,
+  CONFIDENCE_META,
+  categoryCode,
+  categoryLabel,
+  missingSections,
+} from "./display";
+import { INTERVIEW_CATEGORIES, type Report } from "./types";
 
 /**
  * These render into the report UI for every question. The interesting cases are
@@ -79,6 +85,47 @@ describe("CATEGORY_META", () => {
   it("has no duplicate short codes, which would make two rounds indistinguishable", () => {
     const codes = Object.values(CATEGORY_META).map((m) => m.code);
     expect(new Set(codes).size).toBe(codes.length);
+  });
+});
+
+describe("missingSections", () => {
+  const fullReport: Report = {
+    companySnapshot: "Payments infrastructure",
+    companyExplainer: "Stripe moves money when you pay online.",
+    likelyLoopStructure: "Phone screen, then onsite",
+    interviewerSummary: null,
+    questions: [
+      {
+        category: "dsa",
+        question: "Implement an LRU cache",
+        confidence: "high",
+        rationale: "Reported by three candidates",
+        prepNote: "Discuss O(1) get/put",
+        evidenceUrls: [],
+        basis: "evidence",
+      },
+    ],
+    skillsRequired: [],
+    prepPlan: ["Drill LRU cache"],
+    interviewExperiences: [],
+    recruiterPitch: {
+      candidateProfile: "Product-minded engineers",
+      presentationTips: ["Lead with impact"],
+    },
+    importantLinks: [],
+  };
+
+  it("reports nothing missing on a report that has every section", () => {
+    expect(missingSections(fullReport)).toEqual([]);
+  });
+
+  it("counts a declined-null recruiter pitch as missing", () => {
+    expect(missingSections({ ...fullReport, recruiterPitch: null })).toEqual(["recruiter"]);
+  });
+
+  it("counts a legacy report predating recruiterPitch as missing it", () => {
+    const { recruiterPitch: _gone, ...legacy } = fullReport;
+    expect(missingSections(legacy as Report)).toEqual(["recruiter"]);
   });
 });
 

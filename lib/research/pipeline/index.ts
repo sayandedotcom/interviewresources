@@ -30,7 +30,8 @@ export async function runResearchPipeline(
   // off, but a query it plans anyway is a search we would pay for and then throw
   // away. Enforce it here rather than trust the prompt. (Safe after parsing:
   // researchPlanSchema's .min(3) only guards what the model returned.)
-  const companyEvidence = wants(input, "company") || wants(input, "skills");
+  const companyEvidence =
+    wants(input, "company") || wants(input, "skills") || wants(input, "recruiter");
   plan.queries = plan.queries.filter(
     (q) =>
       (q.category !== "company" || companyEvidence) &&

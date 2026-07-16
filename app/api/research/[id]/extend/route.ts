@@ -84,6 +84,7 @@ function mergeReports(
     companyExplainer: existing.companyExplainer ?? addition.companyExplainer,
     likelyLoopStructure: existing.likelyLoopStructure ?? addition.likelyLoopStructure,
     skillsRequired: existing.skillsRequired ?? addition.skillsRequired,
+    recruiterPitch: existing.recruiterPitch ?? addition.recruiterPitch,
     questions: opts.addedRounds
       ? [...existing.questions, ...addition.questions]
       : existing.questions,

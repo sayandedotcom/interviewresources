@@ -18,7 +18,8 @@ type OptionalReportField =
   | "companyExplainer"
   | "likelyLoopStructure"
   | "skillsRequired"
-  | "interviewExperiences";
+  | "interviewExperiences"
+  | "recruiterPitch";
 
 /** Stage 4 — Synthesize. One strong call producing the final structured report. */
 export async function synthesizeStage(
@@ -59,6 +60,7 @@ export async function synthesizeStage(
   const loop = wants(input, "loop");
   const skills = wants(input, "skills");
   const experiences = wants(input, "experiences");
+  const recruiter = wants(input, "recruiter");
 
   // A section the caller switched off is cut from the schema, so the model is
   // never asked for it and never bills output tokens writing it. The matching
@@ -71,6 +73,7 @@ export async function synthesizeStage(
   if (!loop) omitMask.likelyLoopStructure = true;
   if (!skills) omitMask.skillsRequired = true;
   if (!experiences) omitMask.interviewExperiences = true;
+  if (!recruiter) omitMask.recruiterPitch = true;
 
   // The cast keeps the full generated shape in the types: which keys the schema
   // actually carries is a runtime decision, and the reads below are already
@@ -123,6 +126,16 @@ export async function synthesizeStage(
   account is whenever the notes reveal them (e.g. "A 2024 E5 backend candidate's full loop
   breakdown, round by round"). If the notes contain no first-hand account, return an empty
   array — never invent one, and never fill it with generic listicles or job postings.`,
+    recruiter &&
+      `- In recruiterPitch, describe the candidate this company's recruiters are actually
+  screening for and how to present yourself to them. candidateProfile is a short paragraph
+  (2-3 sentences) naming the backgrounds, signals, and traits their screens favour —
+  grounded in what the company builds, its stated values, and how candidates in the notes
+  describe its recruiter screens, never generic recruiting advice. presentationTips is 4-6
+  concrete, actionable tips: what to lead with on the resume and in the recruiter call,
+  which experience or projects to foreground, which keywords to surface. Each tip must be
+  specific to THIS company and role — never boilerplate like "be confident" or "research
+  the company".`,
     `- In importantLinks, pick the ${preset.linksHint} highest-value sources for the candidate to read before
   the interview, using only URLs that appear in the evidence notes. Favour the company's
   engineering blog, its public docs, and interviewer talks or writing over generic
@@ -163,6 +176,7 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
     likelyLoopStructure: loop ? generated.likelyLoopStructure : null,
     skillsRequired: skills ? generated.skillsRequired : null,
     interviewExperiences: experiences ? generated.interviewExperiences : null,
+    recruiterPitch: recruiter ? generated.recruiterPitch : null,
   };
 
   // A URL the notes never contained is a hallucination — strip it from both

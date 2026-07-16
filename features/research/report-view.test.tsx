@@ -35,6 +35,10 @@ function report(overrides: Partial<Report> = {}): Report {
     skillsRequired: [],
     prepPlan: ["Drill LRU cache", "Read the engineering blog"],
     interviewExperiences: [],
+    recruiterPitch: {
+      candidateProfile: "They favour product-minded engineers with ownership.",
+      presentationTips: ["Lead with impact metrics", "Frame projects around user problems"],
+    },
     importantLinks: [],
     ...overrides,
   };
@@ -123,6 +127,28 @@ describe("report body", () => {
     delete (legacy as Partial<Report>).skillsRequired;
     render(<ReportView {...base} report={legacy} />);
     expect(screen.queryByText("Skills required")).not.toBeInTheDocument();
+  });
+
+  it("renders the recruiter pitch profile and tips", () => {
+    render(<ReportView {...base} report={report()} />);
+
+    expect(screen.getByText("How to impress the recruiter")).toBeInTheDocument();
+    expect(
+      screen.getByText("They favour product-minded engineers with ownership.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("Lead with impact metrics")).toBeInTheDocument();
+    expect(screen.getByText("Frame projects around user problems")).toBeInTheDocument();
+  });
+
+  it("hides the recruiter pitch when the run declined it, and on a report predating it", () => {
+    const { unmount } = render(<ReportView {...base} report={report({ recruiterPitch: null })} />);
+    expect(screen.queryByText("How to impress the recruiter")).not.toBeInTheDocument();
+    unmount();
+
+    const legacy = report();
+    delete (legacy as Partial<Report>).recruiterPitch;
+    render(<ReportView {...base} report={legacy} />);
+    expect(screen.queryByText("How to impress the recruiter")).not.toBeInTheDocument();
   });
 
   it("renders the prep plan as a numbered, zero-padded list", () => {
@@ -584,6 +610,16 @@ describe("extend controls", () => {
     expect(screen.getByRole("button", { name: /interview experiences/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /the loop/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /skills required/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /impress the recruiter/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers the recruiter section when the original run declined it", () => {
+    render(<ReportView {...base} report={report({ recruiterPitch: null })} researchId="r-1" />);
+
+    expect(screen.getByText("Report Sections")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /impress the recruiter/i })).toBeInTheDocument();
   });
 
   it("scouts a chosen missing section through the extend route", async () => {

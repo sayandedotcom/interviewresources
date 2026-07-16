@@ -1,6 +1,13 @@
 "use client";
 
-import { Building2, Compass, type LucideIcon, MessagesSquare, Wrench } from "lucide-react";
+import {
+  Building2,
+  Compass,
+  type LucideIcon,
+  MessagesSquare,
+  UserCheck,
+  Wrench,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,6 +21,7 @@ const SECTION_ICON: Record<ReportSection, LucideIcon> = {
   loop: Compass,
   skills: Wrench,
   experiences: MessagesSquare,
+  recruiter: UserCheck,
 };
 
 /**

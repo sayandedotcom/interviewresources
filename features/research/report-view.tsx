@@ -25,6 +25,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  UserCheck,
   Wrench,
   Zap,
 } from "lucide-react";
@@ -486,6 +487,30 @@ export function ReportView({
               </Tooltip>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Null on a report that declined the section, absent on one generated
+          before it existed — either way there is nothing to show. */}
+      {current.recruiterPitch && (
+        <section className="mt-8">
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            <UserCheck className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+            How to impress the recruiter
+          </h2>
+          <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
+            {current.recruiterPitch.candidateProfile}
+          </p>
+          <ul className="mt-3 space-y-1.5">
+            {current.recruiterPitch.presentationTips.map((tip, i) => (
+              <li key={i} className="font-display text-foreground flex gap-3 text-[15px]">
+                <span className="text-tertiary font-mono text-[13px]" aria-hidden="true">
+                  →
+                </span>
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

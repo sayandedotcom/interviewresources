@@ -21,9 +21,21 @@ export type InterviewCategory = (typeof INTERVIEW_CATEGORIES)[number];
  * search and synthesis budget a candidate may not want to spend (the company
  * overview is dead weight for a household-name employer).
  */
-export const REPORT_SECTIONS = ["company", "loop", "skills", "experiences"] as const;
+export const REPORT_SECTIONS = ["company", "loop", "skills", "experiences", "recruiter"] as const;
 
 export type ReportSection = (typeof REPORT_SECTIONS)[number];
+
+/**
+ * What a caller gets without asking. "recruiter" is deliberately absent: it is
+ * the first opt-in section — and the input-schema default doubles as the shape
+ * of stored inputs from runs that predate the field, which never asked for it.
+ */
+export const DEFAULT_SECTIONS = [
+  "company",
+  "loop",
+  "skills",
+  "experiences",
+] as const satisfies readonly ReportSection[];
 
 /**
  * Ceilings on caller-supplied free text. Every field below is interpolated into
@@ -92,9 +104,9 @@ export const researchInputSchema = z.object({
   /**
    * Which optional sections to produce. Defaulted rather than required so a
    * caller predating the field — and the stored inputs of an older run — still
-   * gets the full report.
+   * gets the full report, minus opt-in sections it never asked for.
    */
-  sections: z.array(z.enum(REPORT_SECTIONS)).default([...REPORT_SECTIONS]),
+  sections: z.array(z.enum(REPORT_SECTIONS)).default([...DEFAULT_SECTIONS]),
 });
 
 export type ResearchInput = z.infer<typeof researchInputSchema>;
@@ -222,6 +234,24 @@ export const requiredSkillSchema = z.object({
 
 export type RequiredSkill = z.infer<typeof requiredSkillSchema>;
 
+export const recruiterPitchSchema = z.object({
+  candidateProfile: z
+    .string()
+    .describe(
+      "2-3 sentences: the candidate profile this company's recruiters favour — the " +
+        "backgrounds, signals, and traits their screens select for, grounded in the evidence"
+    ),
+  presentationTips: z
+    .array(z.string())
+    .describe(
+      "Concrete, actionable tips for presenting yourself to this company's recruiters — " +
+        "what to lead with on the resume and in the screen call, which experience and " +
+        "keywords to foreground. Each tip specific to this company and role, never boilerplate"
+    ),
+});
+
+export type RecruiterPitch = z.infer<typeof recruiterPitchSchema>;
+
 export const reportSchema = z.object({
   companySnapshot: z.string().describe("What the company does, stack, scale signals"),
   companyExplainer: z
@@ -251,6 +281,9 @@ export const reportSchema = z.object({
         "Discuss, Blind, Reddit, personal blogs), chosen from the evidence URLs. Each " +
         '"why" names the role, level, and recency when known'
     ),
+  recruiterPitch: recruiterPitchSchema.describe(
+    "Who this company's recruiters are looking for, and how to present yourself to them"
+  ),
   importantLinks: z
     .array(importantLinkSchema)
     .describe("3-6 most valuable sources for the candidate to read, chosen from the evidence URLs"),
@@ -269,8 +302,9 @@ export const reportSchema = z.object({
  * the generation schema entirely and lands here as `null`.
  *
  * The distinction is load-bearing for the two array sections: `[]` means we
- * looked and found nothing, `null` means we never looked. `skillsRequired` is
- * additionally optional because reports stored before it existed lack the key.
+ * looked and found nothing, `null` means we never looked. `skillsRequired` and
+ * `recruiterPitch` are additionally optional because reports stored before they
+ * existed lack the keys.
  */
 export const storedReportSchema = reportSchema.extend({
   companySnapshot: reportSchema.shape.companySnapshot.nullable(),
@@ -278,6 +312,7 @@ export const storedReportSchema = reportSchema.extend({
   likelyLoopStructure: reportSchema.shape.likelyLoopStructure.nullable(),
   skillsRequired: reportSchema.shape.skillsRequired.nullable().optional(),
   interviewExperiences: reportSchema.shape.interviewExperiences.nullable(),
+  recruiterPitch: reportSchema.shape.recruiterPitch.nullable().optional(),
 });
 
 export type Report = z.infer<typeof storedReportSchema>;

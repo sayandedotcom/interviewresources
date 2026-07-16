@@ -31,6 +31,13 @@ function contextSections(report: Report, companyName: string): string[] {
     parts.push(`## Skills the role demands\n\n${skills}`);
   }
 
+  if (report.recruiterPitch) {
+    const tips = report.recruiterPitch.presentationTips.map((t) => `- ${t}`).join("\n");
+    parts.push(
+      `## What their recruiters look for\n\n${report.recruiterPitch.candidateProfile}\n\n${tips}`
+    );
+  }
+
   if (report.interviewerSummary) {
     parts.push(`## The interviewer\n\n${report.interviewerSummary}`);
   }

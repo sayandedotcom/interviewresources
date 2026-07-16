@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { EFFORT_LEVELS } from "@/lib/research/budget";
 import {
+  DEFAULT_SECTIONS,
   MAX_COMPANY_NAME,
   MAX_LOCATION,
   MAX_ROLE_CONTEXT,
@@ -65,7 +66,9 @@ export const emptyFormValues: ResearchFormValues = {
   interviewers: [{ name: "", url: "" }],
   rounds: ["dsa", "system_design"],
   effort: "medium",
-  sections: [...REPORT_SECTIONS],
+  // DEFAULT_SECTIONS, not REPORT_SECTIONS: the recruiter section is opt-in,
+  // so its chip starts unpressed.
+  sections: [...DEFAULT_SECTIONS],
 };
 
 /**

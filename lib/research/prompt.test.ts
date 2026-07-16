@@ -77,6 +77,26 @@ describe("buildAnswerPrompt", () => {
     expect(buildAnswerPrompt(report(), "Stripe")).not.toContain("https://blind.com/post/1");
   });
 
+  it("carries the recruiter pitch when the report has one, and omits it otherwise", () => {
+    const withPitch = buildAnswerPrompt(
+      report({
+        recruiterPitch: {
+          candidateProfile: "Product-minded engineers with ownership.",
+          presentationTips: ["Lead with impact metrics"],
+        },
+      }),
+      "Stripe"
+    );
+    expect(withPitch).toContain("## What their recruiters look for");
+    expect(withPitch).toContain("Product-minded engineers with ownership.");
+    expect(withPitch).toContain("- Lead with impact metrics");
+
+    expect(buildAnswerPrompt(report({ recruiterPitch: null }), "Stripe")).not.toContain(
+      "What their recruiters look for"
+    );
+    expect(buildAnswerPrompt(report(), "Stripe")).not.toContain("What their recruiters look for");
+  });
+
   it("labels a custom round the same way the report does", () => {
     const prompt = buildAnswerPrompt(
       report({ questions: [question({ category: "live_debugging" })] }),

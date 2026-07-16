@@ -34,8 +34,13 @@ describe("form draft persistence", () => {
     const draft = loadDraft();
     expect(draft?.company).toBe("Stripe");
     expect(draft?.rounds).toEqual(emptyFormValues.rounds);
-    // Saved before report sections were selectable: the draft still asks for all of them.
+    // Saved before report sections were selectable: the draft still asks for
+    // the default set — which excludes the opt-in recruiter section.
     expect(draft?.sections).toEqual(emptyFormValues.sections);
+  });
+
+  it("keeps the opt-in recruiter section out of the pristine defaults", () => {
+    expect(emptyFormValues.sections).not.toContain("recruiter");
   });
 
   it("round-trips a trimmed section selection", () => {

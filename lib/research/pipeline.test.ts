@@ -3,9 +3,9 @@ import type { z } from "zod";
 
 import type { BudgetTracker, GeminiModel } from "./budget";
 import {
+  DEFAULT_SECTIONS,
   type PipelineProgressEvent,
   type ProxyPlan,
-  REPORT_SECTIONS,
   type Report,
   type ResearchInput,
   type ResearchPlan,
@@ -33,7 +33,7 @@ const input: ResearchInput = {
   fullLoop: false,
   excludeQuestions: [],
   effort: "medium",
-  sections: [...REPORT_SECTIONS],
+  sections: [...DEFAULT_SECTIONS],
 };
 
 function plan(overrides: Partial<ResearchPlan> = {}): ResearchPlan {
@@ -1046,7 +1046,7 @@ describe("optional report sections", () => {
     return searchMock.mock.calls.map((c) => c[0]);
   }
 
-  it("produces every section by default", async () => {
+  it("produces every default section, leaving the opt-in recruiter pitch out", async () => {
     stubStages({});
 
     const { report: out } = await runResearchPipeline(input);
@@ -1064,6 +1064,41 @@ describe("optional report sections", () => {
         "interviewExperiences",
       ])
     );
+    expect(synthesizeSchemaKeys()).not.toContain("recruiterPitch");
+    expect(out.recruiterPitch).toBeNull();
+  });
+
+  it("produces the recruiter pitch when it is opted in", async () => {
+    stubStages({
+      report: report({
+        recruiterPitch: {
+          candidateProfile: "Product-minded engineers",
+          presentationTips: ["Lead with impact"],
+        },
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline({
+      ...input,
+      sections: [...DEFAULT_SECTIONS, "recruiter"],
+    });
+
+    expect(synthesizeSchemaKeys()).toContain("recruiterPitch");
+    expect(systemFor("synthesize")).toContain("In recruiterPitch");
+    expect(out.recruiterPitch).toEqual({
+      candidateProfile: "Product-minded engineers",
+      presentationTips: ["Lead with impact"],
+    });
+  });
+
+  it("keeps company searches for a recruiter-only request", async () => {
+    stubStages({});
+
+    // The pitch is inferred from what the company builds and values, so the
+    // company evidence still earns its cost even with the prose switched off.
+    await runResearchPipeline({ ...input, sections: ["recruiter"] });
+
+    expect(searchedQueries()).toContain("stripe tech stack");
   });
 
   it("drops the loop_format search and section when the loop is not wanted", async () => {
@@ -1151,6 +1186,7 @@ describe("optional report sections", () => {
     expect(out.likelyLoopStructure).toBeNull();
     expect(out.skillsRequired).toBeNull();
     expect(out.interviewExperiences).toBeNull();
+    expect(out.recruiterPitch).toBeNull();
     // What the caller still paid for, and still gets.
     expect(out.questions).toHaveLength(1);
     expect(out.prepPlan).toEqual(["Drill LRU"]);

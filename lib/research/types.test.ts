@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  REPORT_SECTIONS,
+  DEFAULT_SECTIONS,
   interviewerSchema,
   proxyPlanSchema,
   reportSchema,
@@ -51,8 +51,15 @@ describe("researchInputSchema", () => {
     expect(() => researchInputSchema.parse({ ...validInput, effort: "extreme" })).toThrow();
   });
 
-  it("defaults to every report section, so a caller predating the field loses nothing", () => {
-    expect(researchInputSchema.parse(validInput).sections).toEqual([...REPORT_SECTIONS]);
+  it("defaults to the pre-recruiter sections, so a caller predating the field loses nothing", () => {
+    expect(researchInputSchema.parse(validInput).sections).toEqual([...DEFAULT_SECTIONS]);
+  });
+
+  it("keeps the opt-in recruiter section out of the defaults but accepts it explicitly", () => {
+    expect(DEFAULT_SECTIONS).not.toContain("recruiter");
+    expect(researchInputSchema.parse({ ...validInput, sections: ["recruiter"] }).sections).toEqual([
+      "recruiter",
+    ]);
   });
 
   it("accepts a trimmed set of sections, including none at all", () => {
@@ -240,6 +247,10 @@ describe("reportSchema", () => {
     skillsRequired: [{ skill: "Idempotency", why: "Every payment API retries" }],
     prepPlan: ["Drill LRU cache"],
     interviewExperiences: [{ title: "E", url: "https://example.com/e", why: "2024 E5 onsite" }],
+    recruiterPitch: {
+      candidateProfile: "Product-minded engineers with ownership",
+      presentationTips: ["Lead with impact metrics"],
+    },
     importantLinks: [{ title: "T", url: "https://example.com/a", why: "w" }],
   };
 
@@ -259,10 +270,11 @@ describe("reportSchema", () => {
       likelyLoopStructure: null,
       skillsRequired: null,
       interviewExperiences: null,
+      recruiterPitch: null,
     };
     expect(() => storedReportSchema.parse(excluded)).not.toThrow();
 
-    const legacy = { ...validReport, skillsRequired: undefined };
+    const legacy = { ...validReport, skillsRequired: undefined, recruiterPitch: undefined };
     expect(() => storedReportSchema.parse(legacy)).not.toThrow();
   });
 
