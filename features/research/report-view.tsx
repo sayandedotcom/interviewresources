@@ -465,7 +465,7 @@ export function ReportView({
             <Wrench className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             Skills required
           </h2>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="text-muted-foreground font-display mt-1 text-xs">
             What the role actually demands — including what the job post leaves unsaid. Hover a
             skill for why it matters here.
           </p>
