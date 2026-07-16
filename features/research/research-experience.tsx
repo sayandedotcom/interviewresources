@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 
-import { Info, Radio, RefreshCw, Target, Trash2, X } from "lucide-react";
+import { Info, RefreshCw, Target, Trash2, X } from "lucide-react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ import {
   researchFormSchema,
   saveDraft,
 } from "@/features/research/form-schema";
-import { ReportView, SectionLabel } from "@/features/research/report-view";
+import { ReportView } from "@/features/research/report-view";
 import {
   EffortCard,
   EffortNote,
@@ -47,6 +47,7 @@ import {
   LiveEstimate,
   RunButton,
 } from "@/features/research/research-form-controls";
+import { ResearchTerminal } from "@/features/research/research-terminal";
 import { explainError, streamSse } from "@/features/research/stream";
 
 type Phase = "form" | "running" | "done" | "error";
@@ -658,7 +659,11 @@ export function ResearchExperience({
 
       {(phase === "running" || phase === "error") && (
         <div className="mt-6 space-y-4">
-          <ProgressLog lines={progress} />
+          <ResearchTerminal
+            lines={progress}
+            company={getValues("company")}
+            failed={phase === "error"}
+          />
           {phase === "error" && error && (
             <Card>
               <CardContent>
@@ -691,31 +696,5 @@ export function ResearchExperience({
         />
       )}
     </div>
-  );
-}
-
-function ProgressLog({ lines }: { lines: ProgressLine[] }) {
-  return (
-    <Card className="bg-muted">
-      <CardContent>
-        <SectionLabel>
-          <Radio className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-          Live feed
-        </SectionLabel>
-        <ul className="mt-3 space-y-1.5">
-          {lines.map((line) => (
-            <li key={line.id} className="text-foreground flex gap-3 font-mono text-[13px]">
-              <span className="text-tertiary/60 shrink-0 tracking-widest uppercase">
-                {line.stage}
-              </span>
-              <span className="font-display">{line.message}</span>
-            </li>
-          ))}
-          {lines.length === 0 && (
-            <li className="text-muted-foreground font-display text-[13px]">Establishing feed…</li>
-          )}
-        </ul>
-      </CardContent>
-    </Card>
   );
 }
