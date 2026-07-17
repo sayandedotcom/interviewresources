@@ -83,6 +83,7 @@ export function ResearchExperience({
   const [costUsd, setCostUsd] = useState<number | null>(null);
   const [creditsCharged, setCreditsCharged] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const progressId = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -120,6 +121,7 @@ export function ResearchExperience({
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
         saveDraft(values as ResearchFormValues);
+        setLastSavedAt(Date.now());
       }, DRAFT_SAVE_DEBOUNCE_MS);
     });
     return () => {
@@ -161,6 +163,7 @@ export function ResearchExperience({
   function clearForm() {
     reset(emptyFormValues);
     clearDraft();
+    setLastSavedAt(null);
   }
 
   async function onSubmit(values: ResearchFormValues) {
@@ -254,13 +257,20 @@ export function ResearchExperience({
               <Card>
                 <CardContent>
                   <div className="flex items-center justify-between">
-                    <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
-                      <Target
-                        className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
-                        aria-hidden="true"
-                      />
-                      Target
-                    </h2>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
+                        <Target
+                          className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
+                          aria-hidden="true"
+                        />
+                        Target
+                      </h2>
+                      {lastSavedAt && (
+                        <span className="text-muted-foreground font-display animate-in fade-in slide-in-from-left-2 text-xs">
+                          Progress saved
+                        </span>
+                      )}
+                    </div>
                     <ClearFormButton control={control} onClear={clearForm} />
                   </div>
                   <p className="text-muted-foreground font-display mt-1 text-xs">
