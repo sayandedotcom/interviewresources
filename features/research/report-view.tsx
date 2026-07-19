@@ -517,7 +517,7 @@ export function ReportView({
       <section className="mt-8">
         <h2 className="font-display text-lg font-semibold tracking-tight">
           <HelpCircle className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
-          Predicted questions
+          Pinpointed questions
         </h2>
         <div className="mt-3 space-y-6">
           {grouped.map(({ cat, questions }) => {

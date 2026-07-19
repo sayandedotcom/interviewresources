@@ -18,7 +18,7 @@ export const pricingConfig = {
       features: [
         "100 credits",
         "About 2 research reports",
-        "Question predictions with evidence",
+        "Pinpointed questions with evidence",
         "Interviewer research",
         "PDF and JSON export",
       ],

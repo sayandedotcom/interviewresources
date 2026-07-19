@@ -139,7 +139,7 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
   text(companyName, { size: 26, style: "bold", leading: 1.15 });
   y += 4;
   text(
-    `Generated ${new Date().toLocaleDateString("en-US", { dateStyle: "long" })} - ${report.questions.length} predicted question${report.questions.length === 1 ? "" : "s"}`,
+    `Generated ${new Date().toLocaleDateString("en-US", { dateStyle: "long" })} - ${report.questions.length} pinpointed question${report.questions.length === 1 ? "" : "s"}`,
     { size: 9, color: MUTED }
   );
   y += 8;
@@ -190,9 +190,9 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
     text(report.interviewerSummary, { leading: 1.5 });
   }
 
-  // ---- Predicted questions ----------------------------------------------
+  // ---- Pinpointed questions ----------------------------------------------
 
-  heading("Predicted questions");
+  heading("Pinpointed questions");
 
   let n = 0;
   for (const { cat, questions } of groupByCategory(report.questions)) {

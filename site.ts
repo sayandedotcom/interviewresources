@@ -9,7 +9,7 @@ import { pricingConfig } from "./config/pricing";
 export const siteConfig = {
   name: "Interview Scout",
   description:
-    "AI predicts the interview questions you'll face — under $0.50 a report, every question backed by evidence.",
+    "AI pinpoints the interview questions you'll face — under $0.50 a report, every question backed by evidence.",
   url: "https://interviewscout.app",
   /** Shown in the landing page hero badge, e.g. "34,345 users". Edit freely. */
   userCount: "2,345",

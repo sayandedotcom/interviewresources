@@ -6,7 +6,7 @@ export const comparisonConfig = [
     coaching: "Sometimes",
   },
   {
-    feature: "Evidence-backed predictions",
+    feature: "Evidence-backed questions",
     us: true,
     genericPrep: false,
     coaching: "Sometimes",

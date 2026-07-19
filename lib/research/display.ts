@@ -109,7 +109,7 @@ export const CONFIDENCE_META: Record<
 export const BASIS_META = {
   label: "Inferred",
   tooltip:
-    "Predicted from proxy signals — the founders' backgrounds, comparable companies, and " +
+    "Inferred from proxy signals — the founders' backgrounds, comparable companies, and " +
     "stage norms — not first-hand accounts of interviewing here. See the rationale for the basis.",
 } as const;
 

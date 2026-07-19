@@ -294,7 +294,7 @@ function ResearchPanel() {
   );
 }
 
-/** A single predicted question inside the sample report. */
+/** A single pinpointed question inside the sample report. */
 function SampleQuestion({
   confidence,
   question,
@@ -365,7 +365,7 @@ function SampleReportPanel() {
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         <Stagger index={0}>
           <p className="text-muted-foreground mb-2 font-mono text-[10px] tracking-widest uppercase">
-            System Design · 3 predicted
+            System Design · 3 questions
           </p>
           <div className="space-y-2.5">
             <SampleQuestion
@@ -385,7 +385,7 @@ function SampleReportPanel() {
 
         <Stagger index={1}>
           <p className="text-muted-foreground mb-2 font-mono text-[10px] tracking-widest uppercase">
-            Algorithmic Coding · 2 predicted
+            Algorithmic Coding · 2 questions
           </p>
           <div className="space-y-2.5">
             <SampleQuestion
@@ -399,7 +399,7 @@ function SampleReportPanel() {
 
         <Stagger index={2}>
           <p className="text-muted-foreground mb-2 font-mono text-[10px] tracking-widest uppercase">
-            Behavioral · 2 predicted
+            Behavioral · 2 questions
           </p>
           <div className="space-y-2.5">
             <SampleQuestion
@@ -478,7 +478,7 @@ function PrepPanel() {
         ))}
       </ul>
       <p className="text-muted-foreground font-display mt-auto text-xs">
-        Mark what actually came up; it sharpens every future prediction.
+        Mark what actually came up; it sharpens every future report.
       </p>
     </div>
   );

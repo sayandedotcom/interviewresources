@@ -32,7 +32,7 @@ export const faqJsonLd = {
       name: `How does ${siteConfig.name} work?`,
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Paste a company (and optionally an interviewer). We research the company's product, stack, engineering culture, and reported interview loop, then predict the questions you're likely to face, each citing the evidence it came from.",
+        text: "Paste a company (and optionally an interviewer). We research the company's product, stack, engineering culture, and reported interview loop, then pinpoint the questions you're likely to face, each citing the evidence it came from.",
       },
     },
     {

@@ -5,28 +5,28 @@
  */
 export const copyConfig = {
   // ── Meta / SEO / OG ──────────────────────────────────────────────
-  tagline: "AI predicts your interview questions. For under $0.50.",
+  tagline: "AI pinpoints your interview questions. For under $0.50.",
   subtagline:
     "Our AI researches a company's stack, culture, and real interview reports. Every question cites its evidence.",
   metaDescription:
-    "Interview Scout's AI researches a company's stack, culture, and real interview reports, then predicts the questions you'll face, each backed by evidence. Under $0.50 a report, no subscription.",
+    "Interview Scout's AI researches a company's stack, culture, and real interview reports, then pinpoints the questions you'll face, each backed by evidence. Under $0.50 a report, no subscription.",
   titleSuffix: "AI Interview Question Predictions",
   footerTagline: "AI prep intelligence, not prophecy.",
   twitterCreator: "@sayandedotcom",
   /** Alt text for the OG and Twitter card images. */
   ogAlt:
-    "Interview Scout: AI predicts your interview questions for under $0.50, each backed by evidence.",
+    "Interview Scout: AI pinpoints your interview questions for under $0.50, each backed by evidence.",
 
   // ── Landing page ─────────────────────────────────────────────────
   landing: {
     eyebrow: "AI reconnaissance before the interview",
     heroTitle: {
-      line1: "AI predicts your",
+      line1: "AI pinpoints your",
       line2: "interview questions.",
       highlight: "For under $0.50.",
     },
     heroSub:
-      "Paste a company name. Our AI researches its stack, culture, and real interview reports, then predicts the questions you'll face, each backed by evidence.",
+      "Paste a company name. Our AI researches its stack, culture, and real interview reports, then pinpoints the questions you'll face, each backed by evidence.",
     heroCtaPrimary: { label: "Try it for $1", href: "/#pricing" },
     heroCtaSecondary: { label: "See how it works", href: "/#how-it-works" },
     heroFomo:
@@ -78,13 +78,13 @@ export const copyConfig = {
         label: "Report",
         title: "Your personalized report",
         description:
-          "You get the questions you're most likely to hear, grouped by round. Every prediction carries a confidence level, the evidence it came from so you can verify it yourself, and prep notes on what a strong answer covers.",
+          "You get the questions you're most likely to hear, grouped by round. Every question carries a confidence level, the evidence it came from so you can verify it yourself, and prep notes on what a strong answer covers.",
       },
       {
         label: "Prep",
         title: "Show up prepared",
         description:
-          "Study in the order that counts most, starting with the near-certain questions. Afterward, mark what actually came up; it takes a second and makes every future prediction sharper.",
+          "Study in the order that counts most, starting with the near-certain questions. Afterward, mark what actually came up; it takes a second and makes every future report sharper.",
       },
     ],
   },
@@ -123,7 +123,7 @@ export const copyConfig = {
       {
         name: "Every claim is checkable",
         description:
-          "Each question ships with a confidence level and links to the exact source it came from. No black box; verify any prediction yourself.",
+          "Each question ships with a confidence level and links to the exact source it came from. No black box; verify any question yourself.",
       },
     ],
   },
@@ -168,7 +168,7 @@ export const copyConfig = {
   confidence: {
     eyebrow: "Reading a report",
     title: "What the confidence badges mean",
-    sub: "Every predicted question carries a signal for how sure the agent is, so you know where to spend your prep time.",
+    sub: "Every pinpointed question carries a signal for how sure the agent is, so you know where to spend your prep time.",
     levels: [
       {
         label: "High",
@@ -238,7 +238,7 @@ export const copyConfig = {
     {
       question: "How does Interview Scout work?",
       answer:
-        "You enter the company you're interviewing with, select the interview rounds you're preparing for, and our AI researches publicly available information to predict the questions you might face. Each prediction comes with evidence and prep notes.",
+        "You enter the company you're interviewing with, select the interview rounds you're preparing for, and our AI researches publicly available information to pinpoint the questions you might face. Each question comes with evidence and prep notes.",
     },
     {
       question: "How much does it cost?",
@@ -256,7 +256,7 @@ export const copyConfig = {
         "We only use publicly available web search results. We never scrape LinkedIn or access private profiles. Interviewer names are used only as a search seed to find their public work like talks or blog posts.",
     },
     {
-      question: "How accurate are the predictions?",
+      question: "How accurate are the results?",
       answer:
         "Every question comes with a confidence score and evidence links. When evidence is strong, confidence is high. When we're working with limited data, we say so honestly.",
     },

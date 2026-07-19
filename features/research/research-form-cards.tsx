@@ -49,7 +49,7 @@ export function SectionsCard({
           Report Sections
         </h2>
         <p className="text-muted-foreground font-display mt-1 text-xs">
-          Drop what you already know, you are only charged for what the run researches. Predicted
+          Drop what you already know, you are only charged for what the run researches. Pinpointed
           questions, the prep plan, and worth reading are always included.
         </p>
         <div className="mt-4">
