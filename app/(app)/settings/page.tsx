@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { EXPIRED_PARAM } from "@/proxy";
@@ -6,14 +5,14 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/lib/db/index";
 import { users } from "@/lib/db/schema";
-import { getSessionUser } from "@/lib/session";
+import { getCurrentUser } from "@/lib/session";
 
 import { SettingsClient } from "@/features/settings/settings-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const user = await getSessionUser(await headers());
+  const user = await getCurrentUser();
   if (!user) redirect(`/?${EXPIRED_PARAM}=expired`);
 
   const [userRow] = await db

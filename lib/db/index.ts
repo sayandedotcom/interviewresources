@@ -15,8 +15,13 @@ if (!connectionString) {
 // connection each, and let the platform's pooler (Neon's PgBouncer) do the
 // pooling. `prepare: false` is mandatory against that pooler — it runs in
 // transaction mode, where prepared statements do not survive between queries.
+//
+// Dev is the opposite case: one long-lived server serving one developer, where
+// `max: 1` would serialise every query in a page over a single socket and each
+// one pays the round-trip to a remote database. A handful of connections lets
+// the queries a page issues in parallel actually run in parallel.
 const client = postgres(connectionString, {
-  max: 1,
+  max: process.env.NODE_ENV === "production" ? 1 : 5,
   prepare: false,
   idle_timeout: 20,
 });

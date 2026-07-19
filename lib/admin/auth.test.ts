@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionUser } from "@/lib/session";
 
 vi.mock("@/env", () => ({ env: { ADMIN_EMAILS: undefined } }));
-vi.mock("@/lib/session", () => ({ getSessionUser: vi.fn() }));
+vi.mock("@/lib/session", () => ({ getCurrentUser: vi.fn() }));
 
 const { env } = await import("@/env");
 const { isAdmin } = await import("./auth");

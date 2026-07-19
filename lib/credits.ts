@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "./db/index";
@@ -10,15 +12,22 @@ import { creditsLedger, users } from "./db/schema";
  */
 export * from "./pricing";
 
-/** Balance is derived, never stored: the ledger is the source of truth. */
-export async function getBalance(userId: string): Promise<number> {
+/**
+ * Balance is derived, never stored: the ledger is the source of truth.
+ *
+ * Memoised per request, because the `(app)` layout and its page each want the
+ * balance for the same user. Anything that spends credits must read the balance
+ * `chargeCredits` returns rather than calling this again in the same request —
+ * this would answer with the pre-charge figure.
+ */
+export const getBalance = cache(async (userId: string): Promise<number> => {
   const [row] = await db
     .select({ balance: sql<number>`coalesce(sum(${creditsLedger.delta}), 0)::int` })
     .from(creditsLedger)
     .where(eq(creditsLedger.userId, userId));
 
   return row?.balance ?? 0;
-}
+});
 
 /**
  * Charges a completed run. Takes a row lock on the user so two concurrent runs

@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { env } from "@/env";
@@ -12,7 +11,7 @@ import {
   getOrCreateReferralCode,
   getReferralStats,
 } from "@/lib/referrals";
-import { getSessionUser } from "@/lib/session";
+import { getCurrentUser } from "@/lib/session";
 
 import { ReferralPanel } from "@/features/referrals/referral-panel";
 
@@ -20,7 +19,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function ReferralsPage() {
-  const user = await getSessionUser(await headers());
+  const user = await getCurrentUser();
   if (!user) redirect(`/?${EXPIRED_PARAM}=expired`);
 
   const [code, stats] = await Promise.all([

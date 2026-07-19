@@ -1,9 +1,8 @@
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { env } from "@/env";
 
-import { type SessionUser, getSessionUser } from "@/lib/session";
+import { type SessionUser, getCurrentUser } from "@/lib/session";
 
 /** Parsed once per call — ADMIN_EMAILS is small and this runs on the server only. */
 function adminEmails(): Set<string> {
@@ -30,7 +29,7 @@ export function isAdmin(user: SessionUser | null): boolean {
  * than redirect so a signed-in non-admin can't tell the route exists.
  */
 export async function requireAdmin(): Promise<SessionUser> {
-  const user = await getSessionUser(await headers());
+  const user = await getCurrentUser();
   if (!user || !isAdmin(user)) notFound();
   return user;
 }
