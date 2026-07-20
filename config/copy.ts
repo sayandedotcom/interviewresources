@@ -5,28 +5,28 @@
  */
 export const copyConfig = {
   // ── Meta / SEO / OG ──────────────────────────────────────────────
-  tagline: "AI pinpoints your interview questions. For under $0.50.",
+  tagline: "AI gathers your interview resources. For under $0.50.",
   subtagline:
     "Our AI researches a company's stack, culture, and real interview reports. Every question cites its evidence.",
   metaDescription:
-    "Interview Scout's AI researches a company's stack, culture, and real interview reports, then pinpoints the questions you'll face, each backed by evidence. Under $0.50 a report, no subscription.",
-  titleSuffix: "AI Interview Question Predictions",
+    "Interview Resources' AI researches a company's stack, culture, and real interview reports, then gathers the questions you'll face, each backed by evidence. Under $0.50 a report, no subscription.",
+  titleSuffix: "Gather Interview Resources with AI",
   footerTagline: "AI prep intelligence, not prophecy.",
   twitterCreator: "@sayandedotcom",
   /** Alt text for the OG and Twitter card images. */
   ogAlt:
-    "Interview Scout: AI pinpoints your interview questions for under $0.50, each backed by evidence.",
+    "Interview Resources: AI gathers your interview resources for under $0.50, each backed by evidence.",
 
   // ── Landing page ─────────────────────────────────────────────────
   landing: {
-    eyebrow: "AI reconnaissance before the interview",
+    eyebrow: "AI research before the interview",
     heroTitle: {
-      line1: "AI pinpoints your",
-      line2: "interview questions.",
+      line1: "AI gathers your",
+      line2: "interview resources.",
       highlight: "For under $0.50.",
     },
     heroSub:
-      "Paste a company name. Our AI researches its stack, culture, and real interview reports, then pinpoints the questions you'll face, each backed by evidence.",
+      "Paste a company name. Our AI researches its stack, culture, and real interview reports, then gathers the questions you'll face, each backed by evidence.",
     heroCtaPrimary: { label: "Try it for $1", href: "/#pricing" },
     heroCtaSecondary: { label: "See how it works", href: "/#how-it-works" },
     heroFomo:
@@ -93,7 +93,7 @@ export const copyConfig = {
   agent: {
     eyebrow: "Under the hood",
     title: "How the agent actually works",
-    sub: "No black box. Here's exactly what runs when you hit scout, and where your credits go.",
+    sub: "No black box. Here's exactly what runs when you hit gather, and where your credits go.",
     tiles: [
       {
         name: "It plans before it searches",
@@ -134,12 +134,12 @@ export const copyConfig = {
     title: "Why not just ask ChatGPT?",
     sub: "A general chatbot can guess at interview questions. Here's what it can't do that we do.",
     chatgptLabel: "Asking ChatGPT",
-    usLabel: "Interview Scout",
+    usLabel: "Interview Resources",
     rows: [
       {
         point: "Where the answer comes from",
         chatgpt: "Training data with a cutoff date, frozen months ago",
-        us: "The live web, researched the moment you hit scout",
+        us: "The live web, researched the moment you hit gather",
       },
       {
         point: "Can you verify it?",
@@ -159,7 +159,7 @@ export const copyConfig = {
       {
         point: "What it costs you",
         chatgpt: "A monthly subscription whether you interview or not",
-        us: "Metered credits with a hard cap per run; pay only when you scout",
+        us: "Metered credits with a hard cap per run; pay only when you gather",
       },
     ],
   },
@@ -218,10 +218,10 @@ export const copyConfig = {
     eyebrow: "A note from the builder",
     paragraphs: [
       "I built this after one too many evenings lost to Glassdoor threads and half-updated Reddit posts, trying to guess what an interview would actually cover. A coaching call cost more than the job hunt could justify, and a generic question bank never knew which company I was even talking to.",
-      "So Interview Scout does the digging I used to do by hand, shows its sources instead of asking you to trust it, and costs less than a coffee per report. If the public data on a company is thin, it says so instead of pretending otherwise. That's the whole promise: real research, shown honestly, priced fairly.",
+      "So Interview Resources does the digging I used to do by hand, shows its sources instead of asking you to trust it, and costs less than a coffee per report. If the public data on a company is thin, it says so instead of pretending otherwise. That's the whole promise: real research, shown honestly, priced fairly.",
     ],
     name: "Sayan De",
-    role: "Builder, Interview Scout",
+    role: "Builder, Interview Resources",
   },
 
   // ── CTA section (shared) ─────────────────────────────────────────
@@ -236,7 +236,7 @@ export const copyConfig = {
   // ── FAQs ──────────────────────────────────────────────────────────
   faqs: [
     {
-      question: "How does Interview Scout work?",
+      question: "How does Interview Resources work?",
       answer:
         "You enter the company you're interviewing with, select the interview rounds you're preparing for, and our AI researches publicly available information to pinpoint the questions you might face. Each question comes with evidence and prep notes.",
     },

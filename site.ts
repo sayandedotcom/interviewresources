@@ -7,10 +7,10 @@ import { keywordsConfig } from "./config/keywords";
 import { pricingConfig } from "./config/pricing";
 
 export const siteConfig = {
-  name: "Interview Scout",
+  name: "Interview Resources",
   description:
-    "AI pinpoints the interview questions you'll face — under $0.50 a report, every question backed by evidence.",
-  url: "https://interviewscout.app",
+    "AI gathers the interview resources you'll need — under $0.50 a report, every question backed by evidence.",
+  url: "https://interviewrecources.app",
   /** Shown in the landing page hero badge, e.g. "34,345 users". Edit freely. */
   userCount: "2,345",
   emails: contactConfig,
