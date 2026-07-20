@@ -14,16 +14,16 @@ function line(overrides: Partial<TerminalLine> = {}): TerminalLine {
 }
 
 describe("ResearchTerminal", () => {
-  it("names the session after the company being scouted, lowercased", () => {
+  it("names the session after the company being gathered, lowercased", () => {
     render(<ResearchTerminal lines={[]} company="Stripe" />);
 
-    expect(screen.getByText("interview-scout · stripe")).toBeInTheDocument();
+    expect(screen.getByText("interview-resources · stripe")).toBeInTheDocument();
   });
 
   it("falls back to a generic session name when the company is blank", () => {
     render(<ResearchTerminal lines={[]} company="  " />);
 
-    expect(screen.getByText("interview-scout · research")).toBeInTheDocument();
+    expect(screen.getByText("interview-resources · research")).toBeInTheDocument();
   });
 
   it("shows a placeholder until the first event streams in", () => {

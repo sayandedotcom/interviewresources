@@ -1,4 +1,4 @@
-# PRD — Interview Question Guesser
+# PRD — Interview Resources
 
 **Version:** 0.1 (Draft)
 **Date:** 2026-07-09
@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-**Interview Question Guesser** is a SaaS that predicts the questions a candidate is likely to face in an upcoming interview. The user provides:
+**Interview Resources** is a SaaS that gathers the questions a candidate is likely to face in an upcoming interview. The user provides:
 
 1. **Company** — a URL (preferred) or company name
 2. **Interviewer** — name and/or LinkedIn profile URL _(optional)_

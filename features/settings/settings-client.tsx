@@ -41,7 +41,7 @@ export function SettingsClient({ userId }: SettingsClientProps) {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `scouting-report-data-${new Date().toISOString().split("T")[0]}.json`;
+        a.download = `gathered-resources-data-${new Date().toISOString().split("T")[0]}.json`;
         document.body.appendChild(a);
         a.click();
         a.remove();

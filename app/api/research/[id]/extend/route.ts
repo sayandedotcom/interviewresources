@@ -28,7 +28,7 @@ export const maxDuration = 300;
 
 // A round adds questions; a section fills prose the original run declined. An
 // extension may do either or both, so neither list is required on its own — but
-// an extension that scouts nothing is a paid no-op, so at least one must be set.
+// an extension that gathers nothing is a paid no-op, so at least one must be set.
 const extendBodySchema = z
   .object({
     interviewTypes: z.array(z.string().min(1)).max(5).default([]),
@@ -36,7 +36,7 @@ const extendBodySchema = z
     effort: z.enum(EFFORT_LEVELS).default("medium"),
   })
   .refine((body) => body.interviewTypes.length > 0 || body.sections.length > 0, {
-    message: "Pick at least one round or section to scout.",
+    message: "Pick at least one round or section to gather.",
   });
 
 function sse(data: unknown): Uint8Array {
@@ -50,9 +50,9 @@ function costCents(entries: CostEntry[], kind: CostEntry["kind"]): number {
 
 /**
  * Folds a fresh pipeline result into the report already on disk. New questions
- * are appended when rounds were scouted (the pipeline was told not to repeat the
+ * are appended when rounds were gathered (the pipeline was told not to repeat the
  * existing ones); a prose section the original run declined is filled in when
- * the caller scouted it, while a section the original already wrote is kept as
+ * the caller gathered it, while a section the original already wrote is kept as
  * is — the extension only researched a slice, so its version would be thinner.
  */
 function mergeReports(
@@ -61,7 +61,7 @@ function mergeReports(
   opts: { addedRounds: boolean; sections: ReportSection[] }
 ): Report {
   // `null` means the original run excluded the section: it stays excluded unless
-  // this extension explicitly scouted it in (`force`). `undefined` means the
+  // this extension explicitly gathered it in (`force`). `undefined` means the
   // report predates the section, which extending it can legitimately fill in.
   const mergeLinks = (
     a: ImportantLink[] | null | undefined,
@@ -78,7 +78,7 @@ function mergeReports(
 
   return {
     ...existing,
-    // A hole the original left null is filled by the freshly scouted section;
+    // A hole the original left null is filled by the freshly gathered section;
     // prose the original already wrote wins over the extension's thinner take.
     companySnapshot: existing.companySnapshot ?? addition.companySnapshot,
     companyExplainer: existing.companyExplainer ?? addition.companyExplainer,
@@ -157,14 +157,14 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const existing = row.jsonPayload as Report;
 
   // Only sections the report is actually missing are worth paying to research —
-  // re-scouting a section the original already wrote would be discarded by the
+  // re-gathering a section the original already wrote would be discarded by the
   // merge. The UI offers only these, but the server does not trust that.
   const missing = missingSections(existing);
   const addSections = body.sections.filter((section) => missing.includes(section));
 
   // Interview experiences merge additively, so an extension of a report that
   // already has them refreshes the list — unchanged behavior. On top of that,
-  // fold in any missing section the caller explicitly chose to scout in.
+  // fold in any missing section the caller explicitly chose to gather in.
   const pipelineSections = new Set<ReportSection>(addSections);
   if (existing.interviewExperiences !== null) pipelineSections.add("experiences");
   const sections = [...pipelineSections];
@@ -197,7 +197,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
         const entries = budget.breakdown();
         const creditsCharged = usdToCredits(budget.totalUsd);
 
-        // The sidebar renders interviewType, so newly scouted rounds belong in it.
+        // The sidebar renders interviewType, so newly gathered rounds belong in it.
         const rounds = new Set(row.interviewType.split(",").filter(Boolean));
         for (const t of body.interviewTypes) rounds.add(t);
 

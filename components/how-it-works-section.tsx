@@ -54,7 +54,7 @@ function Stagger({
   );
 }
 
-/** A mini card mirroring the scout form's Card + tertiary icon header. */
+/** A mini card mirroring the gather form's Card + tertiary icon header. */
 function FormCard({
   icon: Icon,
   title,
@@ -140,7 +140,7 @@ function Field({
   );
 }
 
-/** 01 · Target: the scout form as it really looks: target card, rounds, sections, effort. */
+/** 01 · Target: the gather form as it really looks: target card, rounds, sections, effort. */
 function TargetPanel() {
   // The seven real interview categories from CATEGORY_META, with their real icons.
   const rounds: { icon: LucideIcon; code: string; label: string; on: boolean }[] = [
@@ -187,7 +187,7 @@ function TargetPanel() {
 
       <FormCard
         icon={Swords}
-        title="Rounds to Scout"
+        title="Rounds to Gather"
         sub="You can add more rounds later, from the finished report."
         index={1}>
         <div className="flex flex-wrap gap-2">
@@ -264,7 +264,7 @@ function ResearchPanel() {
     <div className="flex h-full flex-col bg-neutral-950 font-mono text-xs text-neutral-300">
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-2.5">
         <Terminal className="h-3.5 w-3.5 text-neutral-500" />
-        <span className="text-[11px] text-neutral-500">interview-scout · research</span>
+        <span className="text-[11px] text-neutral-500">interview-resources · research</span>
         <span className="ml-auto text-[11px] text-neutral-600">02:47 elapsed</span>
       </div>
       <div className="flex-1 space-y-2 overflow-y-auto p-4">

@@ -111,7 +111,7 @@ export function buildAnswerPrompt(
   const parts: string[] = [];
 
   parts.push(
-    `I am preparing for a technical interview at ${companyName}${roleClause}. Below is a scouting report of the questions I am most likely to be asked. Please answer every question thoroughly, in the order given.
+    `I am preparing for a technical interview at ${companyName}${roleClause}. Below are the gathered interview resources: the questions I am most likely to be asked. Please answer every question thoroughly, in the order given.
 
 For each question:
 - Give a complete, correct answer at the depth an interviewer would expect.

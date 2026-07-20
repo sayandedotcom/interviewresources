@@ -28,7 +28,7 @@ export function describeInput(input: ResearchInput): string {
 
   return `Company: ${input.companyName}${input.companyUrl ? ` (${input.companyUrl})` : ""}
 Interviewers: ${interviewers}
-Rounds to scout: ${input.interviewTypes.join(", ")}
+Rounds to gather: ${input.interviewTypes.join(", ")}
 Role context: ${input.roleContext ?? "not provided"}
 Candidate years of experience: ${input.yearsExperience || "not provided"}
 Candidate tech stack: ${input.techStack || "not provided"}

@@ -176,7 +176,7 @@ describe("input validation", () => {
     expect((await POST(post({ interviewTypes: [] }), ctx)).status).toBe(400);
   });
 
-  it("rejects more rounds than one extension should scout", async () => {
+  it("rejects more rounds than one extension should gather", async () => {
     const body = { interviewTypes: ["a", "b", "c", "d", "e", "f"] };
     expect((await POST(post(body), ctx)).status).toBe(400);
   });
@@ -327,7 +327,7 @@ describe("the extension run", () => {
     expect(merged.interviewExperiences).toBeNull();
   });
 
-  it("scouts a missing section the caller chose, alongside the experiences refresh", async () => {
+  it("gathers a missing section the caller chose, alongside the experiences refresh", async () => {
     // existingReport has no skillsRequired key, so "skills" is a missing section.
     await readSse(await POST(post({ sections: ["skills"] }), ctx));
 
@@ -337,7 +337,7 @@ describe("the extension run", () => {
   });
 
   it("ignores a chosen section the report already carries", async () => {
-    // The company snapshot is already present, so re-scouting it would be waste.
+    // The company snapshot is already present, so re-gathering it would be waste.
     await readSse(await POST(post({ interviewTypes: ["dsa"], sections: ["company"] }), ctx));
 
     expect(pipelineMock.mock.calls[0][0].sections).toEqual(["experiences"]);
@@ -354,11 +354,11 @@ describe("the extension run", () => {
     const merged = events.find((e) => e.kind === "report")!.report as Report;
 
     expect(merged.skillsRequired).toEqual(skills);
-    // A sections-only extension scouts no new rounds, so the questions are left be.
+    // A sections-only extension gathers no new rounds, so the questions are left be.
     expect(merged.questions.map((q) => q.question)).toEqual(["LRU cache"]);
   });
 
-  it("scouts the recruiter pitch into a report that never had one", async () => {
+  it("gathers the recruiter pitch into a report that never had one", async () => {
     // existingReport predates recruiterPitch, so "recruiter" is a missing section.
     const pitch = {
       candidateProfile: "Product-minded engineers",
@@ -377,7 +377,7 @@ describe("the extension run", () => {
     expect(merged.recruiterPitch).toEqual(pitch);
   });
 
-  it("leaves a declined recruiter pitch null when the extension did not scout it", async () => {
+  it("leaves a declined recruiter pitch null when the extension did not gather it", async () => {
     stubSelect({
       ...row,
       jsonPayload: { ...existingReport, recruiterPitch: null } satisfies Report,
@@ -396,11 +396,11 @@ describe("the extension run", () => {
     expect(merged.recruiterPitch).toBeNull();
   });
 
-  it("rejects an extension that scouts neither a round nor a section", async () => {
+  it("rejects an extension that gathers neither a round nor a section", async () => {
     expect((await POST(post({ interviewTypes: [], sections: [] }), ctx)).status).toBe(400);
   });
 
-  it("adds newly scouted rounds to interviewType so the sidebar shows them", async () => {
+  it("adds newly gathered rounds to interviewType so the sidebar shows them", async () => {
     const updates = stubUpdate();
 
     await readSse(await POST(post({ interviewTypes: ["behavioral"] }), ctx));

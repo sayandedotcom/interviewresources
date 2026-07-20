@@ -12,7 +12,7 @@ export function reportSlug(company: string): string {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       // Strip the edge hyphens punctuation leaves behind, or "Acme Corp!" would
-      // download as `scouting-report-acme-corp-.json` and "!!!" as `--.json`.
+      // download as `gathered-resources-acme-corp-.json` and "!!!" as `--.json`.
       .replace(/^-+|-+$/g, "") || "report"
   );
 }

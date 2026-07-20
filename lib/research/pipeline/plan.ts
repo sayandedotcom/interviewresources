@@ -55,7 +55,7 @@ specific rather than searching for the process itself.`;
     schema: researchPlanSchema,
     budget,
     system: `You are a research planner for an interview-prep tool. Given a company and the
-rounds the candidate wants scouted, produce a compact search plan: ${preset.queriesHint} targeted web-search
+rounds the candidate wants gathered, produce a compact search plan: ${preset.queriesHint} targeted web-search
 queries. ${loopRule} Always include one or
 two queries with category "interview_experience" hunting for first-hand accounts from
 people who actually interviewed there — Glassdoor reviews, LeetCode Discuss threads, Blind

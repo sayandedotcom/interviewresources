@@ -28,7 +28,7 @@ export const MAX_RUN_CREDITS = Math.ceil((MAX_EFFORT_CAP_USD * CREDIT_MARKUP) / 
 export const MIN_RUN_CREDITS = 50;
 
 /**
- * Extensions ("more questions", "scout another round") reuse the same pipeline
+ * Extensions ("more questions", "gather another round") reuse the same pipeline
  * but produce a fraction of a full report, so they get a smaller floor and a
  * tighter dollar cap than a fresh run: half the same effort's full-run cap.
  * Medium works out to $0.5, the flat value extensions used before they were

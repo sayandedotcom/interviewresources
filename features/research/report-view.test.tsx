@@ -498,7 +498,7 @@ describe("cost and export", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:report");
 
     const anchor = click.mock.instances[0] as unknown as HTMLAnchorElement;
-    expect(anchor.download).toBe("scouting-report-acme-corp.json");
+    expect(anchor.download).toBe("gathered-resources-acme-corp.json");
   });
 
   it("falls back to a generic filename when the company name has no usable characters", async () => {
@@ -509,7 +509,7 @@ describe("cost and export", () => {
     await userEvent.click(await screen.findByRole("menuitem", { name: /json/i }));
 
     const anchor = click.mock.instances[0] as unknown as HTMLAnchorElement;
-    expect(anchor.download).toBe("scouting-report-report.json");
+    expect(anchor.download).toBe("gathered-resources-report.json");
   });
 
   it("downloads a slugged pdf when the user picks PDF", async () => {
@@ -527,7 +527,7 @@ describe("cost and export", () => {
     expect(blob.size).toBeGreaterThan(0);
 
     const anchor = click.mock.instances[0] as unknown as HTMLAnchorElement;
-    expect(anchor.download).toBe("scouting-report-acme-corp.pdf");
+    expect(anchor.download).toBe("gathered-resources-acme-corp.pdf");
   });
 });
 
@@ -564,22 +564,22 @@ describe("extend controls", () => {
    * Neither extend button spends anything on its own — both only open the
    * confirmation. This is the click that actually starts the pipeline.
    */
-  async function confirmScout() {
+  async function confirmGather() {
     await screen.findByRole("alertdialog");
-    await userEvent.click(screen.getByRole("button", { name: /^scout$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^gather$/i }));
   }
 
   it("hides the extend UI for a report that has no id yet", () => {
     render(<ReportView {...base} report={report()} />);
 
-    expect(screen.queryByText("Scout more rounds")).not.toBeInTheDocument();
+    expect(screen.queryByText("Gather more rounds")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /add more/i })).not.toBeInTheDocument();
   });
 
   it("shows a More button per section and the rounds footer once persisted", () => {
     render(<ReportView {...base} report={report()} researchId="r-1" />);
 
-    expect(screen.getByText("Scout more rounds")).toBeInTheDocument();
+    expect(screen.getByText("Gather more rounds")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /add more algorithmic coding questions/i })
     ).toBeInTheDocument();
@@ -622,7 +622,7 @@ describe("extend controls", () => {
     expect(screen.getByRole("button", { name: /impress the recruiter/i })).toBeInTheDocument();
   });
 
-  it("scouts a chosen missing section through the extend route", async () => {
+  it("gathers a chosen missing section through the extend route", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue({ ok: true, body: sseBody(report()) } as unknown as Response);
@@ -630,8 +630,8 @@ describe("extend controls", () => {
 
     render(<ReportView {...base} report={report({ skillsRequired: null })} researchId="r-1" />);
     await userEvent.click(screen.getByRole("button", { name: /skills required/i }));
-    await userEvent.click(screen.getByRole("button", { name: /scout these rounds/i }));
-    await confirmScout();
+    await userEvent.click(screen.getByRole("button", { name: /gather these rounds/i }));
+    await confirmGather();
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       interviewTypes: [],
@@ -652,7 +652,7 @@ describe("extend controls", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /add more algorithmic coding questions/i })
     );
-    await confirmScout();
+    await confirmGather();
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0];
@@ -680,7 +680,7 @@ describe("extend controls", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /add more algorithmic coding questions/i })
     );
-    await confirmScout();
+    await confirmGather();
 
     expect(await screen.findByText(/not enough credits/i)).toBeInTheDocument();
     expect(screen.getByText("Implement an LRU cache")).toBeInTheDocument();
@@ -689,7 +689,7 @@ describe("extend controls", () => {
 
   it("omits rounds the report already covers from the footer picker", () => {
     render(<ReportView {...base} report={report()} researchId="r-1" />);
-    const footer = screen.getByText("Scout more rounds").parentElement!;
+    const footer = screen.getByText("Gather more rounds").parentElement!;
 
     // dsa is already in the report, so only its "More" button offers it.
     expect(
@@ -698,7 +698,7 @@ describe("extend controls", () => {
     expect(within(footer).getByRole("button", { name: /Behavioral/ })).toBeInTheDocument();
   });
 
-  it("scouts the rounds picked in the footer", async () => {
+  it("gathers the rounds picked in the footer", async () => {
     const merged = report({
       questions: [question(), question({ category: "behavioral", question: "Conflict story" })],
     });
@@ -708,10 +708,10 @@ describe("extend controls", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<ReportView {...base} report={report()} researchId="r-1" />);
-    const footer = screen.getByText("Scout more rounds").parentElement!;
+    const footer = screen.getByText("Gather more rounds").parentElement!;
     await userEvent.click(within(footer).getByRole("button", { name: /Behavioral/ }));
-    await userEvent.click(screen.getByRole("button", { name: /scout these rounds/i }));
-    await confirmScout();
+    await userEvent.click(screen.getByRole("button", { name: /gather these rounds/i }));
+    await confirmGather();
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       interviewTypes: ["behavioral"],
@@ -744,7 +744,7 @@ describe("extend controls", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /add more algorithmic coding questions/i })
     );
-    await confirmScout();
+    await confirmGather();
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       interviewTypes: ["dsa"],
@@ -813,10 +813,10 @@ describe("extend controls", () => {
     expect(within(rail).getByText("130")).toBeInTheDocument();
   });
 
-  it("keeps the scout button disabled until a round is picked", () => {
+  it("keeps the gather button disabled until a round is picked", () => {
     render(<ReportView {...base} report={report()} researchId="r-1" />);
 
-    expect(screen.getByRole("button", { name: /scout these rounds/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /gather these rounds/i })).toBeDisabled();
   });
 
   it("estimates what an extension will cost, and says it is only an estimate", () => {

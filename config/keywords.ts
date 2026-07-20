@@ -8,6 +8,9 @@ export const keywordsConfig = {
     "AI interview questions",
     "AI interview prep",
     "interview question predictor",
+    "interview resources",
+    "AI interview resources",
+    "gather interview resources",
   ] as string[],
 };
 

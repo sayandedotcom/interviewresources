@@ -181,7 +181,7 @@ function toEstimate(
   return { minCredits, maxCredits, minMinutes, maxMinutes };
 }
 
-/** What a fresh run off the scout form is likely to cost and how long it takes. */
+/** What a fresh run off the gather form is likely to cost and how long it takes. */
 export function estimateRun(input: EstimateInput, ceilingCredits: number): Estimate {
   return toEstimate(
     model(input, { questionScale: 1, sectionsCount: input.sectionsCount }),
@@ -190,7 +190,7 @@ export function estimateRun(input: EstimateInput, ceilingCredits: number): Estim
 }
 
 /**
- * What "Scout more rounds" is likely to cost. An extension reuses the pipeline
+ * What "Gather more rounds" is likely to cost. An extension reuses the pipeline
  * against a report that already exists, so it carries none of the form's
  * context — only the rounds asked for and the effort.
  */

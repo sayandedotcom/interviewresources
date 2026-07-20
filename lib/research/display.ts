@@ -52,7 +52,7 @@ export const SECTION_META: Record<ReportSection, { label: string; code: string; 
 
 /**
  * The optional sections a report does not currently carry — the ones a finished
- * report can still scout in. `null` means the original run declined the section
+ * report can still gather in. `null` means the original run declined the section
  * (or, for legacy reports, `undefined` — the field predates it); an empty string
  * or absent prose reads the same to the reader. `experiences`/`skills` use `== null`
  * so an empty array (looked, found nothing) counts as present, not missing.

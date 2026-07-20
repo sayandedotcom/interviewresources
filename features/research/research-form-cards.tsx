@@ -101,7 +101,7 @@ export function RoundsCard({
             className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
             aria-hidden="true"
           />
-          Rounds to Scout
+          Rounds to Gather
         </h2>
         <p className="text-muted-foreground font-display mt-1 text-xs">
           You can add more rounds later, from the finished report.

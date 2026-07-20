@@ -105,7 +105,7 @@ export function ResearchTerminal({
   failed = false,
 }: {
   lines: TerminalLine[];
-  /** The company being scouted; the header names the session after it. */
+  /** The company being gathered on; the header names the session after it. */
   company: string;
   /** Freezes the clock and the cursor once the run has failed. */
   failed?: boolean;
@@ -133,7 +133,7 @@ export function ResearchTerminal({
     <div className="flex h-[calc(100dvh-10rem)] min-h-[28rem] flex-col overflow-hidden rounded-xl bg-neutral-950 font-mono text-xs text-neutral-300 ring-1 ring-neutral-800">
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-2.5">
         <Terminal className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
-        <span className="text-[11px] text-neutral-500">interview-scout · {session}</span>
+        <span className="text-[11px] text-neutral-500">interview-resources · {session}</span>
         <span className="ml-auto text-[11px] text-neutral-600">
           {formatElapsed(elapsed)} elapsed
         </span>

@@ -120,7 +120,7 @@ export function ReportView({
   // the sentinel "__rounds__" for the footer form. Only one runs at a time.
   const [busy, setBusy] = useState<string | null>(null);
   // The extension awaiting confirmation, in the same shape `extend` takes. Both
-  // entry points — "More" and "Scout these rounds" — spend credits, so neither
+  // entry points — "More" and "Gather these rounds" — spend credits, so neither
   // calls `extend` directly; they park the request here.
   const [confirm, setConfirm] = useState<{
     rounds: string[];
@@ -130,9 +130,9 @@ export function ReportView({
   const [progress, setProgress] = useState<string | null>(null);
   const [extendError, setExtendError] = useState<string | null>(null);
   const [extraRounds, setExtraRounds] = useState<string[]>([]);
-  // Sections the finished report is missing that the user has chosen to scout in.
+  // Sections the finished report is missing that the user has chosen to gather in.
   const [extraSections, setExtraSections] = useState<ReportSection[]>([]);
-  // How hard every extension (both "More" and "Scout these rounds") searches.
+  // How hard every extension (both "More" and "Gather these rounds") searches.
   const [effort, setEffort] = useState<Effort>("medium");
 
   // "copied" reverts on a timer; "failed" covers a denied clipboard permission.
@@ -158,7 +158,7 @@ export function ReportView({
 
   function downloadJson() {
     const blob = new Blob([JSON.stringify(current, null, 2)], { type: "application/json" });
-    downloadBlob(blob, `scouting-report-${reportSlug(company)}.json`);
+    downloadBlob(blob, `gathered-resources-${reportSlug(company)}.json`);
   }
 
   async function downloadPdf() {
@@ -170,7 +170,7 @@ export function ReportView({
       const { buildReportPdf } = await import("@/lib/research/pdf");
       downloadBlob(
         await buildReportPdf(current, company),
-        `scouting-report-${reportSlug(company)}.pdf`
+        `gathered-resources-${reportSlug(company)}.pdf`
       );
     } catch {
       setDownloadError("Could not build the PDF. Try again.");
@@ -242,7 +242,7 @@ export function ReportView({
   }
 
   // The sections this finished report never got — the ones "Report Sections"
-  // offers to scout in. Re-derived each render so an extension that fills one
+  // offers to gather in. Re-derived each render so an extension that fills one
   // drops it from the card.
   const missing = missingSections(current);
 
@@ -269,7 +269,7 @@ export function ReportView({
       : null;
 
   const grouped = groupByCategory(current.questions);
-  // The rounds already covered, which "Scout more rounds" must not offer again.
+  // The rounds already covered, which "Gather more rounds" must not offer again.
   const order = grouped.map((g) => g.cat);
 
   // Null when the run excluded the section, absent when the report predates it.
@@ -282,7 +282,7 @@ export function ReportView({
       <div className="flex items-center justify-between pb-3">
         <SectionLabel>
           <Search className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-          Scouting report
+          Gathered resources
         </SectionLabel>
         <div className="flex items-center gap-4">
           {creditsCharged != null && (
@@ -745,8 +745,8 @@ export function ReportView({
             Keep on Generating
           </h2>
 
-          {/* Sections the original run skipped can still be scouted in. Only
-              shown when something is actually missing; the "Scout these rounds"
+          {/* Sections the original run skipped can still be gathered in. Only
+              shown when something is actually missing; the "Gather these rounds"
               button below sends whatever is picked here alongside the rounds. */}
           {missing.length > 0 && (
             <Card className="mt-4">
@@ -786,7 +786,7 @@ export function ReportView({
                   className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
                   aria-hidden="true"
                 />
-                Scout more rounds
+                Gather more rounds
               </h2>
               <p className="text-muted-foreground font-display mt-1 text-xs">
                 Forgot a round? Pick or create one and we&apos;ll research it into this report.
@@ -832,7 +832,8 @@ export function ReportView({
                     })
                   }>
                   {busy === "__rounds__" && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-                  Scout these rounds <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
+                  Gather these rounds{" "}
+                  <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
                 </Button>
               </div>
             </CardContent>
@@ -886,8 +887,8 @@ export function ReportView({
           <AlertDialogHeader>
             <AlertDialogTitle>
               {confirm && confirm.rounds.length + confirm.sections.length > 1
-                ? "Scout these?"
-                : "Scout more questions?"}
+                ? "Gather these?"
+                : "Gather more questions?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirm && (
@@ -921,7 +922,7 @@ export function ReportView({
                 setConfirm(null);
                 extend(rounds, sections, token);
               }}>
-              Scout
+              Gather
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

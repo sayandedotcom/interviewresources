@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
  * The report page is an async Server Component, so its authorization cannot be
  * unit tested. Its `and(eq(researches.id, id), eq(researches.userId, user.id))`
  * clause is the only thing standing between a signed-in user and every other
- * user's scouting report — an IDOR if it ever regresses to id-only.
+ * user's gathered resources report — an IDOR if it ever regresses to id-only.
  *
  * Signing in requires Google OAuth, so these tests need a seeded session cookie.
  * `tests/e2e/fixtures.ts` is the place to mint one against a scratch database;

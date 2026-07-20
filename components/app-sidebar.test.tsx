@@ -115,7 +115,7 @@ describe("header", () => {
     stubFetch([]);
     renderSidebar();
 
-    expect(screen.getByRole("link", { name: /interview scout/i })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /interview resources/i })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: /new session/i })).toHaveAttribute("href", "/prepare");
   });
 });

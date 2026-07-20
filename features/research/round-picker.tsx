@@ -47,7 +47,7 @@ export function isCustomRound(round: string): boolean {
 }
 
 /**
- * The "Rounds to scout" chips, shared by the main form and the extend footer
+ * The "Rounds to gather" chips, shared by the main form and the extend footer
  * under a finished report. `exclude` hides rounds the report already covers.
  */
 export function RoundPicker({

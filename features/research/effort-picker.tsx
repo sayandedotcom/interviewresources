@@ -8,8 +8,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { EFFORT_LEVELS, EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
 
 /**
- * The Low/Medium/High effort selector, shared by the main scout form and the
- * report's "Scout more rounds" form. Dumb by design: the parent owns the value
+ * The Low/Medium/High effort selector, shared by the main gather form and the
+ * report's "Gather more rounds" form. Dumb by design: the parent owns the value
  * and the credit ceilings (which differ between a full run and an extension).
  */
 export function EffortPicker({

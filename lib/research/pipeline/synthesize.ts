@@ -87,7 +87,7 @@ export async function synthesizeStage(
   action (e.g. "When you buy shoes online and pay by card, Stripe is the service that
   checks the card and moves the money to the store."). companySnapshot stays the
   technical view: stack, scale signals, engineering culture.`,
-    `- Set each question's "category" to one of the round identifiers from "Rounds to scout",
+    `- Set each question's "category" to one of the round identifiers from "Rounds to gather",
   copied character-for-character. Never invent a new identifier or reformat an existing one.`,
     `- Every question must cite at least one evidence URL from the notes it's grounded in.`,
     basisRules,
@@ -156,7 +156,7 @@ export async function synthesizeStage(
 produce a report predicting likely interview questions for the given company and rounds.
 Standard rounds follow the PRD §5.3 taxonomy: dsa, system_design, domain_quiz, take_home,
 pair_programming, behavioral, hr_culture. The candidate may also have added custom rounds,
-which appear verbatim in the "Rounds to scout" list.
+which appear verbatim in the "Rounds to gather" list.
 
 Rules:
 ${rules}`,

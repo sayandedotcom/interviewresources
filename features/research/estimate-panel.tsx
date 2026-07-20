@@ -144,7 +144,7 @@ function BudgetWarning({ estimate, balance }: { estimate: Estimate; balance: num
 }
 
 /**
- * Live cost of the choices on the scout form. The form is a long scroll, so the
+ * Live cost of the choices on the gather form. The form is a long scroll, so the
  * estimate follows the user: a sticky rail in the margin on desktop, a sticky
  * bar at the bottom of the viewport on smaller screens (tap to expand).
  */

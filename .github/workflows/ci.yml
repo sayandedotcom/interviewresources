@@ -53,7 +53,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: scouting_report_e2e
+          POSTGRES_DB: gathered_resources_e2e
         ports:
           - 5432:5432
         options: >-
@@ -64,7 +64,7 @@ jobs:
 
     env:
       CI: "true"
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/scouting_report_e2e
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/gathered_resources_e2e
       BETTER_AUTH_SECRET: e2e-secret-not-a-real-key
       NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3100
 

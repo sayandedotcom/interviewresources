@@ -211,7 +211,7 @@ describe("input validation", () => {
     expect((await POST(post("{ nope"))).status).toBe(400);
   });
 
-  it("rejects a request with no rounds to scout", async () => {
+  it("rejects a request with no rounds to gather", async () => {
     expect((await POST(post({ companyName: "Stripe", interviewTypes: [] }))).status).toBe(400);
   });
 });
@@ -239,7 +239,7 @@ describe("the input length caps", () => {
     await rejects({ roleContext: "a".repeat(MAX_ROLE_CONTEXT + 1) });
   });
 
-  it("rejects too many rounds to scout", async () => {
+  it("rejects too many rounds to gather", async () => {
     await rejects({ interviewTypes: Array(MAX_INTERVIEW_TYPES + 1).fill("dsa") });
   });
 

@@ -64,7 +64,7 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
   const companyName = company.trim() || "the company";
 
   doc.setProperties({
-    title: `Scouting report - ${companyName}`,
+    title: `Gathered resources - ${companyName}`,
     subject: `Interview preparation for ${companyName}`,
     creator: siteConfig.name,
   });
@@ -135,7 +135,7 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
 
   // ---- Cover ------------------------------------------------------------
 
-  eyebrow("Scouting report", ACCENT);
+  eyebrow("Gathered resources", ACCENT);
   text(companyName, { size: 26, style: "bold", leading: 1.15 });
   y += 4;
   text(
@@ -271,7 +271,7 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...MUTED);
-    doc.text(sanitize(`Scouting report - ${companyName}`), MARGIN, FOOTER_Y);
+    doc.text(sanitize(`Gathered resources - ${companyName}`), MARGIN, FOOTER_Y);
     doc.text(`${page} / ${pages}`, PAGE_W - MARGIN, FOOTER_Y, { align: "right" });
   }
 

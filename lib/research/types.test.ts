@@ -86,7 +86,7 @@ describe("researchInputSchema", () => {
     expect(() => researchInputSchema.parse({ ...validInput, companyName: "" })).toThrow();
   });
 
-  it("rejects a request with no rounds to scout", () => {
+  it("rejects a request with no rounds to gather", () => {
     expect(() => researchInputSchema.parse({ ...validInput, interviewTypes: [] })).toThrow();
   });
 

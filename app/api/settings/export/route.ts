@@ -57,7 +57,7 @@ export async function GET(request: Request) {
 
   return Response.json(exportData, {
     headers: {
-      "Content-Disposition": `attachment; filename="scouting-report-data-${new Date().toISOString().split("T")[0]}.json"`,
+      "Content-Disposition": `attachment; filename="gathered-resources-data-${new Date().toISOString().split("T")[0]}.json"`,
     },
   });
 }

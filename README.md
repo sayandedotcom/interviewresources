@@ -1,4 +1,4 @@
-# Interview Question Guesser
+# Interview Resources
 
 Predicts likely interview questions for a specific company (and, optionally,
 a specific interviewer) by researching the web and synthesizing a report
@@ -15,7 +15,7 @@ We're between **M0 and M1** (PRD §13). What exists today:
 
 - ✅ A standalone research pipeline (`lib/research/`) — plan → gather →
   compress → synthesize → budget guard — runnable via CLI.
-- ✅ A web UI (`app/`) — the "Interview Scout" research form, live SSE
+- ✅ A web UI (`app/`) — the "Interview Resources" research form, live SSE
   progress feed, and the report page (PRD §5), wired to the pipeline
   through `app/api/research`.
 - ✅ A Postgres schema (`lib/db/schema.ts`) matching PRD §9, not yet wired
@@ -108,7 +108,7 @@ pnpm dev
 ```
 
 Opens the app at [http://localhost:3000](http://localhost:3000): the
-Interview Scout research form. Fill it in, run reconnaissance, and watch
+Interview Resources research form. Fill it in, run the research, and watch
 the live progress feed as the pipeline works, then read the report inline.
 Requires `GOOGLE_GENERATIVE_AI_API_KEY` and `TAVILY_API_KEY` in
 `.env.local` — without them the run fails on the first stage with a clear
