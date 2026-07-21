@@ -1,7 +1,7 @@
 "use client";
 
 import { siteConfig } from "@/site";
-import { Compass, Gauge, Globe, Link2, Route, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { Gauge, Globe, Link2, Route, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
@@ -128,27 +128,7 @@ function EffortBg() {
   );
 }
 
-/** 05 · Broaden: the "evidence thin → broadening" fallback state. */
-function BroadenBg() {
-  return (
-    <div className={wrap}>
-      <div className="space-y-2 p-4 font-mono text-[10px]">
-        <p className="text-muted-foreground">direct interview evidence… thin</p>
-        <p className="text-tertiary">↳ broadening: founders · funding · similar cos</p>
-        <div className="mt-2 flex gap-1.5">
-          <span className="border-status-warning/40 text-status-warning bg-status-warning/10 rounded border px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
-            inferred
-          </span>
-          <span className="border-border text-muted-foreground rounded border px-1.5 py-0.5 text-[9px] uppercase">
-            labelled
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** 06 · Evidence: a question row with confidence + source links. */
+/** 05 · Evidence: a question row with confidence + source links. */
 function EvidenceBg() {
   return (
     <div className={wrap}>
@@ -175,13 +155,14 @@ function EvidenceBg() {
   );
 }
 
+/** Index-matched to `copy.agent.tiles` — keep the two arrays in sync. The last
+ * tile spans two columns so the five cards fill a 3-column grid cleanly. */
 const TILES = [
-  { Icon: Route, background: <PlanBg /> },
-  { Icon: Globe, background: <ReadBg /> },
-  { Icon: SlidersHorizontal, background: <ScopeBg /> },
-  { Icon: Gauge, background: <EffortBg /> },
-  { Icon: Compass, background: <BroadenBg /> },
-  { Icon: ShieldCheck, background: <EvidenceBg /> },
+  { Icon: Route, background: <PlanBg />, className: "col-span-1" },
+  { Icon: Globe, background: <ReadBg />, className: "col-span-1" },
+  { Icon: SlidersHorizontal, background: <ScopeBg />, className: "col-span-1" },
+  { Icon: Gauge, background: <EffortBg />, className: "col-span-1" },
+  { Icon: ShieldCheck, background: <EvidenceBg />, className: "col-span-1 md:col-span-2" },
 ];
 
 export function HowAgentWorksSection() {
@@ -206,7 +187,7 @@ export function HowAgentWorksSection() {
             description={tile.description}
             Icon={TILES[i].Icon}
             background={TILES[i].background}
-            className="col-span-1"
+            className={TILES[i].className}
           />
         ))}
       </BentoGrid>

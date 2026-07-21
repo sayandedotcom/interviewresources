@@ -10,6 +10,7 @@ import { FounderNoteSection } from "@/components/founder-note-section";
 import { Header } from "@/components/header";
 import { HowAgentWorksSection } from "@/components/how-agent-works-section";
 import { HowItWorksSection } from "@/components/how-it-works-section";
+import { HowWeSourceSection } from "@/components/how-we-source-section";
 import { WhyNotChatgptSection } from "@/components/why-not-chatgpt-section";
 
 import { MAX_RUN_CREDITS } from "@/lib/credits";
@@ -85,6 +86,8 @@ export default function Home() {
       <HowItWorksSection />
 
       <HowAgentWorksSection />
+
+      <HowWeSourceSection />
 
       <section className="mx-auto w-full max-w-3xl border-t px-5 py-12">
         <div className="grid gap-8 sm:grid-cols-4">

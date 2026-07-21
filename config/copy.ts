@@ -116,11 +116,6 @@ export const copyConfig = {
           "Low, Medium, or High tune how wide it searches and how many questions you get, from an 8-question scan to a 50-question sweep, each with a hard spend ceiling.",
       },
       {
-        name: "It won't invent answers",
-        description:
-          "When public interview data is thin, it researches founders, funding, and similar companies instead of guessing, and clearly labels anything it inferred.",
-      },
-      {
         name: "Every claim is checkable",
         description:
           "Each question ships with a confidence level and links to the exact source it came from. No black box; verify any question yourself.",
@@ -191,7 +186,49 @@ export const copyConfig = {
     ],
     inferred: {
       label: "Inferred",
-      body: "When public interview data for a company is thin, the agent researches proxy signals instead: founders' backgrounds, comparable companies, and stage norms. Anything built this way is labelled Inferred, so you always know whether a question comes from a first-hand account or an educated guess.",
+      body: "Built from proxy signals rather than a first-hand account of interviewing here. An inferred question can never carry High confidence — see how we source questions above.",
+    },
+  },
+
+  // ── "How we source questions" transparency (landing) ─────────────
+  sourcing: {
+    eyebrow: "Transparency",
+    title: "Where the questions actually come from",
+    sub: "We search the open web, then measure what came back. What we found is what decides the report you get.",
+    beats: [
+      {
+        name: "First, we hunt for first-hand accounts",
+        body: "The agent drafts targeted queries and goes looking for people who actually interviewed there, plus what the company publishes about itself. One thing it never touches: LinkedIn.",
+        chips: [
+          "Glassdoor",
+          "Blind",
+          "LeetCode Discuss",
+          "Reddit threads",
+          "Personal write-ups",
+          "Engineering blogs",
+          "Job postings",
+          "Interviewer talks & open source",
+        ],
+        note: "These are search targets, not partnerships. We hit the open web like you would, just faster and wider.",
+      },
+      {
+        name: "Then we count what came back",
+        body: "A result only counts as evidence if it carries real content, not a title echo or a nav blurb. Company overviews and interviewer pages don't count toward it at all: they say nothing about how the place interviews. Below three substantial sources, or below five with not a single full page worth pulling, the agent stops and broadens instead of shipping you a thin report.",
+      },
+    ],
+    rules: {
+      label: "Two rules we can't override",
+      sub: "Applied in code after the model answers, not instructions we ask it to follow.",
+      items: [
+        {
+          rule: "No source link, no confidence",
+          body: "If a question comes back without a single citation behind it, its confidence is forced to Low, whatever the model claimed.",
+        },
+        {
+          rule: "Inferred can never be High",
+          body: "When a question is built from proxy signals instead of first-hand accounts, its confidence is capped at Medium and it ships with the Inferred tag.",
+        },
+      ],
     },
   },
 
