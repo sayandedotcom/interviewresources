@@ -68,7 +68,7 @@ export default function CookiesPage() {
             For questions about our use of cookies, contact us at{" "}
             <a
               href={`mailto:${siteConfig.emails.privacy}`}
-              className="text-[#AEF05A] hover:underline">
+              className="text-primary hover:underline">
               {siteConfig.emails.privacy}
             </a>
             .

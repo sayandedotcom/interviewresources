@@ -41,7 +41,7 @@ export default function ChangelogPage() {
         {changelog.map((release) => (
           <div key={release.version} className="relative">
             <div className="flex items-center gap-4">
-              <span className="inline-flex items-center rounded-full bg-[#AEF05A]/10 px-3 py-1 text-sm font-medium text-[#AEF05A]">
+              <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-3 py-1 text-sm font-medium">
                 {release.version}
               </span>
               <span className="text-muted-foreground text-sm">{release.date}</span>
@@ -49,7 +49,7 @@ export default function ChangelogPage() {
             <ul className="mt-4 space-y-2">
               {release.changes.map((change, i) => (
                 <li key={i} className="text-muted-foreground flex items-start gap-2">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#AEF05A]" />
+                  <span className="bg-primary mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" />
                   {change}
                 </li>
               ))}

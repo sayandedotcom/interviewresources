@@ -65,7 +65,7 @@ export default function PrivacyPolicyPage() {
             If you have any questions about this Privacy Policy, please contact us at{" "}
             <a
               href={`mailto:${siteConfig.emails.privacy}`}
-              className="text-[#AEF05A] hover:underline">
+              className="text-primary hover:underline">
               {siteConfig.emails.privacy}
             </a>
             .

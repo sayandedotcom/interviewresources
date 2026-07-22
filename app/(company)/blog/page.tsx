@@ -42,19 +42,17 @@ export default function BlogPage() {
         {posts.map((post, i) => (
           <article
             key={i}
-            className="group cursor-pointer rounded-lg border p-6 transition-colors hover:border-[#AEF05A]/50">
+            className="group hover:border-primary/50 cursor-pointer rounded-lg border p-6 transition-colors">
             <div className="text-muted-foreground flex items-center gap-2 text-sm">
               <span>{post.date}</span>
               <span>·</span>
               <span>{post.readTime}</span>
             </div>
-            <h2 className="font-display mt-2 text-xl font-semibold transition-colors group-hover:text-[#AEF05A]">
+            <h2 className="font-display group-hover:text-primary mt-2 text-xl font-semibold transition-colors">
               {post.title}
             </h2>
             <p className="text-muted-foreground mt-2">{post.excerpt}</p>
-            <span className="mt-3 inline-block text-sm font-medium text-[#AEF05A]">
-              Read more →
-            </span>
+            <span className="text-primary mt-3 inline-block text-sm font-medium">Read more →</span>
           </article>
         ))}
       </div>

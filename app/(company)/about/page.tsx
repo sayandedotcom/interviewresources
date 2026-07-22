@@ -66,9 +66,7 @@ export default function AboutPage() {
           <h2 className="font-display text-xl font-semibold">Get In Touch</h2>
           <p className="text-muted-foreground mt-2">
             We would love to hear from you. Reach out at{" "}
-            <a
-              href={`mailto:${siteConfig.emails.hello}`}
-              className="text-[#AEF05A] hover:underline">
+            <a href={`mailto:${siteConfig.emails.hello}`} className="text-primary hover:underline">
               {siteConfig.emails.hello}
             </a>
             .

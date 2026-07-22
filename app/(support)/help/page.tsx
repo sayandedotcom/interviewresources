@@ -76,7 +76,7 @@ export default function HelpPage() {
             Can not find what you are looking for? Reach out to our support team at{" "}
             <a
               href={`mailto:${siteConfig.emails.support}`}
-              className="text-[#AEF05A] hover:underline">
+              className="text-primary hover:underline">
               {siteConfig.emails.support}
             </a>
             .

@@ -79,9 +79,7 @@ export default function TermsOfServicePage() {
           <h2 className="font-display text-xl font-semibold">8. Contact</h2>
           <p className="text-muted-foreground mt-2">
             If you have any questions about these Terms, please contact us at{" "}
-            <a
-              href={`mailto:${siteConfig.emails.legal}`}
-              className="text-[#AEF05A] hover:underline">
+            <a href={`mailto:${siteConfig.emails.legal}`} className="text-primary hover:underline">
               {siteConfig.emails.legal}
             </a>
             .

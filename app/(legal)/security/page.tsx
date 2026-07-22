@@ -63,7 +63,7 @@ export default function SecurityPage() {
             If you discover a security vulnerability, please report it responsibly to{" "}
             <a
               href={`mailto:${siteConfig.emails.security}`}
-              className="text-[#AEF05A] hover:underline">
+              className="text-primary hover:underline">
               {siteConfig.emails.security}
             </a>
             . We appreciate responsible disclosure and will work with you to address any issues

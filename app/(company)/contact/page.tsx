@@ -24,7 +24,7 @@ export default function ContactPage() {
           </p>
           <a
             href={`mailto:${siteConfig.emails.hello}`}
-            className="mt-3 inline-block text-[#AEF05A] hover:underline">
+            className="text-primary mt-3 inline-block hover:underline">
             {siteConfig.emails.hello}
           </a>
         </div>
@@ -36,7 +36,7 @@ export default function ContactPage() {
           </p>
           <a
             href={`mailto:${siteConfig.emails.support}`}
-            className="mt-3 inline-block text-[#AEF05A] hover:underline">
+            className="text-primary mt-3 inline-block hover:underline">
             {siteConfig.emails.support}
           </a>
         </div>
@@ -48,7 +48,7 @@ export default function ContactPage() {
           </p>
           <a
             href={`mailto:${siteConfig.emails.security}`}
-            className="mt-3 inline-block text-[#AEF05A] hover:underline">
+            className="text-primary mt-3 inline-block hover:underline">
             {siteConfig.emails.security}
           </a>
         </div>
