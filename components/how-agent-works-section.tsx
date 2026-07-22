@@ -4,59 +4,115 @@ import { siteConfig } from "@/site";
 import { Gauge, Globe, Link2, Route, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
-import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
+/**
+ * One step of the pipeline: a brand-tinted cradle holding a white mock panel,
+ * with the step number, icon, and copy below it. Deliberately single-hue — the
+ * five tiles are one sequence, so colour is used for depth, not to tell them
+ * apart. The step number does that.
+ */
+function Step({
+  index,
+  Icon,
+  name,
+  description,
+  mock,
+  wide = false,
+}: {
+  index: number;
+  Icon: React.ElementType;
+  name: string;
+  description: string;
+  mock: React.ReactNode;
+  wide?: boolean;
+}) {
+  const copy = (
+    <div className={wide ? "" : "mt-6"}>
+      <div className="flex items-center gap-3">
+        <span className="bg-brand-100 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+          <Icon className="text-primary h-5 w-5" strokeWidth={1.75} />
+        </span>
+        <span className="text-primary text-xs font-semibold tracking-[0.2em] tabular-nums">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      </div>
+      <h3 className="font-display mt-4 text-xl font-semibold tracking-tight">{name}</h3>
+      <p className="font-display text-muted-foreground mt-2 text-base leading-relaxed">
+        {description}
+      </p>
+    </div>
+  );
 
-/** A faint mock sits behind the card's title/description. Everything is
- * pointer-events-none and low-contrast so the copy stays the focus. */
-const wrap = "pointer-events-none absolute inset-0 overflow-hidden opacity-70";
+  const panel = (
+    <div className="border-border/50 bg-background overflow-hidden rounded-2xl border shadow-[var(--shadow-md)]">
+      {mock}
+    </div>
+  );
 
-/** 01 · Plan: planned queries stagger in, each with its purpose. */
-function PlanBg() {
+  return (
+    <div
+      className={`silver-edge from-brand-100/90 to-brand-50/30 rounded-3xl bg-gradient-to-b p-5 shadow-[var(--shadow-sm)] sm:p-6 ${
+        wide ? "sm:p-8" : ""
+      }`}>
+      {wide ? (
+        <div className="grid items-center gap-8 md:grid-cols-2">
+          {panel}
+          {copy}
+        </div>
+      ) : (
+        <>
+          {panel}
+          {copy}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 01 · Plan: planned queries stagger in, each with its stated purpose. */
+function PlanMock() {
   const reduce = useReducedMotion();
   const queries = [
-    { q: "stripe.com engineering interview process", p: "loop format" },
-    { q: "stripe system design interview questions", p: "system design round" },
-    { q: "stripe behavioral values interview", p: "behavioral round" },
+    { q: "stripe interview process", p: "loop format" },
+    { q: "stripe system design questions", p: "system design round" },
+    { q: "stripe behavioral values", p: "behavioral round" },
   ];
   return (
-    <div className={wrap}>
-      <div className="space-y-2 p-4">
-        {queries.map((item, i) => (
-          <motion.div
-            key={item.q}
-            initial={reduce ? false : { opacity: 0, x: -8 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.15 * i, duration: 0.4 }}
-            className="border-border bg-card rounded-md border px-2.5 py-1.5">
-            <p className="text-foreground/80 font-mono text-[10px]">{item.q}</p>
-            <p className="text-tertiary font-mono text-[9px]">→ {item.p}</p>
-          </motion.div>
-        ))}
-      </div>
+    <div className="space-y-2 p-4">
+      {queries.map((item, i) => (
+        <motion.div
+          key={item.q}
+          initial={reduce ? false : { opacity: 0, x: -8 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.15 * i, duration: 0.4 }}
+          className="border-border/60 bg-muted/30 rounded-lg border px-3 py-2">
+          <p className="text-foreground truncate text-xs">{item.q}</p>
+          <p className="text-primary text-[11px] font-medium">→ {item.p}</p>
+        </motion.div>
+      ))}
     </div>
   );
 }
 
 /** 02 · Read: source chips with a scanning shimmer sweeping across. */
-function ReadBg() {
+function ReadMock() {
   const reduce = useReducedMotion();
   const sources = ["Engineering blog", "Job posting", "Candidate review", "Conference talk"];
   return (
-    <div className={wrap}>
-      <div className="flex flex-wrap gap-2 p-4">
+    <div className="relative overflow-hidden p-4">
+      <div className="flex flex-wrap gap-2">
         {sources.map((s) => (
           <span
             key={s}
-            className="border-border bg-card text-muted-foreground flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px]">
-            <span className="bg-tertiary inline-block h-1.5 w-1.5 rounded-full" />
+            className="border-border/60 bg-muted/30 text-foreground flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs">
+            <span className="bg-primary inline-block h-1.5 w-1.5 rounded-full" />
             {s}
           </span>
         ))}
       </div>
       {!reduce && (
         <motion.div
-          className="via-tertiary/15 absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent to-transparent"
+          className="via-primary/20 absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent to-transparent"
           animate={{ x: ["-40%", "340%"] }}
           transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -65,8 +121,8 @@ function ReadBg() {
   );
 }
 
-/** 03 · Scope: round + section toggle chips, some switched off. */
-function ScopeBg() {
+/** 03 · Scope: round + section toggles, the switched-off ones struck through. */
+function ScopeMock() {
   const chips = [
     { label: "Coding", on: true },
     { label: "System Design", on: true },
@@ -76,26 +132,24 @@ function ScopeBg() {
     { label: "Skills", on: true },
   ];
   return (
-    <div className={wrap}>
-      <div className="flex flex-wrap gap-2 p-4">
-        {chips.map((c) => (
-          <span
-            key={c.label}
-            className={`font-display rounded-full border px-2.5 py-1 text-[11px] ${
-              c.on
-                ? "border-tertiary bg-tertiary/10 text-tertiary"
-                : "border-border text-muted-foreground/50 line-through"
-            }`}>
-            {c.label}
-          </span>
-        ))}
-      </div>
+    <div className="flex flex-wrap gap-2 p-4">
+      {chips.map((c) => (
+        <span
+          key={c.label}
+          className={`font-display rounded-full border px-3 py-1.5 text-xs font-medium ${
+            c.on
+              ? "border-primary/40 bg-primary/10 text-primary"
+              : "border-border bg-muted/40 text-muted-foreground/60 line-through"
+          }`}>
+          {c.label}
+        </span>
+      ))}
     </div>
   );
 }
 
 /** 04 · Effort: Low/Med/High bars whose widths ease in on view. */
-function EffortBg() {
+function EffortMock() {
   const reduce = useReducedMotion();
   const rows = [
     { label: "Low", width: "34%", meta: "3–5 queries · 8–15 Q" },
@@ -103,24 +157,47 @@ function EffortBg() {
     { label: "High", width: "100%", meta: "8–12 queries · 30–50 Q" },
   ];
   return (
-    <div className={wrap}>
-      <div className="space-y-3 p-4">
-        {rows.map((r, i) => (
-          <div key={r.label}>
-            <div className="text-muted-foreground mb-1 flex justify-between font-mono text-[9px]">
-              <span>{r.label}</span>
-              <span>{r.meta}</span>
-            </div>
-            <div className="bg-muted h-1.5 overflow-hidden rounded-full">
-              <motion.div
-                className="bg-tertiary h-full rounded-full"
-                initial={reduce ? false : { width: 0 }}
-                whileInView={{ width: r.width }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 * i, duration: 0.6, ease: "easeOut" }}
-                style={reduce ? { width: r.width } : undefined}
-              />
-            </div>
+    <div className="space-y-3 p-4">
+      {rows.map((r, i) => (
+        <div key={r.label}>
+          <div className="mb-1.5 flex justify-between text-[11px]">
+            <span className="text-foreground font-medium">{r.label}</span>
+            <span className="text-muted-foreground">{r.meta}</span>
+          </div>
+          <div className="bg-brand-100 h-2 overflow-hidden rounded-full">
+            <motion.div
+              className="bg-primary h-full rounded-full"
+              initial={reduce ? false : { width: 0 }}
+              whileInView={{ width: r.width }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 * i, duration: 0.6, ease: "easeOut" }}
+              style={reduce ? { width: r.width } : undefined}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 05 · Evidence: a question row with its confidence and source links. */
+function EvidenceMock() {
+  return (
+    <div className="p-5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-status-good bg-status-good/10 rounded-full px-2.5 py-1 text-xs font-semibold">
+          High
+        </span>
+        <span className="text-muted-foreground text-xs">2 sources</span>
+      </div>
+      <p className="font-display text-foreground mt-4 text-base leading-snug font-semibold">
+        How do you guarantee idempotency on the payments API?
+      </p>
+      <div className="border-border/60 mt-4 space-y-2 border-t pt-3">
+        {["Stripe Engineering blog", "Interview review · levels.fyi"].map((s) => (
+          <div key={s} className="text-primary flex items-center gap-1.5 text-xs font-medium">
+            <Link2 className="h-3.5 w-3.5 shrink-0" />
+            <span>{s}</span>
           </div>
         ))}
       </div>
@@ -128,69 +205,58 @@ function EffortBg() {
   );
 }
 
-/** 05 · Evidence: a question row with confidence + source links. */
-function EvidenceBg() {
-  return (
-    <div className={wrap}>
-      <div className="space-y-2 p-4">
-        <div className="flex items-center gap-2">
-          <span className="text-status-good border-status-good/30 bg-status-good/10 rounded-full border px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase">
-            High
-          </span>
-          <span className="text-muted-foreground font-mono text-[9px]">confidence</span>
-        </div>
-        <p className="font-display text-foreground/80 text-xs leading-snug">
-          How do you guarantee idempotency on the payments API?
-        </p>
-        <div className="text-tertiary space-y-1">
-          {["Stripe Engineering blog", "Interview review · levels.fyi"].map((s) => (
-            <div key={s} className="flex items-center gap-1.5 text-[10px]">
-              <Link2 className="h-3 w-3 shrink-0" />
-              <span>{s}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Index-matched to `copy.agent.tiles` — keep the two arrays in sync. The last
- * tile spans two columns so the five cards fill a 3-column grid cleanly. */
-const TILES = [
-  { Icon: Route, background: <PlanBg />, className: "col-span-1" },
-  { Icon: Globe, background: <ReadBg />, className: "col-span-1" },
-  { Icon: SlidersHorizontal, background: <ScopeBg />, className: "col-span-1" },
-  { Icon: Gauge, background: <EffortBg />, className: "col-span-1" },
-  { Icon: ShieldCheck, background: <EvidenceBg />, className: "col-span-1 md:col-span-2" },
+/** Index-matched to `copy.agent.tiles` — keep the two arrays in sync. */
+const STEPS = [
+  { Icon: Route, mock: <PlanMock /> },
+  { Icon: Globe, mock: <ReadMock /> },
+  { Icon: SlidersHorizontal, mock: <ScopeMock /> },
+  { Icon: Gauge, mock: <EffortMock /> },
+  { Icon: ShieldCheck, mock: <EvidenceMock /> },
 ];
 
 export function HowAgentWorksSection() {
   const { agent } = siteConfig.copy;
+  const grid = agent.tiles.slice(0, 4);
+  const hero = agent.tiles[4];
 
   return (
-    <section id="how-agent-works" className="mx-auto w-full max-w-5xl border-t px-5 py-16">
-      <div className="mb-10 text-center">
-        <p className="text-tertiary mb-3 font-mono text-xs font-semibold tracking-[0.25em] uppercase">
+    <section id="how-agent-works" className="mx-auto w-full max-w-6xl px-6 py-24 md:px-8">
+      <div className="mb-14 text-center">
+        <p className="text-tertiary mb-3 text-xs font-semibold tracking-[0.25em] uppercase">
           {agent.eyebrow}
         </p>
-        <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h2 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
           {agent.title}
         </h2>
-        <p className="font-display text-muted-foreground mx-auto mt-2 max-w-xl">{agent.sub}</p>
+        <p className="font-display text-muted-foreground mx-auto mt-4 max-w-2xl text-lg leading-relaxed">
+          {agent.sub}
+        </p>
       </div>
-      <BentoGrid className="auto-rows-[19rem] grid-cols-1 md:grid-cols-3">
-        {agent.tiles.map((tile, i) => (
-          <BentoCard
+
+      {/* Four steps in a 2×2, then the payoff step across the full width. */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {grid.map((tile, i) => (
+          <Step
             key={tile.name}
+            index={i}
+            Icon={STEPS[i].Icon}
             name={tile.name}
             description={tile.description}
-            Icon={TILES[i].Icon}
-            background={TILES[i].background}
-            className={TILES[i].className}
+            mock={STEPS[i].mock}
           />
         ))}
-      </BentoGrid>
+      </div>
+
+      <div className="mt-6">
+        <Step
+          index={4}
+          Icon={STEPS[4].Icon}
+          name={hero.name}
+          description={hero.description}
+          mock={STEPS[4].mock}
+          wide
+        />
+      </div>
     </section>
   );
 }
