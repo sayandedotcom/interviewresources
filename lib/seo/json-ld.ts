@@ -1,5 +1,7 @@
 import { siteConfig } from "@/site";
 
+const planPrices = siteConfig.pricingPlans.map((plan) => plan.price);
+
 export const webApplicationJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
@@ -8,10 +10,17 @@ export const webApplicationJsonLd = {
   url: siteConfig.url,
   applicationCategory: "BusinessApplication",
   operatingSystem: "Any",
+  /**
+   * Derived from the real credit packs rather than hardcoded. A fixed
+   * `price: "0"` here would contradict the prices shown on /pricing, which
+   * Google treats as a structured-data mismatch.
+   */
   offers: {
-    "@type": "Offer",
-    price: "0",
+    "@type": "AggregateOffer",
+    lowPrice: String(Math.min(...planPrices)),
+    highPrice: String(Math.max(...planPrices)),
     priceCurrency: "USD",
+    offerCount: String(siteConfig.pricingPlans.length),
   },
 };
 
@@ -23,25 +32,23 @@ export const organizationJsonLd = {
   sameAs: [siteConfig.links.twitter, siteConfig.links.github],
 };
 
+/**
+ * Built from the same `siteConfig.faqs` that `FaqSection` renders, so the
+ * markup can never drift from the visible copy — Google requires FAQ
+ * structured data to match what's on the page.
+ *
+ * Render this on the landing page only, never in the root layout: the FAQs
+ * are only visible there.
+ */
 export const faqJsonLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: `How does ${siteConfig.name} work?`,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Paste a company (and optionally an interviewer). We research the company's product, stack, engineering culture, and reported interview loop, then pinpoint the questions you're likely to face, each citing the evidence it came from.",
-      },
+  mainEntity: siteConfig.faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
     },
-    {
-      "@type": "Question",
-      name: "Do you scrape LinkedIn?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "No. An interviewer's name is only used as a public-search seed, never to scrape LinkedIn.",
-      },
-    },
-  ],
+  })),
 };

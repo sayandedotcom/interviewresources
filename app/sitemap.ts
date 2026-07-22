@@ -2,13 +2,14 @@ import type { MetadataRoute } from "next";
 
 import { siteConfig } from "@/site";
 
+import { publicRoutes } from "@/lib/seo/routes";
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [
-    {
-      url: siteConfig.url,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-  ];
+  const lastModified = new Date();
+
+  return Object.entries(publicRoutes).map(([path, entry]) => ({
+    url: new URL(path, siteConfig.url).toString(),
+    lastModified,
+    ...entry,
+  }));
 }
