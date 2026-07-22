@@ -10,7 +10,7 @@ export const siteConfig = {
   name: "Interview Resources",
   description:
     "AI gathers the interview resources you'll need — under $0.50 a report, every question backed by evidence.",
-  url: "https://interviewrecources.app",
+  url: "https://interviewresources.app",
   /** Shown in the landing page hero badge, e.g. "34,345 users". Edit freely. */
   userCount: "2,345",
   emails: contactConfig,

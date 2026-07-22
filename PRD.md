@@ -3,7 +3,7 @@
 **Version:** 2.0
 **Date:** 2026-07-21
 **Owner:** Sayan De
-**Website:** interviewrecources.app
+**Website:** interviewresources.app
 **Status:** Live — M0–M2 shipped, M3 (quality loop) in progress
 
 > **On the numbers in this document.** Every figure here is either traceable to a

@@ -1,4 +1,4 @@
-const domain = "interviewrecources.app";
+const domain = "interviewresources.app";
 
 export const contactConfig = {
   hello: `hello@${domain}`,
