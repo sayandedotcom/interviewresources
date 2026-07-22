@@ -7,6 +7,7 @@ import { Analytics } from "@/components/analytics";
 import { CookieConsentBanner } from "@/components/cookie-consent";
 
 import { organizationJsonLd, webApplicationJsonLd } from "@/lib/seo/json-ld";
+import { siteTitle } from "@/lib/seo/metadata";
 
 import { ToastProvider } from "@/hooks/use-toast";
 
@@ -22,32 +23,32 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const title = `${siteConfig.name} — ${siteConfig.copy.titleSuffix}`;
-
+/**
+ * Site-wide defaults only. Note the absence of `alternates.canonical` and
+ * `openGraph.url`: metadata is inherited, so setting either here would point
+ * every child route's canonical at the homepage and de-index the whole site.
+ * Per-page canonicals come from `buildMetadata` in lib/seo/metadata.ts.
+ */
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: title,
+    default: siteTitle,
     template: `%s · ${siteConfig.name}`,
   },
   description: siteConfig.copy.metaDescription,
   applicationName: siteConfig.name,
   authors: [{ name: siteConfig.name, url: siteConfig.url }],
   creator: siteConfig.name,
-  alternates: {
-    canonical: "/",
-  },
   openGraph: {
     type: "website",
-    url: "/",
     siteName: siteConfig.name,
-    title,
+    title: siteTitle,
     description: siteConfig.copy.metaDescription,
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title,
+    title: siteTitle,
     description: siteConfig.copy.metaDescription,
     creator: siteConfig.copy.twitterCreator,
   },

@@ -1,6 +1,11 @@
 import Link from "next/link";
 
 import { requireAdmin } from "@/lib/admin/auth";
+import { noIndexMetadata } from "@/lib/seo/metadata";
+
+// Covers /admin and /admin/runs. robots.ts also disallows /admin, but this is
+// what actually keeps it out of the index if the path is ever discovered.
+export const metadata = noIndexMetadata;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();

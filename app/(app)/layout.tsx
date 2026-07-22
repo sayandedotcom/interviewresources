@@ -8,7 +8,12 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 import { getBalance } from "@/lib/credits";
 import { MAX_SESSIONS_PER_USER, getUserResearches } from "@/lib/research/sessions";
+import { noIndexMetadata } from "@/lib/seo/metadata";
 import { getCurrentUser } from "@/lib/session";
+
+// Applied at the group layout so every route in this segment — including ones
+// added later — inherits it, rather than relying on each page remembering.
+export const metadata = noIndexMetadata;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
