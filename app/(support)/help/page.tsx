@@ -1,11 +1,12 @@
-import { Metadata } from "next";
-
 import { siteConfig } from "@/site";
 
-export const metadata: Metadata = {
+import { buildMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildMetadata({
+  path: "/help",
   title: "Help & Documentation",
   description: `Get help with ${siteConfig.name}`,
-};
+});
 
 export default function HelpPage() {
   return (

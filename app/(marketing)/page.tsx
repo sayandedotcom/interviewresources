@@ -1,3 +1,5 @@
+import { siteConfig } from "@/site";
+
 import { ConfidenceExplainerSection } from "@/components/confidence-explainer-section";
 import { CtaSection } from "@/components/cta-section";
 import { Footer } from "@/components/footer";
@@ -15,11 +17,26 @@ import { PricingSection } from "@/components/sections/pricing-section";
 import { StatsSection } from "@/components/sections/stats-section";
 import { WhyNotChatgptSection } from "@/components/why-not-chatgpt-section";
 
+import { faqJsonLd } from "@/lib/seo/json-ld";
+import { buildMetadata, siteTitle } from "@/lib/seo/metadata";
+
 // import { ResearchExperience } from "@/features/research/research-experience";
+
+export const metadata = buildMetadata({
+  path: "/",
+  title: siteConfig.name,
+  absoluteTitle: siteTitle,
+  description: siteConfig.copy.metaDescription,
+});
 
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
+      {/* Scoped to this page because it's the only one that renders the FAQs. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <Header />
 
       <HeroSection />
