@@ -3,7 +3,6 @@ import { companiesConfig } from "./config/companies";
 import { comparisonConfig } from "./config/comparison";
 import { contactConfig } from "./config/contact";
 import { copyConfig } from "./config/copy";
-import { keywordsConfig } from "./config/keywords";
 import { pricingConfig } from "./config/pricing";
 
 export const siteConfig = {
@@ -27,7 +26,6 @@ export const siteConfig = {
   waitlist: false,
   activeAuth: true,
   enablePayments: true,
-  keywords: keywordsConfig.keywords,
   copy: copyConfig,
   brand: brandConfig,
   pricingPlans: pricingConfig.plans,
