@@ -31,7 +31,14 @@ export const env = createEnv({
     TAVILY_API_KEY: req(z.string().min(1)),
     DODO_PAYMENTS_API_KEY: req(z.string().min(1)),
     DODO_PAYMENTS_WEBHOOK_KEY: req(z.string().min(1)),
-    DODO_PAYMENTS_ENVIRONMENT: z.enum(["test_mode", "live_mode"]).optional(),
+    /**
+     * Required in production, unlike most optional settings, because the
+     * fallback is dangerous rather than merely absent: lib/payments.ts defaults
+     * an unset value to "test_mode", so a production deploy that forgets this
+     * would send live credentials to the test host and 401 every real
+     * checkout — with all six sibling secrets present, so nothing else warns.
+     */
+    DODO_PAYMENTS_ENVIRONMENT: req(z.enum(["test_mode", "live_mode"])),
     DODO_PRODUCT_ID_STARTER: req(z.string().min(1)),
     DODO_PRODUCT_ID_BUNDLE: req(z.string().min(1)),
     DODO_PRODUCT_ID_MAX: req(z.string().min(1)),
