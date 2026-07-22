@@ -14,7 +14,8 @@ import { type TestDb, createTestDb, resetDb, seedUser } from "./harness";
 const dbPromise = createTestDb();
 vi.mock("@/lib/db/index", async () => ({ db: await dbPromise }));
 
-const { chargeCredits, getBalance, grantCredits } = await import("@/lib/credits");
+const { chargeCredits, getBalance, grantCredits, isPaymentCredited } =
+  await import("@/lib/credits");
 
 let db: TestDb;
 
@@ -267,5 +268,38 @@ describe("the ledger as the source of truth", () => {
 
     await expect(getBalance(userId)).resolves.toBe(replayed);
     expect(replayed).toBe(541);
+  });
+});
+
+/**
+ * Backs the success page. It must answer for one payment on one account, so a
+ * returning customer's existing credits cannot be mistaken for a fresh grant.
+ */
+describe("isPaymentCredited", () => {
+  it("is false before the webhook lands", async () => {
+    const userId = await seedUser(db);
+    await expect(isPaymentCredited(userId, "pay_1")).resolves.toBe(false);
+  });
+
+  it("is true once that payment has been granted", async () => {
+    const userId = await seedUser(db);
+    await grantCredits({ userId, credits: 100, reason: "purchase:starter", paymentRef: "pay_1" });
+
+    await expect(isPaymentCredited(userId, "pay_1")).resolves.toBe(true);
+  });
+
+  it("stays false for a different payment on an account that already has credits", async () => {
+    const userId = await seedUser(db);
+    await grantCredits({ userId, credits: 420, reason: "purchase:max", paymentRef: "pay_old" });
+
+    await expect(isPaymentCredited(userId, "pay_new")).resolves.toBe(false);
+  });
+
+  it("does not report another user's payment as credited", async () => {
+    const alice = await seedUser(db);
+    const bob = await seedUser(db);
+    await grantCredits({ userId: alice, credits: 100, reason: "purchase", paymentRef: "pay_1" });
+
+    await expect(isPaymentCredited(bob, "pay_1")).resolves.toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 import { cache } from "react";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "./db/index";
 import { creditsLedger, users } from "./db/schema";
@@ -28,6 +28,28 @@ export const getBalance = cache(async (userId: string): Promise<number> => {
 
   return row?.balance ?? 0;
 });
+
+/**
+ * Whether one specific Dodo payment has landed in this user's ledger yet.
+ *
+ * The success page cannot infer this from the balance. A returning customer is
+ * already sitting on credits when they arrive, so "balance > 0" answers yes for
+ * a purchase whose webhook has not arrived — and would keep answering yes if it
+ * never arrived at all. `paymentRef` is unique, so this is an exact answer.
+ *
+ * Scoped by userId as well as the ref: the payment id travels in the return URL
+ * where the client controls it, and without the user check one account could
+ * probe whether another's payment had settled.
+ */
+export async function isPaymentCredited(userId: string, paymentRef: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: creditsLedger.id })
+    .from(creditsLedger)
+    .where(and(eq(creditsLedger.userId, userId), eq(creditsLedger.paymentRef, paymentRef)))
+    .limit(1);
+
+  return row != null;
+}
 
 /**
  * Charges a completed run. Takes a row lock on the user so two concurrent runs
