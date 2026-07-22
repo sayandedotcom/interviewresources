@@ -5,9 +5,70 @@ export const ogImageSize = {
   height: 630,
 };
 
-export function OgImageContent() {
-  const { colors } = siteConfig.brand;
+const { colors } = siteConfig.brand;
 
+/** The brand tile, inverted for the blue sky — white square, blue mark inside —
+ * the same swap the site header makes over the hero. */
+function LogoTile() {
+  return (
+    <div
+      style={{
+        width: "48px",
+        height: "48px",
+        borderRadius: "14px",
+        backgroundColor: colors.tileForeground,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+      <div
+        style={{
+          width: "30px",
+          height: "30px",
+          borderRadius: "9999px",
+          border: `3px solid ${colors.tile}`,
+          display: "flex",
+          position: "relative",
+        }}>
+        <div
+          style={{
+            position: "absolute",
+            left: "12px",
+            top: "0px",
+            width: "2px",
+            height: "30px",
+            opacity: 0.4,
+            backgroundColor: colors.tile,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: "0px",
+            top: "12px",
+            width: "30px",
+            height: "2px",
+            opacity: 0.4,
+            backgroundColor: colors.tile,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            left: "16px",
+            top: "4px",
+            width: "8px",
+            height: "8px",
+            borderRadius: "9999px",
+            backgroundColor: colors.tile,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export function OgImageContent() {
   return (
     <div
       style={{
@@ -17,65 +78,13 @@ export function OgImageContent() {
         flexDirection: "column",
         justifyContent: "center",
         padding: "80px",
-        backgroundColor: colors.ogBackground,
+        backgroundImage: `linear-gradient(180deg, ${colors.ogSky
+          .map((stop, i) => `${stop} ${(i / (colors.ogSky.length - 1)) * 100}%`)
+          .join(", ")})`,
         color: colors.ogForeground,
       }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-        {/* The brand tile: solid blue square, everything inside it white. */}
-        <div
-          style={{
-            width: "56px",
-            height: "56px",
-            borderRadius: "16px",
-            backgroundColor: colors.tile,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-          <div
-            style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "9999px",
-              border: `3px solid ${colors.tileForeground}`,
-              display: "flex",
-              position: "relative",
-            }}>
-            <div
-              style={{
-                position: "absolute",
-                left: "14px",
-                top: "0px",
-                width: "2px",
-                height: "34px",
-                opacity: 0.4,
-                backgroundColor: colors.tileForeground,
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                left: "0px",
-                top: "14px",
-                width: "34px",
-                height: "2px",
-                opacity: 0.4,
-                backgroundColor: colors.tileForeground,
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                left: "18px",
-                top: "5px",
-                width: "8px",
-                height: "8px",
-                borderRadius: "9999px",
-                backgroundColor: colors.tileForeground,
-              }}
-            />
-          </div>
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <LogoTile />
         <span
           style={{
             fontSize: "32px",
