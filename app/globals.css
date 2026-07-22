@@ -2,15 +2,20 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Dark mode is disabled for now (light-only makeover). The variant and the
+   token/import surface are kept intact so dark mode is cheap to re-add later:
+   restore the .dark{} block below and wrap the app in a theme provider again. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-space-grotesk);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-space-grotesk);
-  --font-display: var(--font-space-grotesk);
+  /* Deprecated aliases kept so the ~350 existing font-display/font-heading
+     classes keep compiling without a repo-wide rename; use font-sans in new code. */
+  --font-heading: var(--font-geist-sans);
+  --font-display: var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -44,8 +49,19 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Deprecated alias of --primary, retained to avoid a ~150-site rename. Do not use in new code. */
   --color-tertiary: var(--tertiary);
   --color-tertiary-foreground: var(--tertiary-foreground);
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -53,27 +69,167 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Soft, blue-tinted, layered shadows (replace hairline borders between sections). */
+  --shadow-xs: 0 1px 2px oklch(0.45 0.1 252 / 0.05);
+  --shadow-sm: 0 1px 2px oklch(0.45 0.1 252 / 0.04), 0 2px 6px -1px oklch(0.45 0.1 252 / 0.06);
+  --shadow-md:
+    0 1px 2px oklch(0.45 0.1 252 / 0.04), 0 4px 10px -2px oklch(0.45 0.1 252 / 0.06),
+    0 10px 24px -6px oklch(0.45 0.1 252 / 0.06);
+  --shadow-lg:
+    0 1px 2px oklch(0.45 0.1 252 / 0.04), 0 8px 16px -4px oklch(0.45 0.1 252 / 0.06),
+    0 24px 48px -12px oklch(0.42 0.09 252 / 0.1);
+  --shadow-xl:
+    0 2px 4px oklch(0.45 0.1 252 / 0.04), 0 12px 24px -6px oklch(0.45 0.1 252 / 0.07),
+    0 40px 72px -20px oklch(0.42 0.09 252 / 0.12);
+  --shadow-float:
+    0 2px 4px oklch(0.45 0.1 252 / 0.04), 0 12px 28px -6px oklch(0.45 0.1 252 / 0.08),
+    0 56px 100px -28px oklch(0.4 0.09 252 / 0.16);
 }
 
 :root {
+  color-scheme: light;
+
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.205 0.012 250);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.205 0.012 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.205 0.012 250);
+  --primary: oklch(0.576 0.176 252);
+  --primary-foreground: oklch(0.99 0.004 240);
+  --secondary: oklch(0.972 0.01 245);
+  --secondary-foreground: oklch(0.417 0.128 255);
+  --muted: oklch(0.968 0.008 245);
+  /* Body/secondary text. Kept dark enough to stay comfortably readable at the
+     14-16px sizes it's used at (~7.3:1 on white), not just AA-passing. */
+  --muted-foreground: oklch(0.47 0.022 252);
+  --accent: oklch(0.955 0.022 243);
+  --accent-foreground: oklch(0.493 0.158 254);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Card/table hairlines. Deliberately visible — surfaces are defined by a grey
+     border plus a soft shadow, not by shadow alone. */
+  --border: oklch(0.898 0.012 250);
+  --input: oklch(0.898 0.012 250);
+  --ring: oklch(0.656 0.166 249);
+
+  /* Brand ramp — sky blue */
+  --brand-50: oklch(0.977 0.012 240);
+  --brand-100: oklch(0.952 0.026 241);
+  --brand-200: oklch(0.906 0.053 242);
+  --brand-300: oklch(0.837 0.086 243);
+  --brand-400: oklch(0.743 0.133 246);
+  --brand-500: oklch(0.656 0.166 249);
+  --brand-600: oklch(0.576 0.176 252);
+  --brand-700: oklch(0.493 0.158 254);
+  --brand-800: oklch(0.417 0.128 255);
+  --brand-900: oklch(0.356 0.1 256);
+
+  /* Section-band background washes. */
+  /* The hero sky: a deep brand blue at the very top that holds through the hero
+     copy and CTAs (so white text keeps contrast), then fades out over the rest
+     of the band into the page's white background. */
+  --wash-top: linear-gradient(
+    180deg,
+    var(--brand-700) 0%,
+    var(--brand-600) 25%,
+    var(--brand-500) 45%,
+    var(--brand-400) 60%,
+    var(--brand-300) 75%,
+    var(--brand-100) 88%,
+    transparent 100%
+  );
+  --wash-band: linear-gradient(180deg, var(--brand-50) 0%, transparent 100%);
+
+  /* The sky returning at the foot of the page — mirrors --wash-top, but stops
+     well short of the deep end so footer text stays dark and legible. */
+  --wash-bottom: linear-gradient(
+    180deg,
+    transparent 0%,
+    var(--brand-50) 25%,
+    var(--brand-100) 50%,
+    var(--brand-200) 75%,
+    var(--brand-300) 100%
+  );
+
+  /* Glossy treatment for the primary marketing CTAs (hero, final CTA, featured
+     pricing plan). Two stacked layers: a white sheen confined to the top ~45%,
+     over a blue base gradient. The 3D read comes from the sheen and the 1px
+     light rim in --shadow-glossy, NOT from dark inner shading at the bottom —
+     that reads as a bulging bubble rather than a lit surface. Not used on
+     ordinary app/form buttons. */
+  --gradient-glossy:
+    linear-gradient(180deg, oklch(1 0 0 / 0.22) 0%, oklch(1 0 0 / 0.05) 42%, transparent 46%),
+    linear-gradient(180deg, var(--brand-500) 0%, var(--brand-600) 100%);
+  --gradient-glossy-hover:
+    linear-gradient(180deg, oklch(1 0 0 / 0.3) 0%, oklch(1 0 0 / 0.08) 42%, transparent 46%),
+    linear-gradient(180deg, var(--brand-400) 0%, var(--brand-500) 100%);
+  /* Rim first, then the glow stack. The rim is what makes the edge read as
+     lit glass; without it the fill just floats. */
+  --shadow-glossy:
+    inset 0 0 0 1px oklch(1 0 0 / 0.24), inset 0 1px 0 oklch(1 0 0 / 0.45),
+    inset 0 -1px 1px oklch(0.25 0.09 255 / 0.16), 0 1px 2px oklch(0.25 0.09 255 / 0.2),
+    0 6px 14px -4px oklch(0.576 0.176 252 / 0.4), 0 14px 34px -10px oklch(0.576 0.176 252 / 0.42);
+  --shadow-glossy-hover:
+    inset 0 0 0 1px oklch(1 0 0 / 0.22), inset 0 1px 0 oklch(1 0 0 / 0.5),
+    inset 0 -1px 1px oklch(0.25 0.09 255 / 0.16), 0 1px 2px oklch(0.25 0.09 255 / 0.2),
+    0 8px 18px -4px oklch(0.576 0.176 252 / 0.45), 0 18px 42px -10px oklch(0.576 0.176 252 / 0.5);
+  --shadow-glossy-active:
+    inset 0 0 0 1px oklch(1 0 0 / 0.12), inset 0 2px 3px oklch(0.25 0.09 255 / 0.3),
+    0 1px 2px oklch(0.576 0.176 252 / 0.35);
+
+  /* White CTAs on the blue band. The dimensionality has to come from the 1px
+     cool bottom edge, not from a fill gradient — a white button has no color to
+     lighten, so a grey ramp across it just reads as dirty. The fill stays white
+     until the last ~25%, and the shadow stays tight; a wide soft halo muddies
+     the blue underneath. */
+  --gradient-glossy-white: linear-gradient(
+    180deg,
+    oklch(1 0 0) 0%,
+    oklch(1 0 0) 74%,
+    oklch(0.978 0.004 245) 100%
+  );
+  --gradient-glossy-white-hover: linear-gradient(
+    180deg,
+    oklch(1 0 0) 0%,
+    oklch(1 0 0) 80%,
+    oklch(0.99 0.003 245) 100%
+  );
+  --shadow-glossy-white:
+    inset 0 -1.5px 0 oklch(0.62 0.05 250 / 0.2), 0 1px 2px oklch(0.3 0.1 255 / 0.12),
+    0 4px 10px -2px oklch(0.3 0.1 255 / 0.14);
+  --shadow-glossy-white-hover:
+    inset 0 -1.5px 0 oklch(0.62 0.05 250 / 0.16), 0 1px 2px oklch(0.3 0.1 255 / 0.12),
+    0 6px 16px -3px oklch(0.3 0.1 255 / 0.18);
+  --shadow-glossy-white-active:
+    inset 0 1.5px 2px oklch(0.62 0.05 250 / 0.22), 0 1px 1px oklch(0.3 0.1 255 / 0.12);
+
+  /* Glass treatment for the hero's secondary CTA, which sits ON the blue band:
+     a translucent white fill with the sheen in the top 45%, so it reads as lit
+     glass over the band rather than flat 10% white. Only works over blue — the
+     rim is white and the shadow is blue-black, both of which fall apart on a
+     white page. Use --gradient-glossy there instead. */
+  --gradient-glossy-ghost: linear-gradient(
+    180deg,
+    oklch(1 0 0 / 0.3) 0%,
+    oklch(1 0 0 / 0.13) 45%,
+    oklch(1 0 0 / 0.1) 100%
+  );
+  --gradient-glossy-ghost-hover: linear-gradient(
+    180deg,
+    oklch(1 0 0 / 0.42) 0%,
+    oklch(1 0 0 / 0.22) 45%,
+    oklch(1 0 0 / 0.18) 100%
+  );
+  --shadow-glossy-ghost:
+    inset 0 0 0 1px oklch(1 0 0 / 0.35), inset 0 1px 0 oklch(1 0 0 / 0.5),
+    0 1px 2px oklch(0.3 0.1 255 / 0.15), 0 8px 20px -6px oklch(0.3 0.1 255 / 0.2);
+  --shadow-glossy-ghost-hover:
+    inset 0 0 0 1px oklch(1 0 0 / 0.45), inset 0 1px 0 oklch(1 0 0 / 0.6),
+    0 1px 2px oklch(0.3 0.1 255 / 0.15), 0 10px 26px -6px oklch(0.3 0.1 255 / 0.26);
+  --shadow-glossy-ghost-active:
+    inset 0 0 0 1px oklch(1 0 0 / 0.3), inset 0 2px 3px oklch(0.3 0.1 255 / 0.2);
+
   /* Categorical chart palette (dataviz skill): fixed hue order, never cycled. */
   --chart-1: #2a78d6; /* blue */
   --chart-2: #1baf7a; /* aqua */
@@ -86,69 +242,92 @@
   --status-serious: #ec835a;
   --status-critical: #d03b3b;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --tertiary: oklch(0.84 0.19 112);
-  /* --tertiary is a fixed bright lime in both themes, so its paired text
-     colour stays dark in both themes too. */
-  --tertiary-foreground: oklch(0.145 0 0);
+  --sidebar: oklch(0.985 0.006 245);
+  --sidebar-foreground: oklch(0.205 0.012 250);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--brand-100);
+  --sidebar-accent-foreground: var(--brand-800);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  /* Deprecated alias of --primary, retained to avoid a ~150-site rename. Do not use in new code. */
+  --tertiary: var(--primary);
+  --tertiary-foreground: var(--primary-foreground);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  /* Dark-mode categorical steps (dataviz skill): same hues, stepped for the dark surface. */
-  --chart-1: #3987e5; /* blue */
-  --chart-2: #199e70; /* aqua */
-  --chart-3: #c98500; /* yellow */
-  --chart-4: #008300; /* green */
-  --chart-5: #9085e9; /* violet */
-  --status-good: #0ca30c;
-  --status-warning: #fab219;
-  --status-serious: #ec835a;
-  --status-critical: #d03b3b;
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-  --tertiary: oklch(0.84 0.19 112);
-  --tertiary-foreground: oklch(0.145 0 0);
+/* The standard raised surface: white fill, a visible grey hairline, and a soft
+   shadow. Border and shadow together — a shadow alone reads as mushy on white. */
+@utility card-surface {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Marquee rows. The track holds the item list twice, so translating by exactly
+   half its width lands on an identical frame and the loop is seamless. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* A 1px brushed-silver edge. Drawn as a gradient in a masked ::before rather
+   than a border, because a border can only take a flat colour — the mask punches
+   out the inside so only the 1px ring paints. The light runs top-left to
+   bottom-right, so highlights and shadows land where the page's light does. */
+@utility silver-edge {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      145deg,
+      oklch(1 0 0) 0%,
+      oklch(0.88 0.006 250) 22%,
+      oklch(0.99 0.002 250) 42%,
+      oklch(0.82 0.008 250) 62%,
+      oklch(0.95 0.004 250) 82%,
+      oklch(1 0 0) 100%
+    );
+    /* Longhands, not the `mask` shorthand: the shorthand resets mask-composite
+       to `add`, and the minifier then drops the exclude as dead — which paints
+       the gradient over the whole card instead of just the 1px ring. */
+    -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-clip: content-box, border-box;
+    -webkit-mask-composite: xor;
+    mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    mask-clip: content-box, border-box;
+    mask-composite: exclude;
+  }
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  /* font-sans must live on <body>, not <html>: next/font puts the
+     --font-geist-* variables on the body className, so `font-sans` on <html>
+     resolves against an undefined variable and falls back to serif. */
   body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
+    @apply bg-background text-foreground font-sans;
   }
 }

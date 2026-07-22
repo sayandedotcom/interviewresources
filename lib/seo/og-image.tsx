@@ -6,6 +6,8 @@ export const ogImageSize = {
 };
 
 export function OgImageContent() {
+  const { colors } = siteConfig.brand;
+
   return (
     <div
       style={{
@@ -15,52 +17,64 @@ export function OgImageContent() {
         flexDirection: "column",
         justifyContent: "center",
         padding: "80px",
-        backgroundColor: siteConfig.brand.colors.background,
-        color: siteConfig.brand.colors.ogForeground,
+        backgroundColor: colors.ogBackground,
+        color: colors.ogForeground,
       }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+        {/* The brand tile: solid blue square, everything inside it white. */}
         <div
           style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "9999px",
-            border: `2px solid ${siteConfig.brand.colors.ring}`,
+            width: "56px",
+            height: "56px",
+            borderRadius: "16px",
+            backgroundColor: colors.tile,
             display: "flex",
-            position: "relative",
+            alignItems: "center",
+            justifyContent: "center",
           }}>
           <div
             style={{
-              position: "absolute",
-              left: "13px",
-              top: "0px",
-              width: "1px",
-              height: "28px",
-              opacity: 0.4,
-              backgroundColor: siteConfig.brand.colors.ring,
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              left: "0px",
-              top: "13px",
-              width: "28px",
-              height: "1px",
-              opacity: 0.4,
-              backgroundColor: siteConfig.brand.colors.ring,
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              left: "16px",
-              top: "5px",
-              width: "7px",
-              height: "7px",
+              width: "34px",
+              height: "34px",
               borderRadius: "9999px",
-              backgroundColor: siteConfig.brand.colors.blip,
-            }}
-          />
+              border: `3px solid ${colors.tileForeground}`,
+              display: "flex",
+              position: "relative",
+            }}>
+            <div
+              style={{
+                position: "absolute",
+                left: "14px",
+                top: "0px",
+                width: "2px",
+                height: "34px",
+                opacity: 0.4,
+                backgroundColor: colors.tileForeground,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: "0px",
+                top: "14px",
+                width: "34px",
+                height: "2px",
+                opacity: 0.4,
+                backgroundColor: colors.tileForeground,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: "18px",
+                top: "5px",
+                width: "8px",
+                height: "8px",
+                borderRadius: "9999px",
+                backgroundColor: colors.tileForeground,
+              }}
+            />
+          </div>
         </div>
         <span
           style={{
@@ -88,7 +102,7 @@ export function OgImageContent() {
           display: "flex",
           marginTop: "32px",
           fontSize: "28px",
-          color: siteConfig.brand.colors.ogMuted,
+          color: colors.ogMuted,
           maxWidth: "800px",
         }}>
         {siteConfig.copy.subtagline}

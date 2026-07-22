@@ -1,11 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 
 import { siteConfig } from "@/site";
 
 import { Analytics } from "@/components/analytics";
 import { CookieConsentBanner } from "@/components/cookie-consent";
-import { ThemeProvider } from "@/components/theme-provider";
 
 import { organizationJsonLd, webApplicationJsonLd } from "@/lib/seo/json-ld";
 
@@ -14,19 +13,13 @@ import { ToastProvider } from "@/hooks/use-toast";
 import "./globals.css";
 
 const geistSans = Geist({
-  variable: "--font-sans",
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
 const title = `${siteConfig.name} — ${siteConfig.copy.titleSuffix}`;
@@ -70,10 +63,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "oklch(1 0 0)" },
-    { media: "(prefers-color-scheme: dark)", color: "oklch(0.145 0 0)" },
-  ],
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -82,22 +72,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} bg-background text-foreground flex min-h-full flex-col`}>
+        className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground flex min-h-full flex-col`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify([webApplicationJsonLd, organizationJsonLd]),
           }}
         />
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <ToastProvider>
-            {children}
-            <Analytics />
-            <CookieConsentBanner />
-          </ToastProvider>
-        </ThemeProvider>
+        <ToastProvider>
+          {children}
+          <Analytics />
+          <CookieConsentBanner />
+        </ToastProvider>
       </body>
     </html>
   );

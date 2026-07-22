@@ -8,7 +8,9 @@ export const size = {
 };
 export const contentType = "image/png";
 
-// Full radar-scope mark: ring, faint crosshairs, lime dot blip upper-right.
+// Full radar-scope mark: ring, faint crosshairs, dot blip upper-right, on the
+// blue brand tile so it stays visible on light OS chrome. Deliberately square —
+// iOS applies its own corner mask, and pre-rounding would double up.
 export default function AppleIcon() {
   return new ImageResponse(
     <div
@@ -18,14 +20,14 @@ export default function AppleIcon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: siteConfig.brand.colors.background,
+        backgroundColor: siteConfig.brand.colors.tile,
       }}>
       <div
         style={{
           width: "120px",
           height: "120px",
           borderRadius: "9999px",
-          border: `6px solid ${siteConfig.brand.colors.ring}`,
+          border: `6px solid ${siteConfig.brand.colors.tileForeground}`,
           display: "flex",
           position: "relative",
         }}>
@@ -37,7 +39,7 @@ export default function AppleIcon() {
             width: "2px",
             height: "108px",
             opacity: 0.4,
-            backgroundColor: siteConfig.brand.colors.ring,
+            backgroundColor: siteConfig.brand.colors.tileForeground,
           }}
         />
         <div
@@ -48,7 +50,7 @@ export default function AppleIcon() {
             width: "108px",
             height: "2px",
             opacity: 0.4,
-            backgroundColor: siteConfig.brand.colors.ring,
+            backgroundColor: siteConfig.brand.colors.tileForeground,
           }}
         />
         <div
@@ -59,7 +61,7 @@ export default function AppleIcon() {
             width: "26px",
             height: "26px",
             borderRadius: "9999px",
-            backgroundColor: siteConfig.brand.colors.blip,
+            backgroundColor: siteConfig.brand.colors.tileForeground,
           }}
         />
       </div>
