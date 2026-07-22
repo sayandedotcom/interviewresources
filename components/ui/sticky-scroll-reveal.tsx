@@ -24,7 +24,7 @@ function StageText({ stage, index }: { stage: Stage; index: number }) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -8 }}
         transition={{ duration: 0.25 }}>
-        <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
+        <p className="text-tertiary mb-2 text-[11px] tracking-[0.22em] uppercase">
           {String(index + 1).padStart(2, "0")} · {stage.label}
         </p>
         <h3 className="font-display text-2xl font-semibold tracking-tight">{stage.title}</h3>
@@ -38,10 +38,13 @@ function StageText({ stage, index }: { stage: Stage; index: number }) {
 
 /**
  * Scroll-pinned stepper. The section is tall enough to give each stage a full
- * screen of scroll; an inner sticky wrapper "locks" the stepper and the active
- * panel to the viewport while the section scrolls past, advancing the active
- * stage as it goes. Rewritten from the generic side-by-side reveal into this
- * vertical, top-stepper layout.
+ * screen of scroll; an inner sticky wrapper "locks" the stage text, the tabs and
+ * the active panel to the viewport while the section scrolls past, advancing the
+ * active stage as it goes.
+ *
+ * Layout is a two-column grid: the stage copy sits in the left column (in normal
+ * flow, so it is always on screen) and the tabs + panel occupy the right column.
+ * Below lg the copy stacks above the tabs.
  */
 export const StickyScroll = ({
   content,
@@ -66,40 +69,53 @@ export const StickyScroll = ({
     setActive(closest);
   });
 
+  /** Tabs are real controls: clicking one scrolls to that stage's slice of the
+   * section, which then drives `active` through the usual scroll handler. */
+  const goToStage = (index: number) => {
+    const el = ref.current;
+    if (!el) return;
+    const top = el.offsetTop + (el.offsetHeight * index) / cardLength;
+    window.scrollTo({ top, behavior: "smooth" });
+  };
+
   return (
     <div ref={ref} style={{ height: `${cardLength * 90}vh` }} className="relative">
-      {/* The stepper and panel stay centered where the section puts them; the
-          stage text hangs in the page's left margin (absolute, off the content's
-          left edge), the same trick as the estimate rail. Below xl there is no
-          margin to hang in, so the text stacks under the panel instead. */}
-      <div className="sticky top-10">
-        <div className="absolute top-16 right-full mr-12 hidden w-80 xl:block">
+      <div className="sticky top-10 grid gap-8 lg:grid-cols-[minmax(16rem,20rem)_1fr] lg:gap-10">
+        {/* Left column: the active stage's copy, pinned to the top of the panel. */}
+        <div className="lg:pt-14">
           <StageText stage={content[active]} index={active} />
         </div>
 
-        <div className="flex flex-col gap-8">
-          {/* Stepper: numbered pills joined by a line that fills up to the active stage. */}
-          <div className="flex items-center">
+        {/* Right column: tabs + flow progress above the active panel. */}
+        <div className="flex min-w-0 flex-col gap-6">
+          {/* Tabs: numbered pills joined by a line that fills up to the active stage. */}
+          <div className="silver-edge bg-card flex items-center rounded-full px-5 py-2.5 shadow-[var(--shadow-sm)]">
             {content.map((stage, index) => (
               <React.Fragment key={stage.label}>
-                <div className="flex shrink-0 items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => goToStage(index)}
+                  aria-current={index === active ? "step" : undefined}
+                  className="group flex shrink-0 cursor-pointer items-center gap-2.5">
                   <span
                     className={cn(
                       "font-display flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold transition-colors duration-300",
                       index <= active
                         ? "border-tertiary bg-tertiary text-tertiary-foreground"
-                        : "border-border text-muted-foreground"
+                        : "border-border text-muted-foreground group-hover:border-tertiary/50"
                     )}>
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <span
                     className={cn(
-                      "font-display text-sm font-medium transition-colors duration-300",
-                      index === active ? "text-foreground" : "text-muted-foreground"
+                      "font-display hidden text-sm font-medium transition-colors duration-300 sm:inline",
+                      index === active
+                        ? "text-foreground"
+                        : "text-muted-foreground group-hover:text-foreground"
                     )}>
                     {stage.label}
                   </span>
-                </div>
+                </button>
                 {index < cardLength - 1 && (
                   <div className="bg-border relative mx-3 h-px flex-1">
                     <motion.div
@@ -113,28 +129,25 @@ export const StickyScroll = ({
             ))}
           </div>
 
-          {/* The active stage's panel, spanning the stepper's full width. */}
-          <div
-            className={cn(
-              "bg-card flex h-[calc(100vh-10rem)] overflow-hidden rounded-xl border",
-              contentClassName
-            )}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={active}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="h-full w-full">
-                {content[active].content ?? null}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Below xl the margin rail is hidden; the text stacks here instead. */}
-          <div className="xl:hidden">
-            <StageText stage={content[active]} index={active} />
+          {/* The active stage's panel, in a brand cradle to match the other sections. */}
+          <div className="silver-edge from-brand-100/90 to-brand-50/30 rounded-3xl bg-gradient-to-b p-3 shadow-[var(--shadow-sm)] sm:p-4">
+            <div
+              className={cn(
+                "border-border/50 bg-background flex h-[34rem] overflow-hidden rounded-2xl border shadow-[var(--shadow-md)]",
+                contentClassName
+              )}>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={active}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="h-full w-full">
+                  {content[active].content ?? null}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>

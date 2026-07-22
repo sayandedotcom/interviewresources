@@ -19,6 +19,11 @@ const buttonVariants = cva(
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         tertiary: "bg-tertiary text-tertiary-foreground hover:bg-tertiary/80",
         link: "text-primary underline-offset-4 hover:underline",
+        /** Glossy 3D pill for the primary marketing CTAs — not for app/form buttons.
+         * The text shadow is load-bearing: white on the mid-gradient blue is only
+         * ~3.4:1, and the shadow buys back edge definition at CTA sizes. */
+        glossy:
+          "rounded-full font-semibold text-white [text-shadow:0_1px_1px_oklch(0.25_0.09_255/0.35)] bg-[image:var(--gradient-glossy)] shadow-[var(--shadow-glossy)] hover:bg-[image:var(--gradient-glossy-hover)] hover:shadow-[var(--shadow-glossy-hover)] active:shadow-[var(--shadow-glossy-active)]",
       },
       size: {
         default:
