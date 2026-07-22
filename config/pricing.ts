@@ -12,6 +12,8 @@ export const pricingConfig = {
     {
       slug: "starter" as const,
       name: "Starter",
+      badge: "Try it",
+      featured: false,
       price: 1,
       credits: 100,
       description: "Try it for $1 — about two reports",
@@ -26,6 +28,8 @@ export const pricingConfig = {
     {
       slug: "bundle" as const,
       name: "Bundle",
+      badge: "Most popular",
+      featured: true,
       price: 5,
       credits: 550,
       description: "Stock up, stop topping up",
@@ -39,6 +43,8 @@ export const pricingConfig = {
     {
       slug: "max" as const,
       name: "Max",
+      badge: "Best value",
+      featured: false,
       price: 10,
       credits: 1200,
       description: "For a full interview season",

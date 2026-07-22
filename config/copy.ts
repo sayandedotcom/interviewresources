@@ -259,6 +259,11 @@ export const copyConfig = {
     ],
     name: "Sayan De",
     role: "Builder, Interview Resources",
+    /** Drop the files in /public and point these at them, e.g. "/founder.jpg"
+     * and "/signature.png". Left empty, the memo falls back to initials and a
+     * typed sign-off, so the section renders fine either way. */
+    avatarSrc: "",
+    signatureSrc: "",
   },
 
   // ── CTA section (shared) ─────────────────────────────────────────

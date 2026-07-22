@@ -15,7 +15,7 @@ export const siteConfig = {
   userCount: "2,345",
   emails: contactConfig,
   links: {
-    twitter: "https://twitter.com/sayandedotcom",
+    twitter: "https://x.com/sayandedotcom",
     github: "https://github.com/sayandedotcom/interview-questions",
   },
   waitlist: false,
