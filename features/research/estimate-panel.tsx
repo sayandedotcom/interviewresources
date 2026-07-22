@@ -48,7 +48,9 @@ function Summary({
       {balance !== undefined && (
         <Tooltip>
           <TooltipTrigger render={<span className="cursor-help" />}>
-            <EstimateRing value={estimate.maxCredits} max={balance} className="size-16 text-xs" />
+            {/* No className: EstimateRing's own default (size-20 text-sm) is the
+                size we want, and it fits the 224px rail. */}
+            <EstimateRing value={estimate.maxCredits} max={balance} />
           </TooltipTrigger>
           <TooltipContent>
             <span className="font-display">
@@ -62,10 +64,14 @@ function Summary({
         <Tooltip>
           <TooltipTrigger
             render={
-              <p className="font-display text-foreground cursor-help text-lg leading-none font-semibold" />
+              <p className="font-display text-foreground cursor-help text-3xl leading-none font-bold tracking-tight" />
             }>
+            {/* The range and its unit stay in one node — the panel's tests match
+                "~29–54" against this element's text. */}
             ~{creditRange(estimate)}{" "}
-            <span className="text-muted-foreground text-xs font-normal">credits</span>
+            <span className="text-muted-foreground block pt-1.5 text-[11px] font-medium tracking-wide uppercase">
+              credits
+            </span>
           </TooltipTrigger>
           <TooltipContent>
             <span className="font-display">
@@ -99,13 +105,17 @@ function BalanceLine({ balance, ceiling }: { balance: number; ceiling?: number }
     <Tooltip>
       <TooltipTrigger
         render={
-          <p className="font-display flex cursor-help items-center gap-1.5 text-sm font-medium" />
+          <p className="font-display bg-muted/40 flex cursor-help flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-lg px-2.5 py-1.5 text-sm font-medium" />
         }>
-        <Coins className="text-tertiary h-4 w-4 shrink-0" aria-hidden="true" />
+        <Coins className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="text-muted-foreground">Balance:</span>
-        <span className="text-tertiary font-semibold">{balance}</span>
+        {/* Bare on purpose: the test matches "200" exactly, so nothing else may
+            share this element. */}
+        <span className="text-primary font-semibold">{balance}</span>
         {ceiling !== undefined && (
-          <span className="text-tertiary/70 font-semibold">· cap {ceiling}</span>
+          // nowrap: in the report's narrow rail this used to break between "cap"
+          // and the number, stranding the figure on its own line.
+          <span className="text-primary/70 font-semibold whitespace-nowrap">· cap {ceiling}</span>
         )}
       </TooltipTrigger>
       <TooltipContent>
@@ -122,8 +132,10 @@ function BalanceLine({ balance, ceiling }: { balance: number; ceiling?: number }
 /** The promise we are careful not to make, said in the same words everywhere. */
 function Disclaimer() {
   return (
-    <p className="text-muted-foreground font-display bg-tertiary/5 rounded-md px-2.5 py-2 text-xs leading-relaxed font-medium">
-      <span className="text-tertiary font-semibold">Estimate only</span>
+    // Deliberately neutral, not brand-tinted: this is the line that lowers
+    // expectations, and a blue box reads as a feature highlight.
+    <p className="text-muted-foreground font-display bg-muted/60 border-border rounded-lg border px-2.5 py-2 text-xs leading-relaxed">
+      <span className="text-foreground font-semibold">Estimate only</span>
       {DISCLAIMER}
     </p>
   );
@@ -133,7 +145,7 @@ function Disclaimer() {
 function BudgetWarning({ estimate, balance }: { estimate: Estimate; balance: number }) {
   if (!overBudget(estimate.maxCredits, balance)) return null;
   return (
-    <p className="text-status-critical font-display flex gap-1.5 text-xs leading-relaxed font-medium">
+    <p className="text-status-critical font-display bg-status-critical/10 border-status-critical/30 flex gap-1.5 rounded-lg border px-2.5 py-2 text-xs leading-relaxed font-medium">
       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       <span>
         This could cost more than your {balance} credits. The run stops when they are spent, so the
@@ -153,6 +165,7 @@ export function EstimatePanel({
   balance,
   ceiling,
   controls,
+  variant = "margin",
 }: {
   estimate: Estimate;
   balance?: number;
@@ -161,33 +174,41 @@ export function EstimatePanel({
   /** Optional extra controls (e.g. the report's Effort picker) shown above the
       summary in the rail and inside the expanded bottom bar. */
   controls?: React.ReactNode;
+  /**
+   * How the desktop rail is placed. "margin" hangs it outside the content's
+   * right edge (the original behaviour, still used by the report). "column"
+   * makes it an ordinary grid item, which is what lets its container widen
+   * without pushing the rail off the side of the page.
+   */
+  variant?: "margin" | "column";
 }) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       {/*
-       * The rail hangs in the page's right margin (absolute, off the form's right
-       * edge) instead of taking a grid column, so the form stays exactly where it
-       * was — aligned with everything else on the page. It only appears from xl,
-       * the first width where the margin is genuinely wide enough to hold it
-       * without pushing the page sideways; below that the bottom bar takes over.
-       * The full-height wrapper is what gives the sticky card room to travel.
+       * The rail only appears from xl; below that the sticky bottom bar takes
+       * over. Either way the full-height wrapper is what gives the sticky card
+       * room to travel — don't collapse it with `items-start` on the parent.
        */}
       <aside
         data-testid="estimate-rail"
-        className="absolute top-0 left-full ml-5 hidden h-full w-56 xl:block"
+        className={
+          variant === "column"
+            ? "hidden h-full w-full xl:block"
+            : "absolute top-0 left-full ml-5 hidden h-full w-56 xl:block"
+        }
         aria-label="Cost estimate">
-        <Card className="sticky top-6">
+        {/* Recolouring Card's own ring rather than adding a border: it already
+            ships ring-1, and a border on top would double the hairline. The
+            shadow is what says "floating rail" rather than "inline card". */}
+        <Card className="ring-border sticky top-6 rounded-2xl shadow-[var(--shadow-md)]">
           <CardContent className="space-y-3">
-            {/* The label is a heading, not a row of the stack — it wants more air
-                under it than the card's rhythm gives the rest. */}
+            {/* An eyebrow, not a title — it has to yield to the credit figure,
+                which is the one number this panel exists to show. */}
             <div className="mb-2">
-              <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
-                <Gauge
-                  className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
-                  aria-hidden="true"
-                />
+              <h2 className="text-muted-foreground font-display flex items-center text-[11px] font-semibold tracking-[0.14em] uppercase">
+                <Gauge className="text-primary mr-2 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 Estimate
               </h2>
             </div>
@@ -210,18 +231,22 @@ export function EstimatePanel({
       </aside>
 
       {/* Everywhere the rail doesn't fit: a slim bar pinned to the bottom of the
-          viewport, expanding to the same detail on tap. */}
+          viewport, expanding to the same detail on tap. The safe-area padding
+          matters here specifically — this sits where an iPhone's home indicator
+          is. */}
       <div
         data-testid="estimate-bar"
-        className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur xl:hidden">
+        className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur xl:hidden">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="flex w-full items-center justify-between gap-3 px-5 py-2.5 text-left">
+          className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left">
           <span className="font-display text-foreground flex items-center gap-2 text-sm">
-            <Gauge className="text-tertiary h-4 w-4" aria-hidden="true" />
-            <span className="font-semibold">~{creditRange(estimate)} credits</span>
+            <Gauge className="text-primary h-4 w-4" aria-hidden="true" />
+            <span className="text-base font-bold tracking-tight">
+              ~{creditRange(estimate)} credits
+            </span>
             <span className="text-muted-foreground text-xs">· ~{minuteRange(estimate)} min</span>
           </span>
           <ChevronUp
@@ -230,7 +255,7 @@ export function EstimatePanel({
           />
         </button>
         {open && (
-          <div className="space-y-2.5 px-5 pb-3">
+          <div className="space-y-3 px-5 pb-3">
             <Summary estimate={estimate} balance={balance} />
             {balance !== undefined && (
               <>

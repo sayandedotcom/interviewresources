@@ -23,6 +23,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { CATEGORY_META, categoryLabel } from "@/lib/research/display";
 import { INTERVIEW_CATEGORIES, type InterviewCategory } from "@/lib/research/types";
 
+import { ToggleChip, chipOn } from "@/features/research/toggle-chip";
+
 const CATEGORY_ICON: Record<InterviewCategory, LucideIcon> = {
   dsa: Puzzle,
   system_design: Building2,
@@ -83,26 +85,15 @@ export function RoundPicker({
         const meta = CATEGORY_META[cat];
         const Icon = CATEGORY_ICON[cat];
         return (
-          <Tooltip key={cat}>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  size="lg"
-                  variant={on ? "default" : "outline"}
-                  onClick={() => onToggle(cat)}
-                  aria-pressed={on}
-                  disabled={disabled}
-                />
-              }>
-              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="font-mono text-[10px] tracking-widest opacity-70">{meta.code}</span>
-              <span className="font-display">{meta.label}</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <span className="font-display">{meta.blurb}</span>
-            </TooltipContent>
-          </Tooltip>
+          <ToggleChip
+            key={cat}
+            icon={Icon}
+            label={meta.label}
+            blurb={meta.blurb}
+            on={on}
+            onClick={() => onToggle(cat)}
+            disabled={disabled}
+          />
         );
       })}
 
@@ -111,7 +102,8 @@ export function RoundPicker({
           type="button"
           key={custom}
           size="lg"
-          variant="default"
+          variant="outline"
+          className={chipOn}
           onClick={() => onRemoveCustom(custom)}
           title="Click to remove"
           disabled={disabled}>
@@ -135,7 +127,12 @@ export function RoundPicker({
               }
             }}
           />
-          <Button type="button" size="sm" onClick={submitCustom} disabled={disabled}>
+          <Button
+            type="button"
+            size="sm"
+            variant="glossy"
+            onClick={submitCustom}
+            disabled={disabled}>
             Add
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={() => setShowCustomInput(false)}>

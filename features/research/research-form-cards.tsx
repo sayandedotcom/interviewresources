@@ -41,11 +41,8 @@ export function SectionsCard({
   return (
     <Card>
       <CardContent>
-        <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
-          <LayoutList
-            className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
-            aria-hidden="true"
-          />
+        <h2 className="text-muted-foreground font-display flex items-center text-lg font-medium capitalize">
+          <LayoutList className="text-primary mr-2.5 h-5 w-5 shrink-0" aria-hidden="true" />
           Report Sections
         </h2>
         <p className="text-muted-foreground font-display mt-1 text-xs">
@@ -96,11 +93,8 @@ export function RoundsCard({
   return (
     <Card>
       <CardContent>
-        <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
-          <Swords
-            className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
-            aria-hidden="true"
-          />
+        <h2 className="text-muted-foreground font-display flex items-center text-lg font-medium capitalize">
+          <Swords className="text-primary mr-2.5 h-5 w-5 shrink-0" aria-hidden="true" />
           Rounds to Gather
         </h2>
         <p className="text-muted-foreground font-display mt-1 text-xs">
@@ -134,11 +128,8 @@ export function EffortCard({
   return (
     <Card>
       <CardContent>
-        <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
-          <Zap
-            className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
-            aria-hidden="true"
-          />
+        <h2 className="text-muted-foreground font-display flex items-center text-lg font-medium capitalize">
+          <Zap className="text-primary mr-2.5 h-5 w-5 shrink-0" aria-hidden="true" />
           Effort
         </h2>
         <p className="text-muted-foreground font-display mt-1 text-xs">

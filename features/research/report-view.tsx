@@ -75,11 +75,34 @@ import { explainError, streamSse } from "@/features/research/stream";
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-muted-foreground font-mono text-[11px] tracking-[0.18em] uppercase">
+    <span className="text-muted-foreground text-[11px] tracking-[0.18em] uppercase">
       {children}
     </span>
   );
 }
+
+/**
+ * One vertical rhythm for the whole report. The page is a long stack of unlike
+ * blocks — prose, chips, cards, lists — and without a single shared scale it
+ * reads as one undifferentiated wall.
+ *
+ * `SECTION` is the gap between top-level sections; `HEADING_GAP` sits between a
+ * heading and the content it introduces. The section gap has to be clearly
+ * larger than the heading gap, or a heading appears to belong to the section
+ * above it as much as its own.
+ */
+const SECTION = "mt-14";
+const HEADING_GAP = "mt-5";
+
+/**
+ * Headings are grey and the body is near-black, which is the whole point: at a
+ * glance the dark text is what you read, and the grey is scaffolding telling you
+ * where you are.
+ */
+const SECTION_HEADING = "font-display text-muted-foreground text-lg font-semibold tracking-tight";
+
+/** A heading's own explanatory line — stays tight to the heading it belongs to. */
+const HEADING_SUB = "text-muted-foreground font-display mt-1.5 text-xs";
 
 export function ReportView({
   report,
@@ -278,21 +301,28 @@ export function ReportView({
   const skillsRequired = current.skillsRequired ?? [];
 
   return (
-    <div className="relative mt-6">
+    // The estimate rail is absolutely placed at `left-full` + `ml-5`, so it sits
+    // 15.25rem (w-56 + ml-5) beyond this box's right edge. Reserving exactly that
+    // much margin from xl — where the rail appears — is what keeps it on the page
+    // instead of pushing the document sideways. Applied here rather than at the
+    // page so every ReportView (standalone route and post-run in the form) is safe.
+    <div className="relative mt-6 xl:mr-[15.25rem]">
       <div className="flex items-center justify-between pb-3">
         <SectionLabel>
           <Search className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
           Gathered resources
         </SectionLabel>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           {creditsCharged != null && (
             <Tooltip>
               <TooltipTrigger
                 render={
                   <span
                     data-testid="credits-badge"
-                    className="bg-secondary inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-xs tracking-widest">
-                    <Coins className="text-tertiary size-4" />
+                    // No tracking-widest: this is a number, and letter-spacing on
+                    // digits makes them read as separate figures.
+                    className="bg-primary/10 border-primary/20 text-primary mr-1 inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold tabular-nums">
+                    <Coins className="size-3.5" />
                     {creditsCharged.toLocaleString()}
                   </span>
                 }
@@ -309,17 +339,28 @@ export function ReportView({
                 render={
                   <DropdownMenuTrigger
                     render={
+                      // Glossy at rest, but a failure has to drop out of it —
+                      // "Copy failed" in white on a blue gradient reads as a
+                      // success, which is the opposite of what happened.
                       <Button
                         type="button"
-                        variant="outline"
+                        variant={copyState === "failed" ? "outline" : "glossy"}
                         size="sm"
                         aria-label="Copy as prompt"
+                        className={
+                          copyState === "failed"
+                            ? "border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:text-destructive shadow-[var(--shadow-xs)]"
+                            : undefined
+                        }
                       />
                     }
                   />
                 }>
+                {/* Inherits the button's colour rather than going green: the
+                    copied state sits on the glossy blue fill, where a
+                    status-good tick would barely register. */}
                 {copyState === "copied" ? (
-                  <Check className="text-tertiary mr-1 h-4 w-4" />
+                  <Check className="mr-1 h-4 w-4" />
                 ) : (
                   <ClipboardCopy className="mr-1 h-4 w-4" />
                 )}
@@ -357,7 +398,7 @@ export function ReportView({
 
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={<Button type="button" variant="outline" size="sm" aria-label="Download" />}>
+              render={<Button type="button" variant="glossy" size="sm" aria-label="Download" />}>
               {pdfBusy ? (
                 <Loader2 className="mr-1 h-4 w-4 animate-spin" />
               ) : (
@@ -379,14 +420,24 @@ export function ReportView({
           </DropdownMenu>
 
           {onReset && (
-            <Button variant="outline" size="sm" onClick={onReset}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onReset}
+              className="shadow-[var(--shadow-xs)]">
               <span className="font-display">New report</span>
             </Button>
           )}
         </div>
       </div>
+      {/* A failed export used to be an 11px grey-red line hugging the right
+          margin — easy to miss entirely. Given the same boxed treatment as the
+          report's other warnings. */}
       {downloadError && (
-        <p className="text-destructive pb-2 text-right font-mono text-[11px]">{downloadError}</p>
+        <p className="text-destructive bg-destructive/10 border-destructive/30 font-display mb-2 flex items-start gap-1.5 rounded-lg border px-3 py-2 text-xs leading-relaxed">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{downloadError}</span>
+        </p>
       )}
       <Separator />
 
@@ -408,17 +459,17 @@ export function ReportView({
 
       {/* Null once the section can be switched off at request time. */}
       {current.companySnapshot && (
-        <section className="mt-5">
-          <h2 className="font-display text-lg font-semibold tracking-tight">
+        <section className={SECTION}>
+          <h2 className={SECTION_HEADING}>
             <Building2 className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             The company
           </h2>
-          <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
+          <p className={`font-display text-foreground text-[15px] leading-relaxed ${HEADING_GAP}`}>
             {current.companySnapshot}
           </p>
           {/* Reports generated before companyExplainer existed are stored without it. */}
           {current.companyExplainer && (
-            <div className="bg-tertiary/10 border-tertiary/40 mt-3 rounded-md border-l-2 px-4 py-3">
+            <div className="bg-primary/10 border-primary/40 mt-3 rounded-md border-l-2 px-4 py-3">
               <SectionLabel>
                 <Lightbulb className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
                 In plain terms
@@ -432,7 +483,7 @@ export function ReportView({
       )}
 
       {current.likelyLoopStructure && (
-        <section className="mt-6">
+        <section className={SECTION}>
           <SectionLabel>
             <Compass className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
             The loop
@@ -444,7 +495,7 @@ export function ReportView({
       )}
 
       {current.interviewerSummary && (
-        <Card className="mt-6">
+        <Card className={SECTION}>
           <CardContent>
             <SectionLabel>
               <Mic className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
@@ -460,23 +511,23 @@ export function ReportView({
       {/* Null on a report that excluded the section, absent on one generated
           before it existed — either way there is nothing to show. */}
       {skillsRequired.length > 0 && (
-        <section className="mt-8">
-          <h2 className="font-display text-lg font-semibold tracking-tight">
+        <section className={SECTION}>
+          <h2 className={SECTION_HEADING}>
             <Wrench className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             Skills required
           </h2>
-          <p className="text-muted-foreground font-display mt-1 text-xs">
+          <p className={HEADING_SUB}>
             What the role actually demands — including what the job post leaves unsaid. Hover a
             skill for why it matters here.
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className={`flex flex-wrap gap-2 ${HEADING_GAP}`}>
             {skillsRequired.map((s, i) => (
               <Tooltip key={i}>
                 <TooltipTrigger
                   render={
                     <Badge
                       variant="outline"
-                      className="hover:border-tertiary/50 hover:bg-tertiary/10 hover:text-tertiary cursor-help px-2.5 py-1 transition-colors"
+                      className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary cursor-help px-2.5 py-1 transition-colors"
                     />
                   }>
                   <span className="font-display text-[13px]">{s.skill}</span>
@@ -493,18 +544,18 @@ export function ReportView({
       {/* Null on a report that declined the section, absent on one generated
           before it existed — either way there is nothing to show. */}
       {current.recruiterPitch && (
-        <section className="mt-8">
-          <h2 className="font-display text-lg font-semibold tracking-tight">
+        <section className={SECTION}>
+          <h2 className={SECTION_HEADING}>
             <UserCheck className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             How to impress the recruiter
           </h2>
-          <p className="font-display text-foreground mt-1.5 text-[15px] leading-relaxed">
+          <p className={`font-display text-foreground text-[15px] leading-relaxed ${HEADING_GAP}`}>
             {current.recruiterPitch.candidateProfile}
           </p>
           <ul className="mt-3 space-y-1.5">
             {current.recruiterPitch.presentationTips.map((tip, i) => (
               <li key={i} className="font-display text-foreground flex gap-3 text-[15px]">
-                <span className="text-tertiary font-mono text-[13px]" aria-hidden="true">
+                <span className="text-primary text-[13px]" aria-hidden="true">
                   →
                 </span>
                 <span>{tip}</span>
@@ -514,27 +565,29 @@ export function ReportView({
         </section>
       )}
 
-      <section className="mt-8">
-        <h2 className="font-display text-lg font-semibold tracking-tight">
+      <section className={SECTION}>
+        <h2 className={SECTION_HEADING}>
           <HelpCircle className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
           Pinpointed questions
         </h2>
-        <div className="mt-3 space-y-6">
+        <div className={`space-y-8 ${HEADING_GAP}`}>
           {grouped.map(({ cat, questions }) => {
             const CategoryIcon = categoryIcon(cat);
             return (
               <div key={cat}>
                 <div className="flex items-baseline gap-2">
-                  <CategoryIcon className="text-tertiary h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="text-tertiary font-mono text-[10px] font-semibold tracking-widest">
+                  <CategoryIcon className="text-primary h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="text-primary text-[10px] font-semibold tracking-widest">
                     {categoryCode(cat)}
                   </span>
-                  <h3 className="font-display text-sm font-semibold tracking-wide uppercase">
+                  {/* Muted like the section heading above it. Left near-black it
+                      out-ranked its own parent, since it is uppercase and bold. */}
+                  <h3 className="font-display text-muted-foreground text-sm font-semibold tracking-wide uppercase">
                     {categoryLabel(cat)}
                   </h3>
                   <div className="ml-auto flex items-center gap-2">
                     {researchId && busy === cat && progress && (
-                      <span className="text-muted-foreground hidden max-w-[16rem] truncate font-mono text-[11px] sm:inline">
+                      <span className="text-muted-foreground hidden max-w-[16rem] truncate text-[11px] sm:inline">
                         {progress}
                       </span>
                     )}
@@ -557,7 +610,7 @@ export function ReportView({
                             />
                           }>
                           {copiedCat === cat ? (
-                            <Check className="text-tertiary h-3.5 w-3.5" />
+                            <Check className="text-primary h-3.5 w-3.5" />
                           ) : (
                             <ClipboardCopy className="h-3.5 w-3.5" />
                           )}
@@ -594,20 +647,21 @@ export function ReportView({
                           render={
                             <Button
                               type="button"
-                              variant="default"
+                              variant="glossy"
                               size="sm"
                               aria-label={`Add more ${categoryLabel(cat)} questions`}
-                              className="bg-tertiary hover:bg-tertiary/90 h-7 shrink-0 px-2 text-black"
+                              className="h-7 shrink-0 px-2.5"
                               disabled={busy !== null}
                               onClick={() =>
                                 setConfirm({ rounds: [cat], sections: [], token: cat })
                               }
                             />
                           }>
+                          {/* Icons inherit the glossy variant's white text. */}
                           {busy === cat ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-black" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           ) : (
-                            <Plus className="h-3.5 w-3.5 text-black" />
+                            <Plus className="h-3.5 w-3.5" />
                           )}
                           <span className="font-display ml-1 text-xs">More</span>
                         </TooltipTrigger>
@@ -632,7 +686,7 @@ export function ReportView({
                                     render={
                                       <Badge
                                         variant="outline"
-                                        className="text-muted-foreground cursor-default font-mono text-[10px]">
+                                        className="text-muted-foreground cursor-default text-[10px]">
                                         {BASIS_META.label}
                                       </Badge>
                                     }
@@ -643,7 +697,7 @@ export function ReportView({
                                 </Tooltip>
                               )}
                               <span
-                                className={`font-mono text-[13px] leading-none ${
+                                className={`text-[13px] leading-none ${
                                   q.confidence === "low" ? "text-muted-foreground" : "text-primary"
                                 }`}
                                 title={`Confidence: ${CONFIDENCE_META[q.confidence].label}`}>
@@ -655,7 +709,7 @@ export function ReportView({
                             {q.rationale}
                           </p>
                           <details className="mt-2">
-                            <summary className="text-muted-foreground hover:text-foreground cursor-pointer font-mono text-[11px] tracking-widest uppercase">
+                            <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-[11px] tracking-widest uppercase">
                               Prep note
                             </summary>
                             <p className="font-display text-foreground mt-1.5 text-[13.5px] leading-relaxed">
@@ -668,12 +722,12 @@ export function ReportView({
                                 <Badge
                                   key={j}
                                   variant="outline"
-                                  className="hover:border-tertiary/50 hover:bg-tertiary/10 hover:text-tertiary transition-colors"
+                                  className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-colors"
                                   render={
                                     <a href={url} target="_blank" rel="noopener noreferrer" />
                                   }>
                                   <LinkIcon className="h-3 w-3" aria-hidden="true" />
-                                  <span className="font-mono text-[10px]">{hostOf(url)}</span>
+                                  <span className="text-[10px]">{hostOf(url)}</span>
                                 </Badge>
                               ))}
                             </div>
@@ -687,22 +741,20 @@ export function ReportView({
             );
           })}
         </div>
-        {extendError && (
-          <p className="text-destructive mt-3 font-mono text-[11px]">{extendError}</p>
-        )}
+        {extendError && <p className="text-destructive mt-3 text-[11px]">{extendError}</p>}
       </section>
 
       {current.prepPlan.length > 0 && (
-        <section className="mt-8">
+        <section className={SECTION}>
           <Separator className="mb-5" />
-          <h2 className="font-display text-lg font-semibold tracking-tight">
+          <h2 className={SECTION_HEADING}>
             <ClipboardList className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             Prep plan
           </h2>
-          <ol className="mt-2 space-y-1.5">
+          <ol className={`space-y-2 ${HEADING_GAP}`}>
             {current.prepPlan.map((step, i) => (
               <li key={i} className="font-display text-foreground flex gap-3 text-[15px]">
-                <span className="text-muted-foreground font-mono text-[13px]">
+                <span className="text-muted-foreground text-[13px]">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <span className="font-display">{step}</span>
@@ -713,23 +765,21 @@ export function ReportView({
       )}
 
       {interviewExperiences.length > 0 && (
-        <section className="mt-8">
+        <section className={SECTION}>
           <Separator className="mb-5" />
-          <h2 className="font-display text-lg font-semibold tracking-tight">
+          <h2 className={SECTION_HEADING}>
             <MessagesSquare className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             Interview experiences
           </h2>
-          <p className="text-muted-foreground mt-1 text-xs">
-            First-hand accounts from people who interviewed here.
-          </p>
+          <p className={HEADING_SUB}>First-hand accounts from people who interviewed here.</p>
           <LinkCards links={interviewExperiences} />
         </section>
       )}
 
       {importantLinks.length > 0 && (
-        <section className="mt-8">
+        <section className={SECTION}>
           <Separator className="mb-5" />
-          <h2 className="font-display text-lg font-semibold tracking-tight">
+          <h2 className={SECTION_HEADING}>
             <BookOpen className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             Worth reading
           </h2>
@@ -738,9 +788,9 @@ export function ReportView({
       )}
 
       {researchId && (
-        <section className="mt-8">
+        <section className={SECTION}>
           <Separator className="mb-5" />
-          <h2 className="font-display text-lg font-semibold tracking-tight">
+          <h2 className={SECTION_HEADING}>
             <RefreshCw className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
             Keep on Generating
           </h2>
@@ -751,14 +801,11 @@ export function ReportView({
           {missing.length > 0 && (
             <Card className="mt-4">
               <CardContent>
-                <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
-                  <LayoutList
-                    className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
-                    aria-hidden="true"
-                  />
+                <h2 className="text-muted-foreground font-display flex items-center text-lg font-medium capitalize">
+                  <LayoutList className="text-primary mr-2.5 h-5 w-5 shrink-0" aria-hidden="true" />
                   Report Sections
                 </h2>
-                <p className="text-muted-foreground font-display mt-1 text-xs">
+                <p className={HEADING_SUB}>
                   This report skipped these. Pick any you want and we&apos;ll research them into it.
                 </p>
                 <div className="mt-4">
@@ -781,14 +828,11 @@ export function ReportView({
 
           <Card className="mt-4">
             <CardContent>
-              <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
-                <Search
-                  className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
-                  aria-hidden="true"
-                />
+              <h2 className="text-muted-foreground font-display flex items-center text-lg font-medium capitalize">
+                <Search className="text-primary mr-2.5 h-5 w-5 shrink-0" aria-hidden="true" />
                 Gather more rounds
               </h2>
-              <p className="text-muted-foreground font-display mt-1 text-xs">
+              <p className={HEADING_SUB}>
                 Forgot a round? Pick or create one and we&apos;ll research it into this report.
               </p>
               <div className="mt-4">
@@ -814,13 +858,13 @@ export function ReportView({
               </div>
 
               <div className="mt-4 flex items-center justify-between gap-3">
-                <span className="text-muted-foreground truncate font-mono text-[11px]">
+                <span className="text-muted-foreground truncate text-[11px]">
                   {busy === "__rounds__" ? (progress ?? "Starting…") : ""}
                 </span>
                 <Button
                   type="button"
                   size="lg"
-                  variant="tertiary"
+                  variant="glossy"
                   disabled={
                     (extraRounds.length === 0 && extraSections.length === 0) || busy !== null
                   }
@@ -852,14 +896,11 @@ export function ReportView({
           ceiling={extendCredits[effort]}
           controls={
             <div>
-              <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
-                <Zap
-                  className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
-                  aria-hidden="true"
-                />
+              <h2 className="text-muted-foreground font-display flex items-center text-lg font-medium capitalize">
+                <Zap className="text-primary mr-2.5 h-5 w-5 shrink-0" aria-hidden="true" />
                 Effort
               </h2>
-              <p className="text-muted-foreground font-display mt-1 text-xs">
+              <p className={HEADING_SUB}>
                 How wide to search. Higher effort finds more questions and costs more credits.
               </p>
               <div className="mt-3">
@@ -934,23 +975,25 @@ export function ReportView({
 /** The link list shared by "Interview experiences" and "Worth reading". */
 function LinkCards({ links }: { links: ImportantLink[] }) {
   return (
-    <ul className="mt-3 space-y-3">
+    <ul className="mt-5 space-y-3">
       {links.map((link, i) => (
         <li key={i}>
-          <Card>
+          {/* These cards exist to be clicked through. The hover lift is the only
+              thing that says so — the link itself is the sole hit target. */}
+          <Card className="hover:ring-primary/30 transition-all hover:shadow-[var(--shadow-md)]">
             <CardContent>
               <div className="flex items-baseline justify-between gap-3">
                 <span className="flex min-w-0 items-baseline gap-2">
-                  <LinkIcon className="text-tertiary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <LinkIcon className="text-primary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <a
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-display text-foreground hover:text-tertiary text-[15px] leading-snug font-medium underline-offset-4 hover:underline">
+                    className="font-display text-foreground hover:text-primary text-[15px] leading-snug font-medium underline-offset-4 hover:underline">
                     {link.title}
                   </a>
                 </span>
-                <span className="text-tertiary bg-tertiary/10 shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px]">
+                <span className="text-primary bg-primary/10 border-primary/20 shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium">
                   {hostOf(link.url)}
                 </span>
               </div>

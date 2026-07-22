@@ -9,11 +9,10 @@ import {
   Wrench,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
 import { SECTION_META } from "@/lib/research/display";
 import { REPORT_SECTIONS, type ReportSection } from "@/lib/research/types";
+
+import { ToggleChip } from "@/features/research/toggle-chip";
 
 /** Each chip wears the icon its section wears in the report, so the two read as one thing. */
 const SECTION_ICON: Record<ReportSection, LucideIcon> = {
@@ -49,26 +48,15 @@ export function SectionPicker({
         const meta = SECTION_META[section];
         const Icon = SECTION_ICON[section];
         return (
-          <Tooltip key={section}>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  size="lg"
-                  variant={on ? "default" : "outline"}
-                  onClick={() => onToggle(section)}
-                  aria-pressed={on}
-                  disabled={disabled}
-                />
-              }>
-              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="font-mono text-[10px] tracking-widest opacity-70">{meta.code}</span>
-              <span className="font-display">{meta.label}</span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <span className="font-display">{meta.blurb}</span>
-            </TooltipContent>
-          </Tooltip>
+          <ToggleChip
+            key={section}
+            icon={Icon}
+            label={meta.label}
+            blurb={meta.blurb}
+            on={on}
+            onClick={() => onToggle(section)}
+            disabled={disabled}
+          />
         );
       })}
     </div>

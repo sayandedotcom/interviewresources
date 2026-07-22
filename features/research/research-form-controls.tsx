@@ -42,10 +42,12 @@ export function LiveEstimate({
   control,
   balance,
   me,
+  variant,
 }: {
   control: Control<ResearchFormValues>;
   balance?: number;
   me: Me | null;
+  variant?: "margin" | "column";
 }) {
   const [effort, rounds, sections, interviewers, jobDescription, companyUrl] = useWatch({
     control,
@@ -65,7 +67,9 @@ export function LiveEstimate({
     ceiling
   );
 
-  return <EstimatePanel estimate={estimate} balance={balance} ceiling={ceiling} />;
+  return (
+    <EstimatePanel estimate={estimate} balance={balance} ceiling={ceiling} variant={variant} />
+  );
 }
 
 /** Appears once any field diverges from the pristine defaults — so it has to
@@ -181,7 +185,7 @@ export function RunButton({
           <Button
             type="button"
             size="lg"
-            variant="tertiary"
+            variant="glossy"
             disabled={!company.trim() || rounds.length === 0}
           />
         }>

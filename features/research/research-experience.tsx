@@ -243,7 +243,7 @@ export function ResearchExperience({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-5 pb-24">
+    <div className="mx-auto w-full max-w-6xl px-5 pb-24">
       {phase === "form" && (
         <Form {...form}>
           {/* `relative` anchors the estimate rail, which hangs in the page margin
@@ -252,15 +252,20 @@ export function ResearchExperience({
 
               The run is started by RunButton's confirmation dialog, never by the
               form itself, so an Enter keypress in a field must not slip past it. */}
-          <form onSubmit={(e) => e.preventDefault()} className="relative mt-6">
-            <div className="space-y-4">
+          {/* Two real columns from xl: the fields, then the estimate rail. The
+              rail used to hang in the page margin, which capped how wide the
+              fields could get before it slid off the side of the page. */}
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className="mt-6 xl:grid xl:grid-cols-[minmax(0,1fr)_14rem] xl:gap-5">
+            <div className="min-w-0 space-y-4">
               <Card>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <h2 className="text-tertiary font-display flex items-center text-lg font-medium capitalize">
+                      <h2 className="text-muted-foreground font-display flex items-center text-lg font-medium capitalize">
                         <Target
-                          className="mr-2 h-5 w-5 opacity-40 transition-all duration-200 hover:opacity-100 hover:drop-shadow-[0_0_8px_rgba(100,150,255,0.8)]"
+                          className="text-primary mr-2.5 h-5 w-5 shrink-0"
                           aria-hidden="true"
                         />
                         Target
@@ -282,9 +287,8 @@ export function ResearchExperience({
                       name="company"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel htmlFor="company" className="text-tertiary/60">
-                            Company
-                            <span className="text-tertiary/60">*</span>
+                          <FormLabel htmlFor="company">
+                            Company <span className="text-muted-foreground">*</span>
                           </FormLabel>
                           <FormControl>
                             <Input {...field} id="company" placeholder="Stripe" autoFocus />
@@ -299,14 +303,14 @@ export function ResearchExperience({
                       render={({ field }) => (
                         <FormItem>
                           <div className="flex items-center gap-1">
-                            <FormLabel htmlFor="companyUrl" className="text-tertiary/60">
+                            <FormLabel htmlFor="companyUrl">
                               Company URL <span className="text-muted-foreground">· preferred</span>
                             </FormLabel>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   render={
-                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
                                   }
                                 />
                                 <TooltipContent>
@@ -330,7 +334,7 @@ export function ResearchExperience({
                       name="role"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel htmlFor="role" className="text-tertiary/60">
+                          <FormLabel htmlFor="role">
                             Role / level <span className="text-muted-foreground">· optional</span>
                           </FormLabel>
                           <FormControl>
@@ -344,7 +348,7 @@ export function ResearchExperience({
                       name="yearsExperience"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel htmlFor="yearsExperience" className="text-tertiary/60">
+                          <FormLabel htmlFor="yearsExperience">
                             Years of Experience{" "}
                             <span className="text-muted-foreground">· optional</span>
                           </FormLabel>
@@ -360,14 +364,14 @@ export function ResearchExperience({
                       render={({ field }) => (
                         <FormItem>
                           <div className="flex items-center gap-1">
-                            <FormLabel htmlFor="teamContext" className="text-tertiary/60">
+                            <FormLabel htmlFor="teamContext">
                               Team / org <span className="text-muted-foreground">· optional</span>
                             </FormLabel>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   render={
-                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
                                   }
                                 />
                                 <TooltipContent>
@@ -390,7 +394,7 @@ export function ResearchExperience({
                       name="location"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel htmlFor="location" className="text-tertiary/60">
+                          <FormLabel htmlFor="location">
                             Location <span className="text-muted-foreground">· optional</span>
                           </FormLabel>
                           <FormControl>
@@ -405,14 +409,14 @@ export function ResearchExperience({
                       render={({ field }) => (
                         <FormItem className="col-span-2">
                           <div className="flex items-center gap-1">
-                            <FormLabel htmlFor="techStack" className="text-tertiary/60">
+                            <FormLabel htmlFor="techStack">
                               Tech Stack <span className="text-muted-foreground">· optional</span>
                             </FormLabel>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger
                                   render={
-                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
                                   }
                                 />
                                 <TooltipContent>
@@ -440,7 +444,7 @@ export function ResearchExperience({
                       render={({ field }) => (
                         <FormItem className="col-span-2">
                           <div className="flex items-center gap-1">
-                            <FormLabel htmlFor="jobDescription" className="text-tertiary/60">
+                            <FormLabel htmlFor="jobDescription">
                               Job Description{" "}
                               <span className="text-muted-foreground">· optional</span>
                             </FormLabel>
@@ -448,7 +452,7 @@ export function ResearchExperience({
                               <Tooltip>
                                 <TooltipTrigger
                                   render={
-                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
                                   }
                                 />
                                 <TooltipContent>
@@ -478,7 +482,7 @@ export function ResearchExperience({
                       render={({ field }) => (
                         <FormItem className="col-span-2">
                           <div className="flex items-center gap-1">
-                            <FormLabel htmlFor="recruiterNotes" className="text-tertiary/60">
+                            <FormLabel htmlFor="recruiterNotes">
                               Recruiter notes{" "}
                               <span className="text-muted-foreground">· optional</span>
                             </FormLabel>
@@ -486,7 +490,7 @@ export function ResearchExperience({
                               <Tooltip>
                                 <TooltipTrigger
                                   render={
-                                    <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
                                   }
                                 />
                                 <TooltipContent>
@@ -512,14 +516,14 @@ export function ResearchExperience({
                     />
                     <div className="col-span-2 space-y-2">
                       <div className="flex items-center gap-1">
-                        <Label className="text-tertiary/60 font-mono text-[10px] tracking-[0.16em] uppercase">
+                        <Label className="text-foreground text-sm font-medium">
                           Interviewers <span className="text-muted-foreground">· optional</span>
                         </Label>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger
                               render={
-                                <Info className="text-muted-foreground h-2.5 w-2.5 cursor-help" />
+                                <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
                               }
                             />
                             <TooltipContent>
@@ -589,7 +593,7 @@ export function ResearchExperience({
                             render={
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant="glossy"
                                 size="sm"
                                 onClick={() => appendInterviewer({ name: "", url: "" })}
                               />
@@ -630,7 +634,11 @@ export function ResearchExperience({
                 </div>
 
                 {!sessionPending && !signedIn && (
-                  <Button type="button" size="lg" onClick={() => signInWithGoogle()}>
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="glossy"
+                    onClick={() => signInWithGoogle()}>
                     Sign in to run →
                   </Button>
                 )}
@@ -642,7 +650,7 @@ export function ResearchExperience({
                  * disabled until we actually know.
                  */}
                 {signedIn && !balanceKnown && (
-                  <Button type="button" size="lg" variant="tertiary" disabled>
+                  <Button type="button" size="lg" variant="glossy" disabled>
                     Run reconnaissance{" "}
                     <RefreshCw className="ml-1 inline size-4" aria-hidden="true" />
                   </Button>
@@ -650,7 +658,7 @@ export function ResearchExperience({
 
                 {signedIn && balanceKnown && !canAfford && (
                   <Link href="/payments">
-                    <Button type="button" size="lg">
+                    <Button type="button" size="lg" variant="glossy">
                       Buy credits →
                     </Button>
                   </Link>
@@ -662,7 +670,7 @@ export function ResearchExperience({
               </div>
             </div>
 
-            <LiveEstimate control={control} balance={ringBalance} me={me} />
+            <LiveEstimate control={control} balance={ringBalance} me={me} variant="column" />
           </form>
         </Form>
       )}
@@ -677,7 +685,7 @@ export function ResearchExperience({
           {phase === "error" && error && (
             <Card>
               <CardContent>
-                <p className="text-destructive font-mono text-[11px] tracking-widest uppercase">
+                <p className="text-destructive text-[11px] tracking-widest uppercase">
                   Reconnaissance failed
                 </p>
                 <p className="text-foreground font-display mt-1 text-sm">{error}</p>
