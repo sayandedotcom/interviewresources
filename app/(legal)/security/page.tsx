@@ -1,11 +1,12 @@
-import { Metadata } from "next";
-
 import { siteConfig } from "@/site";
 
-export const metadata: Metadata = {
+import { buildMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildMetadata({
+  path: "/security",
   title: "Security",
   description: `Security policy for ${siteConfig.name}`,
-};
+});
 
 export default function SecurityPage() {
   return (

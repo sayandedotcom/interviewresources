@@ -1,11 +1,12 @@
-import { Metadata } from "next";
-
 import { siteConfig } from "@/site";
 
-export const metadata: Metadata = {
+import { buildMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildMetadata({
+  path: "/licenses",
   title: "Open Source Licenses",
   description: `Open Source Licenses for ${siteConfig.name}`,
-};
+});
 
 export default function LicensesPage() {
   return (

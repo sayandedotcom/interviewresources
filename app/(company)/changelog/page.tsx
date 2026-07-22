@@ -1,11 +1,12 @@
-import { Metadata } from "next";
-
 import { siteConfig } from "@/site";
 
-export const metadata: Metadata = {
+import { buildMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildMetadata({
+  path: "/changelog",
   title: "Changelog",
   description: `${siteConfig.name} changelog - new features and improvements`,
-};
+});
 
 const changelog = [
   {

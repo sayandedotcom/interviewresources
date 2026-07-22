@@ -1,11 +1,12 @@
-import { Metadata } from "next";
-
 import { siteConfig } from "@/site";
 
-export const metadata: Metadata = {
+import { buildMetadata } from "@/lib/seo/metadata";
+
+export const metadata = buildMetadata({
+  path: "/terms-of-service",
   title: "Terms of Service",
   description: `Terms of Service for ${siteConfig.name}`,
-};
+});
 
 export default function TermsOfServicePage() {
   return (
