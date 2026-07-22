@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { eq } from "drizzle-orm";
@@ -6,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
 import type { Report } from "@/lib/research/types";
+import { noIndexMetadata } from "@/lib/seo/metadata";
 
 import { ReportView } from "@/features/research/report-view";
 
@@ -14,9 +14,7 @@ export const dynamic = "force-dynamic";
 
 // The token is the only credential, so a shared report must stay out of search
 // results even if the link is posted somewhere public.
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+export const metadata = noIndexMetadata;
 
 /**
  * A report rendered for whoever holds the link. No session is required, and no
