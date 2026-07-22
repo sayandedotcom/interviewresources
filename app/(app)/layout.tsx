@@ -28,8 +28,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         initialSessions={sessions}
         initialLimit={MAX_SESSIONS_PER_USER}
       />
-      <SidebarInset>
-        <DotBackground className="flex flex-1 flex-col p-4 pt-0">{children}</DotBackground>
+      <SidebarInset className="bg-brand-50/40">
+        <DotBackground className="flex flex-1 flex-col p-6 pt-0">
+          <div className="bg-card flex flex-1 flex-col rounded-2xl shadow-[var(--shadow-sm)]">
+            {children}
+          </div>
+        </DotBackground>
       </SidebarInset>
     </SidebarProvider>
   );
