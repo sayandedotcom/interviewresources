@@ -80,6 +80,16 @@ function NavPendingHint({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Selected nav and session rows take the brand tint from the "Report Sections"
+ * chips rather than the default sidebar-accent wash. Mirrors `chipOn` in
+ * features/research/toggle-chip.tsx minus its border — kept as its own string
+ * rather than imported so the app shell doesn't depend on a research feature
+ * module.
+ */
+const navItemActive =
+  "data-active:bg-primary/10 data-active:text-primary data-active:hover:bg-primary/15 data-active:hover:text-primary";
+
 export function AppSidebar({
   initialUser,
   initialBalance,
@@ -191,7 +201,7 @@ export function AppSidebar({
             <Link
               href="/"
               className="group/brand flex items-center gap-2 overflow-hidden transition-opacity group-data-[collapsible=icon]:group-hover/header:opacity-0">
-              <LogoMark glowClassName="bg-tertiary/30 opacity-0 group-hover/brand:opacity-100" />
+              <LogoMark glowClassName="bg-primary/30 opacity-0 group-hover/brand:opacity-100" />
               <span className="font-display truncate text-sm font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
                 {siteConfig.name}
               </span>
@@ -215,6 +225,7 @@ export function AppSidebar({
               <SidebarMenuButton
                 tooltip="New session"
                 isActive={pathname === "/prepare"}
+                className={navItemActive}
                 render={<Link href="/prepare" />}>
                 <PlusIcon />
                 {/* The menu button only truncates a span that is its *last* child, and
@@ -228,6 +239,7 @@ export function AppSidebar({
               <SidebarMenuButton
                 tooltip="Refer a friend and earn credits"
                 render={<Link href="/referrals" />}
+                className={navItemActive}
                 isActive={pathname === "/referrals"}>
                 <Gift className="size-4" />
                 <span className="font-display font-medium">Refer & Earn</span>
@@ -236,7 +248,9 @@ export function AppSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Share your thoughts or report an issue"
-                render={<Link href="/feedback" />}>
+                render={<Link href="/feedback" />}
+                className={navItemActive}
+                isActive={pathname === "/feedback"}>
                 <MessageSquareIcon className="size-4" />
                 <span className="font-display font-medium">Feedback</span>
               </SidebarMenuButton>
@@ -252,8 +266,8 @@ export function AppSidebar({
               <span>Sessions</span>
               {user && limit != null && sessions != null && (
                 <span
-                  className={`font-mono text-[11px] tabular-nums ${
-                    atLimit ? "text-tertiary" : "text-sidebar-foreground/50"
+                  className={`text-[11px] tabular-nums ${
+                    atLimit ? "text-status-warning" : "text-sidebar-foreground/50"
                   }`}
                   title={`We keep your ${limit} most recent sessions. Starting a new one deletes the oldest.`}>
                   {sessions.length}/{limit}
@@ -279,10 +293,13 @@ export function AppSidebar({
                   <SidebarMenuButton
                     size="lg"
                     isActive={pathname === `/prepare/${s.id}`}
+                    className={navItemActive}
                     render={<Link href={`/prepare/${s.id}`} />}>
                     <div className="flex min-w-0 flex-col gap-0.5 py-1">
                       <span className="font-display truncate">{s.companyName}</span>
-                      <span className="font-display text-sidebar-foreground/60 truncate text-xs">
+                      {/* Tints with the row: left grey it reads as a half-selected
+                          row once the company name above it turns brand. */}
+                      <span className="font-display text-sidebar-foreground/60 group-data-active/menu-button:text-primary/70 truncate text-xs">
                         {s.interviewType
                           .split(",")
                           .map((c) => categoryLabel(c))
@@ -320,7 +337,7 @@ export function AppSidebar({
               ))}
             </SidebarMenu>
             {notice && (
-              <p className="text-sidebar-foreground/60 px-2 pt-2 font-mono text-[11px] group-data-[collapsible=icon]:hidden">
+              <p className="text-sidebar-foreground/60 px-2 pt-2 text-[11px] group-data-[collapsible=icon]:hidden">
                 {notice}
               </p>
             )}

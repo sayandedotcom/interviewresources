@@ -18,7 +18,7 @@ export function NavCredits({ balance }: { balance: number }) {
               render={
                 <span className="border-border font-display flex h-6 cursor-help items-center gap-1.5 rounded-full border px-2 text-sm font-bold" />
               }>
-              <Coins className="text-tertiary size-4" />
+              <Coins className="text-primary size-4" />
               {balance}
             </TooltipTrigger>
             <TooltipContent>
@@ -26,7 +26,7 @@ export function NavCredits({ balance }: { balance: number }) {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <Button variant="tertiary" size="sm" render={<Link href="/payments" />}>
+        <Button variant="glossy" size="sm" render={<Link href="/payments" />}>
           Buy credits
         </Button>
       </SidebarMenuItem>

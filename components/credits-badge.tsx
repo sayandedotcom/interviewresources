@@ -11,9 +11,7 @@ interface CreditsBadgeProps {
 
 export function CreditsBadge({ balance, className }: CreditsBadgeProps) {
   return (
-    <Badge
-      variant="secondary"
-      className={`gap-1 font-mono text-[10px] tracking-widest ${className}`}>
+    <Badge variant="secondary" className={`gap-1 text-[10px] tracking-widest ${className}`}>
       <Coins className="text-tertiary size-3" />
       {balance === null ? "—" : balance}
     </Badge>

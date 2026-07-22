@@ -5,144 +5,127 @@ import { siteConfig } from "@/site";
 import { CookiePreferencesLink } from "@/components/cookie-preferences-link";
 import { LogoMark } from "@/components/logo";
 
+/** One footer column. Links are deliberately a step larger than the old text-sm. */
+function Column({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="font-display text-base font-semibold">{title}</h3>
+      <ul className="mt-4 space-y-2.5">{children}</ul>
+    </div>
+  );
+}
+
+const linkClass =
+  "font-display text-muted-foreground hover:text-foreground text-base transition-colors";
+
 export function Footer() {
   return (
-    <footer className="mt-auto border-t">
-      <div className="mx-auto w-full max-w-3xl px-5 py-8">
-        <div className="grid gap-8 sm:grid-cols-4">
-          <div>
-            <h3 className="font-display text-sm font-semibold">Product</h3>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <Link
-                  href="/#pricing"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Pricing
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/changelog"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Changelog
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/help"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Help
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-display text-sm font-semibold">Company</h3>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <Link
-                  href="/about"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/blog"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contact"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Contact
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-display text-sm font-semibold">Resources</h3>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <Link
-                  href="/#how-it-works"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  How it works
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/licenses"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Open Source
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-display text-sm font-semibold">Legal</h3>
-            <ul className="mt-3 space-y-2">
-              <li>
-                <Link
-                  href="/privacy-policy"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/terms-of-service"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/cookies"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Cookie Policy
-                </Link>
-              </li>
-              <li>
-                <CookiePreferencesLink />
-              </li>
-              <li>
-                <Link
-                  href="/security"
-                  className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
-                  Security
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="mt-8 flex items-center justify-between border-t pt-6">
-          <div className="flex items-center gap-2">
-            <LogoMark size="sm" glowClassName="bg-tertiary/40" />
-            <span className="font-display text-sm font-semibold">{siteConfig.name}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <p className="text-muted-foreground font-mono text-[10px]">
+    <footer className="mt-auto [background-image:var(--wash-bottom)]">
+      <div className="mx-auto w-full max-w-6xl px-6 py-16 md:px-8">
+        {/* Brand block leads, then the four link columns. */}
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+          <div className="sm:col-span-2 lg:col-span-1">
+            <Link href="/" className="group flex items-center gap-2.5">
+              <LogoMark size="xl" glowClassName="bg-primary/40 opacity-0 group-hover:opacity-100" />
+              <span className="font-display text-xl font-semibold tracking-tight">
+                {siteConfig.name}
+              </span>
+            </Link>
+            <p className="font-display text-muted-foreground mt-4 max-w-xs text-base leading-relaxed">
               {siteConfig.copy.footerTagline}
             </p>
-            <div className="flex items-center gap-4">
-              <a
-                href={siteConfig.links.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-display text-muted-foreground hover:text-foreground text-[10px] tracking-widest uppercase transition-colors">
-                Twitter
-              </a>
-              <a
-                href={siteConfig.links.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-display text-muted-foreground hover:text-foreground text-[10px] tracking-widest uppercase transition-colors">
-                GitHub
-              </a>
-            </div>
+          </div>
+          <Column title="Product">
+            <li>
+              <Link href="/#pricing" className={linkClass}>
+                Pricing
+              </Link>
+            </li>
+            <li>
+              <Link href="/changelog" className={linkClass}>
+                Changelog
+              </Link>
+            </li>
+            <li>
+              <Link href="/help" className={linkClass}>
+                Help
+              </Link>
+            </li>
+          </Column>
+          <Column title="Company">
+            <li>
+              <Link href="/about" className={linkClass}>
+                About
+              </Link>
+            </li>
+            <li>
+              <Link href="/blog" className={linkClass}>
+                Blog
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" className={linkClass}>
+                Contact
+              </Link>
+            </li>
+          </Column>
+          <Column title="Resources">
+            <li>
+              <Link href="/#how-it-works" className={linkClass}>
+                How it works
+              </Link>
+            </li>
+            <li>
+              <Link href="/licenses" className={linkClass}>
+                Open Source
+              </Link>
+            </li>
+          </Column>
+          <Column title="Legal">
+            <li>
+              <Link href="/privacy-policy" className={linkClass}>
+                Privacy Policy
+              </Link>
+            </li>
+            <li>
+              <Link href="/terms-of-service" className={linkClass}>
+                Terms of Service
+              </Link>
+            </li>
+            <li>
+              <Link href="/cookies" className={linkClass}>
+                Cookie Policy
+              </Link>
+            </li>
+            <li>
+              <CookiePreferencesLink />
+            </li>
+            <li>
+              <Link href="/security" className={linkClass}>
+                Security
+              </Link>
+            </li>
+          </Column>
+        </div>
+        <div className="border-border/50 mt-12 flex flex-wrap items-center justify-between gap-4 border-t pt-6">
+          <p className="font-display text-muted-foreground text-sm">
+            © {new Date().getFullYear()} {siteConfig.name}
+          </p>
+          <div className="flex items-center gap-6">
+            <a
+              href={siteConfig.links.twitter}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
+              Twitter
+            </a>
+            <a
+              href={siteConfig.links.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
+              GitHub
+            </a>
           </div>
         </div>
       </div>

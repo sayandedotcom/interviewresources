@@ -14,8 +14,6 @@ import { Button } from "@/components/ui/button";
 
 import { signOut, useSession } from "@/lib/auth-client";
 
-import { ThemeToggle } from "./theme-toggle";
-
 export function Header() {
   const pathname = usePathname();
   const { data: session, isPending } = useSession();
@@ -42,25 +40,29 @@ export function Header() {
   ];
 
   return (
-    <header className="border-b">
-      <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 py-4">
+    <header className="relative z-40 w-full">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 md:px-8">
         <div className="flex items-center gap-2">
-          <Link href="/" className="group flex items-center gap-2">
-            <LogoMark size="lg" glowClassName="bg-tertiary/30 opacity-0 group-hover:opacity-100" />
-            <span className="font-display text-sm font-semibold tracking-tight">
+          <Link href="/" className="group flex items-center gap-2.5">
+            <LogoMark
+              size="xl"
+              variant="inverted"
+              glowClassName="bg-white/40 opacity-0 group-hover:opacity-100"
+            />
+            <span className="font-display truncate text-lg font-semibold tracking-tight text-white sm:text-xl">
               {siteConfig.name}
             </span>
           </Link>
         </div>
-        <nav className="flex items-center gap-6">
+        {/* The nav links don't fit alongside the wordmark and CTA on phones, so
+            they drop out below sm — the same destinations are in the footer. */}
+        <nav className="flex shrink-0 items-center gap-4 sm:gap-7">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`font-display text-sm transition-colors ${
-                pathname === link.href
-                  ? "text-tertiary"
-                  : "text-muted-foreground hover:text-foreground"
+              className={`font-display hidden text-base font-medium transition-colors sm:inline ${
+                pathname === link.href ? "text-white" : "text-white/80 hover:text-white"
               }`}>
               {link.label}
             </Link>
@@ -75,7 +77,11 @@ export function Header() {
               <Link href="/payments">
                 <CreditsBadge balance={balance} />
               </Link>
-              <Button variant="ghost" size="sm" onClick={() => signOut()}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white/80 hover:bg-white/10 hover:text-white"
+                onClick={() => signOut()}>
                 Sign out
               </Button>
             </>
@@ -83,12 +89,10 @@ export function Header() {
           {!isPending && !session && (
             <Link
               href="/signin"
-              className="bg-primary font-display text-primary-foreground hover:bg-primary/80 inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-[min(12px,var(--radius-md))] px-2.5 text-[0.8rem] font-medium">
+              className="text-brand-700 font-display inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-full bg-[image:var(--gradient-glossy-white)] px-5 text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-all hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-white-active)]">
               Sign in
             </Link>
           )}
-
-          <ThemeToggle />
         </nav>
       </div>
     </header>
