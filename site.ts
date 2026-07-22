@@ -25,6 +25,7 @@ export const siteConfig = {
   copy: copyConfig,
   brand: brandConfig,
   pricingPlans: pricingConfig.plans,
+  pricingNote: pricingConfig.currencyNote,
   faqs: copyConfig.faqs,
   cta: copyConfig.cta,
   stats: copyConfig.landing.stats,

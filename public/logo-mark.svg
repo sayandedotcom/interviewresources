@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Interview Resources radar-scope mark, untiled: all blue (#2f7ff0 = --primary)
+       on transparency. For light backgrounds — on the blue sky use logo.svg. -->
+  <circle cx="12" cy="12" r="10.5" fill="none" stroke="#2f7ff0" stroke-width="1.75" />
+  <line x1="12" y1="2.25" x2="12" y2="21.75" stroke="#2f7ff0" stroke-width="1" opacity="0.4" />
+  <line x1="2.25" y1="12" x2="21.75" y2="12" stroke="#2f7ff0" stroke-width="1" opacity="0.4" />
+  <circle cx="16" cy="8" r="2.5" fill="#2f7ff0" />
+</svg>
