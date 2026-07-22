@@ -5,15 +5,16 @@ import type { SessionUser } from "@/lib/session";
 vi.mock("@/lib/session");
 vi.mock("@/lib/credits", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/credits")>();
-  return { ...actual, getBalance: vi.fn() };
+  return { ...actual, getBalance: vi.fn(), isPaymentCredited: vi.fn() };
 });
 
 const { getSessionUser } = await import("@/lib/session");
-const { getBalance } = await import("@/lib/credits");
+const { getBalance, isPaymentCredited } = await import("@/lib/credits");
 const { GET } = await import("./route");
 
 const sessionMock = vi.mocked(getSessionUser);
 const balanceMock = vi.mocked(getBalance);
+const creditedMock = vi.mocked(isPaymentCredited);
 
 const user: SessionUser = {
   id: "user-1",
@@ -33,6 +34,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   sessionMock.mockResolvedValue(user);
   balanceMock.mockResolvedValue(454);
+  creditedMock.mockResolvedValue(false);
 });
 
 describe("anonymous", () => {
@@ -113,5 +115,59 @@ describe("signed in", () => {
 
     const body = await (await GET(req())).json();
     expect(body.balance).toBe(-4);
+  });
+});
+
+/**
+ * The success page asks whether one specific payment has landed. It cannot use
+ * the balance for this: a returning customer already has credits before their
+ * new purchase settles.
+ */
+describe("payment settlement lookup", () => {
+  const withPayment = (id: string) => new Request(`https://test.local/api/me?payment_id=${id}`);
+
+  it("answers whether that payment reached the ledger", async () => {
+    creditedMock.mockResolvedValue(true);
+
+    const body = await (await GET(withPayment("pay_abc"))).json();
+    expect(body.credited).toBe(true);
+  });
+
+  it("says so when the webhook has not landed yet, even with credits on the account", async () => {
+    balanceMock.mockResolvedValue(420);
+    creditedMock.mockResolvedValue(false);
+
+    const body = await (await GET(withPayment("pay_abc"))).json();
+    expect(body.credited).toBe(false);
+    expect(body.balance).toBe(420);
+  });
+
+  it("scopes the lookup to the session user, not just the ref", async () => {
+    // The payment id arrives in a client-controlled return URL. Without the user
+    // scope this would let one account probe another's payments.
+    await GET(withPayment("pay_abc"));
+
+    expect(creditedMock).toHaveBeenCalledWith("user-1", "pay_abc");
+  });
+
+  it("omits the field entirely when no payment is named", async () => {
+    const body = await (await GET(req())).json();
+
+    expect(body).not.toHaveProperty("credited");
+  });
+
+  it("does not query the ledger for the header and form, which poll without a payment", async () => {
+    await GET(req());
+
+    expect(creditedMock).not.toHaveBeenCalled();
+  });
+
+  it("never looks up a payment for an anonymous caller", async () => {
+    sessionMock.mockResolvedValue(null);
+
+    const body = await (await GET(withPayment("pay_abc"))).json();
+
+    expect(creditedMock).not.toHaveBeenCalled();
+    expect(body).not.toHaveProperty("credited");
   });
 });

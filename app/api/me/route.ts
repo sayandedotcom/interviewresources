@@ -4,6 +4,7 @@ import {
   effortCredits,
   extendCredits,
   getBalance,
+  isPaymentCredited,
 } from "@/lib/credits";
 import { getSessionUser } from "@/lib/session";
 
@@ -28,6 +29,11 @@ export async function GET(request: Request) {
 
   const balance = await getBalance(user.id);
 
+  // Only present when asked for. The header and research form poll this route
+  // too, and an unconditional extra query would cost them a roundtrip they have
+  // no use for.
+  const paymentId = new URL(request.url).searchParams.get("payment_id");
+
   return Response.json({
     signedIn: true,
     user: { name: user.name, email: user.email, image: user.image },
@@ -36,5 +42,6 @@ export async function GET(request: Request) {
     minRunCredits: MIN_RUN_CREDITS,
     effortCredits: effortCredits(),
     extendCredits: extendCredits(),
+    ...(paymentId ? { credited: await isPaymentCredited(user.id, paymentId) } : {}),
   });
 }
