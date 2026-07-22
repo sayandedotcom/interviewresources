@@ -39,7 +39,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   const costUsd = (row.costCentsLlm + row.costCentsSearch) / 100;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-1 pb-24">
+    <div className="mx-auto w-full max-w-6xl px-1 pb-24">
       <ReportView
         report={row.jsonPayload as Report}
         costUsd={costUsd}

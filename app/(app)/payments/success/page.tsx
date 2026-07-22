@@ -60,8 +60,7 @@ export default function PaymentSuccessPage() {
 
           {settled && balance !== null && balance > 0 && (
             <p className="text-muted-foreground mt-3 text-sm">
-              Your balance is now{" "}
-              <span className="text-foreground font-mono">{balance} credits</span>.
+              Your balance is now <span className="text-foreground">{balance} credits</span>.
             </p>
           )}
 

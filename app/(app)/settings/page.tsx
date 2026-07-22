@@ -24,9 +24,7 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-5 py-16">
       <div className="mb-10 text-center">
-        <p className="text-tertiary mb-2 font-mono text-[11px] tracking-[0.22em] uppercase">
-          Account
-        </p>
+        <p className="text-tertiary mb-2 text-[11px] tracking-[0.22em] uppercase">Account</p>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Settings</h1>
         <p className="font-display text-muted-foreground mt-3 text-sm">
           Manage your account settings and preferences.
