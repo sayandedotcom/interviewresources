@@ -4,6 +4,7 @@ import { comparisonConfig } from "./config/comparison";
 import { contactConfig } from "./config/contact";
 import { copyConfig } from "./config/copy";
 import { pricingConfig } from "./config/pricing";
+import { publicClaims } from "./config/public-claims";
 
 export const siteConfig = {
   name: "Interview Resources",
@@ -16,8 +17,8 @@ export const siteConfig = {
    * email domain in config/contact.ts, which is correctly apex-only.
    */
   url: "https://www.interviewresources.app",
-  /** Shown in the landing page hero badge, e.g. "34,345 users". Edit freely. */
-  userCount: "2,345",
+  /** Audited in config/public-claims.ts; update the source record with the value. */
+  userCount: publicClaims.users.value,
   emails: contactConfig,
   links: {
     twitter: "https://x.com/sayandedotcom",
