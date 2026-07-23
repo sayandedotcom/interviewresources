@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { Webhooks } from "@dodopayments/nextjs";
 import { eq } from "drizzle-orm";
 
-import { grantCredits } from "@/lib/credits";
+import { reverseRefund, settlePayment } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { users } from "@/lib/db/schema";
 import { getPackByProductId } from "@/lib/packs";
@@ -66,13 +66,19 @@ function buildHandler(webhookKey: string) {
 
       const credits = packs.reduce((sum, e) => sum + e.pack.credits * (e.quantity || 1), 0);
       const reasons = packs.map((e) => e.pack.slug).join("+");
+      const fallbackAmount = packs.reduce(
+        (sum, e) => sum + e.pack.priceUsdMinor * (e.quantity || 1),
+        0
+      );
 
-      // The unique constraint on payment_ref makes a redelivered webhook a no-op.
-      const applied = await grantCredits({
+      const applied = await settlePayment({
         userId,
         credits,
         reason: `purchase:${reasons}`,
         paymentRef: data.payment_id,
+        amountMinor: typeof data.total_amount === "number" ? data.total_amount : fallbackAmount,
+        currency: typeof data.currency === "string" ? data.currency : "USD",
+        pack: reasons,
       });
 
       // Only pay out a referral on the first delivery of a purchase, and never
@@ -83,6 +89,20 @@ function buildHandler(webhookKey: string) {
         } catch (error) {
           console.error("referral reward failed for payment", data.payment_id, error);
         }
+      }
+    },
+    onRefundSucceeded: async (payload) => {
+      const data = payload.data;
+      if (data.status !== "succeeded" || typeof data.amount !== "number") return;
+
+      const applied = await reverseRefund({
+        paymentRef: data.payment_id,
+        refundRef: data.refund_id,
+        amountMinor: data.amount,
+        currency: typeof data.currency === "string" ? data.currency : "USD",
+      });
+      if (!applied) {
+        console.warn("dodo webhook: refund not applied", data.refund_id);
       }
     },
   });

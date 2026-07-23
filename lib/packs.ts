@@ -9,6 +9,7 @@ export interface CreditPack {
   slug: "starter" | "bundle" | "max";
   name: string;
   credits: number;
+  priceUsdMinor: number;
   productId: string | undefined;
 }
 
@@ -21,18 +22,21 @@ export const CREDIT_PACKS: Record<CreditPack["slug"], CreditPack> = {
     slug: "starter",
     name: "Starter",
     credits: 100,
+    priceUsdMinor: 100,
     productId: env.DODO_PRODUCT_ID_STARTER,
   },
   bundle: {
     slug: "bundle",
     name: "Bundle",
     credits: 550,
+    priceUsdMinor: 500,
     productId: env.DODO_PRODUCT_ID_BUNDLE,
   },
   max: {
     slug: "max",
     name: "Max",
     credits: 1200,
+    priceUsdMinor: 1000,
     productId: env.DODO_PRODUCT_ID_MAX,
   },
 };

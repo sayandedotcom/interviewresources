@@ -13,15 +13,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 type PaymentHandler = (payload: { data: Record<string, unknown> }) => Promise<void>;
 
 let captured: PaymentHandler;
+let capturedRefund: PaymentHandler;
 
 vi.mock("@dodopayments/nextjs", () => ({
-  Webhooks: (opts: { onPaymentSucceeded: PaymentHandler }) => {
+  Webhooks: (opts: { onPaymentSucceeded: PaymentHandler; onRefundSucceeded: PaymentHandler }) => {
     captured = opts.onPaymentSucceeded;
+    capturedRefund = opts.onRefundSucceeded;
     return async () => new Response(null, { status: 200 });
   },
 }));
 
-vi.mock("@/lib/credits", () => ({ grantCredits: vi.fn() }));
+vi.mock("@/lib/credits", () => ({ settlePayment: vi.fn(), reverseRefund: vi.fn() }));
 
 const selectWhere = vi.fn();
 vi.mock("@/lib/db/index", () => ({
@@ -30,10 +32,11 @@ vi.mock("@/lib/db/index", () => ({
   },
 }));
 
-const { grantCredits } = await import("@/lib/credits");
+const { reverseRefund, settlePayment } = await import("@/lib/credits");
 const { POST } = await import("./route");
 
-const grantMock = vi.mocked(grantCredits);
+const grantMock = vi.mocked(settlePayment);
+const refundMock = vi.mocked(reverseRefund);
 
 /** Runs the route once so `Webhooks()` is constructed and the handler captured. */
 async function handler(): Promise<PaymentHandler> {
@@ -41,6 +44,11 @@ async function handler(): Promise<PaymentHandler> {
     new Request("https://test.local/api/webhook/dodo-payments", { method: "POST" }) as never
   );
   return captured;
+}
+
+async function refundHandler(): Promise<PaymentHandler> {
+  await handler();
+  return capturedRefund;
 }
 
 function payment(overrides: Record<string, unknown> = {}) {
@@ -59,6 +67,7 @@ function payment(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   grantMock.mockResolvedValue(true);
+  refundMock.mockResolvedValue(true);
   selectWhere.mockResolvedValue([]);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -271,5 +280,43 @@ describe("idempotency", () => {
     )(payment({ payment_id: "pay_abc" }));
 
     expect(grantMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("refunds", () => {
+  it("forwards a successful refund to the idempotent credit reversal", async () => {
+    await (
+      await refundHandler()
+    )({
+      data: {
+        status: "succeeded",
+        payment_id: "pay_123",
+        refund_id: "refund_1",
+        amount: 50,
+        currency: "USD",
+      },
+    });
+
+    expect(refundMock).toHaveBeenCalledWith({
+      paymentRef: "pay_123",
+      refundRef: "refund_1",
+      amountMinor: 50,
+      currency: "USD",
+    });
+  });
+
+  it("ignores a failed refund", async () => {
+    await (
+      await refundHandler()
+    )({
+      data: {
+        status: "failed",
+        payment_id: "pay_123",
+        refund_id: "refund_1",
+        amount: 50,
+      },
+    });
+
+    expect(refundMock).not.toHaveBeenCalled();
   });
 });

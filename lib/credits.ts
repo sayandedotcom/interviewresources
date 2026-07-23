@@ -3,7 +3,7 @@ import { cache } from "react";
 import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "./db/index";
-import { creditsLedger, users } from "./db/schema";
+import { creditsLedger, paymentRefunds, payments, productEvents, users } from "./db/schema";
 
 /**
  * The pure credit math lives in lib/pricing.ts so the browser can price a run
@@ -109,4 +109,135 @@ export async function grantCredits(opts: {
     .returning({ id: creditsLedger.id });
 
   return inserted.length > 0;
+}
+
+/**
+ * Persists the provider's actual charge and grants its credits in one
+ * transaction. The provider payment id is unique in both records, so webhook
+ * redelivery is a clean no-op rather than a second grant.
+ */
+export async function settlePayment(opts: {
+  userId: string;
+  credits: number;
+  reason: string;
+  paymentRef: string;
+  amountMinor: number;
+  currency: string;
+  pack: string;
+}): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(payments)
+      .values({
+        userId: opts.userId,
+        providerPaymentId: opts.paymentRef,
+        amountMinor: opts.amountMinor,
+        currency: opts.currency.toUpperCase(),
+        pack: opts.pack,
+        creditsGranted: opts.credits,
+      })
+      .onConflictDoNothing({ target: payments.providerPaymentId })
+      .returning({ id: payments.id });
+
+    if (inserted.length === 0) return false;
+
+    await tx.insert(creditsLedger).values({
+      userId: opts.userId,
+      delta: opts.credits,
+      reason: opts.reason,
+      paymentRef: opts.paymentRef,
+    });
+    await tx.insert(productEvents).values({
+      userId: opts.userId,
+      name: "payment_succeeded",
+      properties: {
+        paymentRef: opts.paymentRef,
+        amountMinor: opts.amountMinor,
+        currency: opts.currency.toUpperCase(),
+        pack: opts.pack,
+        credits: opts.credits,
+      },
+    });
+    return true;
+  });
+}
+
+/**
+ * Applies a successful full or partial refund once and reverses the
+ * proportional credit grant. Cumulative rounding keeps multiple partial
+ * refunds from reversing more credits than the purchase granted.
+ */
+export async function reverseRefund(opts: {
+  paymentRef: string;
+  refundRef: string;
+  amountMinor: number;
+  currency: string;
+}): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [payment] = await tx
+      .select()
+      .from(payments)
+      .where(eq(payments.providerPaymentId, opts.paymentRef))
+      .for("update")
+      .limit(1);
+
+    if (!payment) return false;
+
+    const refundAmount = Math.max(
+      0,
+      Math.min(opts.amountMinor, payment.amountMinor - payment.refundedAmountMinor)
+    );
+    if (refundAmount === 0) return false;
+
+    const totalRefunded = payment.refundedAmountMinor + refundAmount;
+    const targetCreditsReversed = Math.min(
+      payment.creditsGranted,
+      Math.round((payment.creditsGranted * totalRefunded) / payment.amountMinor)
+    );
+    const creditsToReverse = targetCreditsReversed - payment.creditsReversed;
+
+    const inserted = await tx
+      .insert(paymentRefunds)
+      .values({
+        paymentId: payment.id,
+        providerRefundId: opts.refundRef,
+        amountMinor: refundAmount,
+        currency: opts.currency.toUpperCase(),
+        creditsReversed: creditsToReverse,
+      })
+      .onConflictDoNothing({ target: paymentRefunds.providerRefundId })
+      .returning({ id: paymentRefunds.id });
+    if (inserted.length === 0) return false;
+
+    await tx
+      .update(payments)
+      .set({
+        refundedAmountMinor: totalRefunded,
+        creditsReversed: targetCreditsReversed,
+        status: totalRefunded >= payment.amountMinor ? "refunded" : "partially_refunded",
+        updatedAt: new Date(),
+      })
+      .where(eq(payments.id, payment.id));
+
+    if (creditsToReverse > 0) {
+      await tx.insert(creditsLedger).values({
+        userId: payment.userId,
+        delta: -creditsToReverse,
+        reason: "payment_refund",
+        paymentRef: `refund:${opts.refundRef}`,
+      });
+    }
+    await tx.insert(productEvents).values({
+      userId: payment.userId,
+      name: "payment_refunded",
+      properties: {
+        paymentRef: opts.paymentRef,
+        refundRef: opts.refundRef,
+        amountMinor: refundAmount,
+        currency: opts.currency.toUpperCase(),
+        creditsReversed: creditsToReverse,
+      },
+    });
+    return true;
+  });
 }

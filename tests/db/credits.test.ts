@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { creditsLedger, researches, users } from "@/lib/db/schema";
+import { creditsLedger, paymentRefunds, payments, researches, users } from "@/lib/db/schema";
 
 import { type TestDb, createTestDb, resetDb, seedUser } from "./harness";
 
@@ -14,7 +14,7 @@ import { type TestDb, createTestDb, resetDb, seedUser } from "./harness";
 const dbPromise = createTestDb();
 vi.mock("@/lib/db/index", async () => ({ db: await dbPromise }));
 
-const { chargeCredits, getBalance, grantCredits, isPaymentCredited } =
+const { chargeCredits, getBalance, grantCredits, isPaymentCredited, reverseRefund, settlePayment } =
   await import("@/lib/credits");
 
 let db: TestDb;
@@ -301,5 +301,83 @@ describe("isPaymentCredited", () => {
     await grantCredits({ userId: alice, credits: 100, reason: "purchase", paymentRef: "pay_1" });
 
     await expect(isPaymentCredited(bob, "pay_1")).resolves.toBe(false);
+  });
+});
+
+describe("provider payment accounting", () => {
+  it("stores actual cash facts and the credit grant in one idempotent transaction", async () => {
+    const userId = await seedUser(db);
+    const payment = {
+      userId,
+      credits: 550,
+      reason: "purchase:bundle",
+      paymentRef: "pay_bundle",
+      amountMinor: 500,
+      currency: "usd",
+      pack: "bundle",
+    };
+
+    await expect(settlePayment(payment)).resolves.toBe(true);
+    await expect(settlePayment(payment)).resolves.toBe(false);
+
+    await expect(getBalance(userId)).resolves.toBe(550);
+    await expect(db.select().from(payments)).resolves.toMatchObject([
+      {
+        providerPaymentId: "pay_bundle",
+        amountMinor: 500,
+        currency: "USD",
+        pack: "bundle",
+        creditsGranted: 550,
+      },
+    ]);
+  });
+
+  it("applies partial refunds once and cumulatively reverses the granted credits", async () => {
+    const userId = await seedUser(db);
+    await settlePayment({
+      userId,
+      credits: 100,
+      reason: "purchase:starter",
+      paymentRef: "pay_1",
+      amountMinor: 100,
+      currency: "USD",
+      pack: "starter",
+    });
+
+    await expect(
+      reverseRefund({
+        paymentRef: "pay_1",
+        refundRef: "refund_25",
+        amountMinor: 25,
+        currency: "USD",
+      })
+    ).resolves.toBe(true);
+    await expect(
+      reverseRefund({
+        paymentRef: "pay_1",
+        refundRef: "refund_25",
+        amountMinor: 25,
+        currency: "USD",
+      })
+    ).resolves.toBe(false);
+    await expect(getBalance(userId)).resolves.toBe(75);
+
+    await expect(
+      reverseRefund({
+        paymentRef: "pay_1",
+        refundRef: "refund_rest",
+        amountMinor: 75,
+        currency: "USD",
+      })
+    ).resolves.toBe(true);
+    await expect(getBalance(userId)).resolves.toBe(0);
+
+    const [payment] = await db.select().from(payments);
+    expect(payment).toMatchObject({
+      status: "refunded",
+      refundedAmountMinor: 100,
+      creditsReversed: 100,
+    });
+    expect(await db.select().from(paymentRefunds)).toHaveLength(2);
   });
 });
