@@ -264,6 +264,56 @@ export const copyConfig = {
     },
   },
 
+  // ── Unknown / early-stage companies (landing) ───────────────────
+  /**
+   * Documents a mechanism that already ships, so every number here traces to
+   * code rather than to marketing: the threshold is SPARSE_DIRECT_THRESHOLD
+   * (lib/research/sparsity.ts), the four signals are the proxy categories in
+   * proxyPlanStage (lib/research/pipeline/plan.ts), and `panel.broaden` is the
+   * exact progress line the pipeline streams to users. Keep them in step.
+   */
+  unknownCompanies: {
+    eyebrow: "When there's no public data",
+    title: "How we research small, early-stage startups",
+    sub: "Most people aren't interviewing at Google. When a company is twenty people with no Glassdoor page, the agent doesn't shrug and hand you an empty report — it changes what it goes looking for.",
+    panel: {
+      label: "Direct evidence",
+      query: "acme labs interview experience",
+      rows: [
+        { source: "Glassdoor", result: "No reviews" },
+        { source: "LeetCode Discuss", result: "No threads" },
+        { source: "Blind", result: "Nothing found" },
+      ],
+      threshold: "2 / 3",
+      thresholdLabel: "substantial sources",
+      thresholdTag: "Below threshold",
+      /** Verbatim from lib/research/pipeline/index.ts — what the run actually says. */
+      broaden:
+        "Public interview data is thin — researching founders, funding stage, and similar companies...",
+    },
+    signalsLabel: "So it goes looking for four things instead",
+    signals: [
+      {
+        name: "Founder background",
+        body: "Where the people who built it came from. A CTO who spent four years at Stripe carries Stripe's interview instincts into their own loop.",
+      },
+      {
+        name: "Funding stage & size",
+        body: "Seed and Series B interview nothing alike. Fourteen engineers run a different loop than four hundred.",
+      },
+      {
+        name: "Comparable companies",
+        body: "How similar-stage companies building similar things actually run their interviews.",
+      },
+      {
+        name: "Role norms",
+        body: "What a loop for your role and your stack typically looks like at a seed-to-Series-B startup.",
+      },
+    ],
+    closer:
+      "Everything this second pass produces ships tagged Inferred and can never claim High confidence — capped in code after the model answers, not asked of it. You'll always know which questions came from someone who actually sat the interview, and which are a reasoned read of how this company probably runs one.",
+  },
+
   // ── Fair-billing guarantee strip (landing) ──────────────────────
   guarantee: {
     items: [
@@ -339,7 +389,12 @@ export const copyConfig = {
     {
       question: "What companies work best?",
       answer:
-        "Tech companies with active engineering blogs, published interview processes, or candidates who share their experiences online tend to have the richest data.",
+        "Tech companies with active engineering blogs, published interview processes, or candidates who share their experiences online tend to have the richest data. When a company is too new or too small for any of that, the agent doesn't give up — it broadens into the founders' backgrounds, the funding stage, and how comparable companies interview, and labels what it infers from that.",
+    },
+    {
+      question: "What if the company is too small to have any public data?",
+      answer:
+        "That's the common case, and it's handled. When the agent can't find enough first-hand interview evidence, it automatically runs a second pass over four proxy signals: the founders' backgrounds and where they worked before, the company's funding stage and size, how comparable companies in the same domain interview, and the norms for your role and stack at startups that size. Questions built that way ship tagged Inferred and are capped below High confidence, so you can always tell them apart from evidence-backed ones.",
     },
     {
       question: "Can I use this for any interview type?",
