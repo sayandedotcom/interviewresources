@@ -6,4 +6,5 @@ export const contactConfig = {
   legal: `legal@${domain}`,
   privacy: `privacy@${domain}`,
   security: `security@${domain}`,
+  feedback: `feedback@${domain}`,
 };

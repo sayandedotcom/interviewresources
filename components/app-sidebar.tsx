@@ -53,6 +53,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { contactConfig } from "@/config/contact";
+
 import { useSession } from "@/lib/auth-client";
 import { categoryLabel } from "@/lib/research/display";
 import type { ResearchSummary } from "@/lib/research/sessions";
@@ -248,9 +250,13 @@ export function AppSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Share your thoughts or report an issue"
-                render={<Link href="/feedback" />}
-                className={navItemActive}
-                isActive={pathname === "/feedback"}>
+                render={
+                  <a
+                    href={`mailto:${contactConfig.feedback}?subject=${encodeURIComponent("Feedback: [ Write your subject here ]")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                }>
                 <MessageSquareIcon className="size-4" />
                 <span className="font-display font-medium">Feedback</span>
               </SidebarMenuButton>
