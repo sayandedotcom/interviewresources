@@ -6,6 +6,7 @@ import type { SessionUser } from "@/lib/session";
 
 vi.mock("@/lib/session");
 vi.mock("@/lib/research/pipeline");
+vi.mock("@/lib/events", () => ({ recordProductEvent: vi.fn() }));
 vi.mock("@/lib/db/index", () => ({ db: { select: vi.fn(), update: vi.fn() } }));
 vi.mock("@/lib/credits", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/credits")>();

@@ -1,5 +1,6 @@
 import DodoPayments from "dodopayments";
 
+import { recordProductEvent } from "@/lib/events";
 import { getPack } from "@/lib/packs";
 import { dodoPaymentsConfig } from "@/lib/payments";
 import { getSessionUser } from "@/lib/session";
@@ -48,5 +49,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "checkout_failed" }, { status: 502 });
   }
 
+  await recordProductEvent("checkout_started", user.id, { pack: pack.slug });
   return Response.json({ checkoutUrl: session.checkout_url });
 }

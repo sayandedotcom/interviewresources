@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
+import { recordProductEvent } from "@/lib/events";
 import { getSessionUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -40,5 +41,6 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     await db.update(reports).set({ shareToken: token }).where(eq(reports.id, row.reportId));
   }
 
+  await recordProductEvent("report_shared", user.id, { researchId: id });
   return Response.json({ token });
 }

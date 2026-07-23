@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionUser } from "@/lib/session";
 
 vi.mock("@/lib/session");
+vi.mock("@/lib/events", () => ({ recordProductEvent: vi.fn() }));
 
 const createSession = vi.fn();
 vi.mock("dodopayments", () => ({

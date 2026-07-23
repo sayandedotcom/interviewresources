@@ -11,6 +11,7 @@ import {
 } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
+import { recordProductEvent } from "@/lib/events";
 import { type CostEntry, EFFORT_LEVELS, MAX_EFFORT_LINKS } from "@/lib/research/budget";
 import { missingSections } from "@/lib/research/display";
 import { runResearchPipeline } from "@/lib/research/pipeline";
@@ -218,6 +219,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
           credits: creditsCharged,
           reason: "research_extend",
           researchId: row.researchId,
+        });
+        await recordProductEvent("report_extended", user.id, {
+          researchId: row.researchId,
+          creditsCharged,
+          rounds: body.interviewTypes,
+          sections,
         });
 
         controller.enqueue(

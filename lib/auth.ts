@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { siteConfig } from "../site";
 import { db } from "./db/index";
 import * as schema from "./db/schema";
+import { recordProductEvent } from "./events";
 import { resolveReferrerByCode } from "./referrals";
 
 /**
@@ -66,6 +67,13 @@ export const auth = siteConfig.activeAuth
         database: { generateId: "uuid" },
       },
       databaseHooks: {
+        session: {
+          create: {
+            after: async (session) => {
+              await recordProductEvent("sign_in", session.userId);
+            },
+          },
+        },
         user: {
           create: {
             after: async (user) => {
