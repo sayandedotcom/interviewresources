@@ -22,6 +22,7 @@ const {
   deleteSession,
   hasRunInFlight,
   pruneToLimit,
+  startResearchRun,
 } = await import("@/lib/research/sessions");
 const { getBalance } = await import("@/lib/credits");
 
@@ -239,5 +240,53 @@ describe("hasRunInFlight", () => {
 
     await expect(hasRunInFlight(busy)).resolves.toBe(true);
     await expect(hasRunInFlight(idle)).resolves.toBe(false);
+  });
+});
+
+describe("startResearchRun", () => {
+  const input = (userId: string) => ({
+    userId,
+    minimumCredits: 50,
+    companyName: "Stripe",
+    interviewers: [],
+    interviewType: "dsa",
+  });
+
+  it("checks balance and creates the active row atomically", async () => {
+    const userId = await seedUser(db);
+    await db.insert(creditsLedger).values({ userId, delta: 100, reason: "grant" });
+
+    await expect(startResearchRun(input(userId))).resolves.toMatchObject({
+      status: "started",
+      balance: 100,
+    });
+    expect(await companies(userId)).toEqual(["Stripe"]);
+  });
+
+  it("does not create a row when the balance is below the floor", async () => {
+    const userId = await seedUser(db);
+
+    await expect(startResearchRun(input(userId))).resolves.toEqual({
+      status: "insufficient_credits",
+      balance: 0,
+    });
+    expect(await companies(userId)).toEqual([]);
+  });
+
+  it("refuses a second active run for the same user", async () => {
+    const userId = await seedUser(db);
+    await db.insert(creditsLedger).values({ userId, delta: 100, reason: "grant" });
+
+    await startResearchRun(input(userId));
+    await expect(startResearchRun(input(userId))).resolves.toEqual({
+      status: "run_in_flight",
+    });
+  });
+
+  it("backs the application lock with a partial unique index", async () => {
+    const userId = await seedUser(db);
+    await seedRun(userId, "first", 0, "running");
+
+    await expect(seedRun(userId, "second", 0, "running")).rejects.toThrow();
   });
 });

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { reports } from "@/lib/db/schema";
+import { reports, researches } from "@/lib/db/schema";
 import { BudgetTracker } from "@/lib/research/budget";
 import {
   MAX_COMPANY_NAME,
@@ -18,9 +18,14 @@ vi.mock("@/lib/session");
 vi.mock("@/lib/research/pipeline");
 vi.mock("@/lib/db/index", () => ({ db: { insert: vi.fn(), update: vi.fn() } }));
 vi.mock("@/lib/research/sessions", async (importOriginal) => {
-  // Keep the real cap; stub the two functions that talk to the DB.
+  // Keep the real cap; stub the functions that talk to the DB.
   const actual = await importOriginal<typeof import("@/lib/research/sessions")>();
-  return { ...actual, pruneToLimit: vi.fn(), hasRunInFlight: vi.fn() };
+  return {
+    ...actual,
+    pruneToLimit: vi.fn(),
+    hasRunInFlight: vi.fn(),
+    startResearchRun: vi.fn(),
+  };
 });
 vi.mock("@/lib/credits", async (importOriginal) => {
   // Keep the real conversion maths; stub only the two functions that touch the DB.
@@ -31,7 +36,7 @@ vi.mock("@/lib/credits", async (importOriginal) => {
 const { getSessionUser } = await import("@/lib/session");
 const { runResearchPipeline } = await import("@/lib/research/pipeline");
 const { chargeCredits, getBalance } = await import("@/lib/credits");
-const { MAX_SESSIONS_PER_USER, hasRunInFlight, pruneToLimit } =
+const { MAX_SESSIONS_PER_USER, hasRunInFlight, pruneToLimit, startResearchRun } =
   await import("@/lib/research/sessions");
 const { db } = await import("@/lib/db/index");
 const { POST } = await import("./route");
@@ -42,6 +47,7 @@ const balanceMock = vi.mocked(getBalance);
 const chargeMock = vi.mocked(chargeCredits);
 const pruneMock = vi.mocked(pruneToLimit);
 const inFlightMock = vi.mocked(hasRunInFlight);
+const startMock = vi.mocked(startResearchRun);
 const insertMock = vi.mocked(db.insert);
 const updateMock = vi.mocked(db.update);
 
@@ -133,6 +139,24 @@ beforeEach(() => {
   pruneMock.mockResolvedValue(0);
   inFlightMock.mockResolvedValue(false);
   stubDb();
+  startMock.mockImplementation(async (opts) => {
+    if (await inFlightMock(opts.userId)) return { status: "run_in_flight" };
+    const balance = await balanceMock(opts.userId);
+    if (balance < opts.minimumCredits) return { status: "insufficient_credits", balance };
+    await pruneMock(opts.userId, MAX_SESSIONS_PER_USER - 1);
+    const [row] = await db
+      .insert(researches)
+      .values({
+        userId: opts.userId,
+        companyName: opts.companyName,
+        interviewers: opts.interviewers,
+        interviewType: opts.interviewType,
+        roleContext: opts.roleContext,
+        status: "running",
+      })
+      .returning({ id: researches.id });
+    return { status: "started", researchId: row.id, balance };
+  });
 });
 
 describe("session cap", () => {

@@ -1,7 +1,7 @@
-import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db/index";
-import { creditsLedger, questionFeedback, reports, researches } from "@/lib/db/schema";
+import { creditsLedger, questionFeedback, reports, researches, users } from "@/lib/db/schema";
 
 /**
  * How many research sessions a user keeps. Starting one past the cap evicts the
@@ -104,6 +104,75 @@ async function deleteRuns(tx: Tx, ids: string[]): Promise<void> {
     .where(inArray(creditsLedger.researchId, ids));
 
   await tx.delete(researches).where(inArray(researches.id, ids));
+}
+
+export type StartResearchResult =
+  | { status: "started"; researchId: string; balance: number }
+  | { status: "insufficient_credits"; balance: number }
+  | { status: "run_in_flight" };
+
+/**
+ * Checks the balance, enforces one active run, prunes history, and creates the
+ * running row under one user-row lock. This is the spend authorization point:
+ * concurrent requests for the same account cannot both pass it.
+ *
+ * The partial unique index on `researches.user_id WHERE status = 'running'` is
+ * a database-level backstop for callers outside this helper.
+ */
+export async function startResearchRun(opts: {
+  userId: string;
+  minimumCredits: number;
+  companyName: string;
+  interviewers: { name: string; url?: string }[];
+  interviewType: string;
+  roleContext?: string;
+}): Promise<StartResearchResult> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${users} where ${users.id} = ${opts.userId} for update`);
+
+    const [running] = await tx
+      .select({ id: researches.id })
+      .from(researches)
+      .where(and(eq(researches.userId, opts.userId), eq(researches.status, "running")))
+      .limit(1);
+
+    if (running) return { status: "run_in_flight" as const };
+
+    const [balanceRow] = await tx
+      .select({ balance: sql<number>`coalesce(sum(${creditsLedger.delta}), 0)::int` })
+      .from(creditsLedger)
+      .where(eq(creditsLedger.userId, opts.userId));
+    const balance = balanceRow?.balance ?? 0;
+
+    if (balance < opts.minimumCredits) {
+      return { status: "insufficient_credits" as const, balance };
+    }
+
+    const stale = await tx
+      .select({ id: researches.id })
+      .from(researches)
+      .where(eq(researches.userId, opts.userId))
+      .orderBy(desc(researches.createdAt), desc(researches.id))
+      .offset(MAX_SESSIONS_PER_USER - 1);
+    await deleteRuns(
+      tx,
+      stale.map((row) => row.id)
+    );
+
+    const [research] = await tx
+      .insert(researches)
+      .values({
+        userId: opts.userId,
+        companyName: opts.companyName,
+        interviewers: opts.interviewers,
+        interviewType: opts.interviewType,
+        roleContext: opts.roleContext,
+        status: "running",
+      })
+      .returning({ id: researches.id });
+
+    return { status: "started" as const, researchId: research.id, balance };
+  });
 }
 
 /**
