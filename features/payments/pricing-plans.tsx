@@ -59,7 +59,7 @@ export function PricingPlans() {
                       plan.featured ? "bg-primary/20" : "bg-muted"
                     }`}>
                     <Check
-                      className={`h-3 w-3 ${plan.featured ? "text-primary" : "text-muted-foreground/70"}`}
+                      className={`h-3 w-3 ${plan.featured ? "text-primary" : "text-muted-foreground-subtle"}`}
                       strokeWidth={3}
                     />
                   </span>

@@ -32,7 +32,19 @@ export const copyConfig = {
     },
     heroSub:
       "Paste a company name. Our AI researches its stack, culture, and real interview reports, then gathers the questions you'll face, each backed by evidence.",
-    heroCtaPrimary: { label: "Try it for $1", href: "/#pricing" },
+    /**
+     * `ariaLabel` disambiguates this from the bottom CTA button, which carries
+     * the same visible text but points at /signin. Screen-reader users hitting
+     * a link list would otherwise see "Try it for $1" twice with no way to tell
+     * which goes where. Keep the visible label as a prefix of the aria-label —
+     * WCAG 2.5.3 requires the accessible name to contain the visible text, so
+     * voice-control users can still say "click Try it for $1".
+     */
+    heroCtaPrimary: {
+      label: "Try it for $1",
+      ariaLabel: "Try it for $1 — see pricing",
+      href: "/#pricing",
+    },
     heroCtaSecondary: { label: "See how it works", href: "/#how-it-works" },
     heroFomo:
       "Someone else interviewing for your role is already prepping with the questions. Are you?",
@@ -291,6 +303,8 @@ export const copyConfig = {
     title: "Know the questions before you walk in.",
     subtitle: "AI-researched, evidence-backed reports for under $0.50 each. No subscription.",
     signedOutLabel: "Try it for $1",
+    /** See landing.heroCtaPrimary.ariaLabel — same visible text, /signin instead. */
+    signedOutAriaLabel: "Try it for $1 — sign in to get started",
     signedInLabel: "Get started",
     closer: "Can't you spend $1 for your $100K job?",
   },
