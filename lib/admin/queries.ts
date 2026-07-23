@@ -2,7 +2,7 @@ import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 
 import { USD_PER_CREDIT } from "@/lib/credits";
 import { db } from "@/lib/db/index";
-import { creditsLedger, researches, users } from "@/lib/db/schema";
+import { creditsLedger, payments, researches, users } from "@/lib/db/schema";
 
 /** Runs wedged in "running" longer than this have almost certainly lost their route handler. */
 const STUCK_RUN_MINUTES = 15;
@@ -153,24 +153,46 @@ export async function getTopCompanies(limit: number): Promise<TopCompany[]> {
 
 export interface DayPurchases {
   day: string;
-  purchaseUsd: number;
+  currency: string;
+  amountMinor: number;
 }
 
-/** Real cash in, by day — only ledger rows tied to a payment, not research spends. */
+/** Real provider-reported cash in, by day and currency. */
 export async function getPurchases(days: number): Promise<DayPurchases[]> {
   const rows = await db
     .select({
-      day: sql<string>`to_char(date_trunc('day', ${creditsLedger.createdAt}), 'YYYY-MM-DD')`,
-      purchaseUsd: sql<number>`coalesce(sum(${creditsLedger.delta}), 0)::float * ${USD_PER_CREDIT}`,
+      day: sql<string>`to_char(date_trunc('day', ${payments.createdAt}), 'YYYY-MM-DD')`,
+      currency: payments.currency,
+      amountMinor: sql<number>`coalesce(sum(${payments.amountMinor} - ${payments.refundedAmountMinor}), 0)::int`,
     })
-    .from(creditsLedger)
-    .where(
-      sql`${creditsLedger.paymentRef} is not null and ${gte(creditsLedger.createdAt, daysAgo(days))}`
-    )
-    .groupBy(sql`date_trunc('day', ${creditsLedger.createdAt})`)
-    .orderBy(sql`date_trunc('day', ${creditsLedger.createdAt})`);
+    .from(payments)
+    .where(gte(payments.createdAt, daysAgo(days)))
+    .groupBy(sql`date_trunc('day', ${payments.createdAt})`, payments.currency)
+    .orderBy(sql`date_trunc('day', ${payments.createdAt})`, payments.currency);
 
   return rows;
+}
+
+export interface CostPercentiles {
+  p50Usd: number;
+  p90Usd: number;
+  samples: number;
+}
+
+/** p50/p90 report COGS, calculated in JS for portability to the PGlite test DB. */
+export async function getCostPercentiles(days: number): Promise<CostPercentiles> {
+  const rows = await db
+    .select({
+      cents: sql<number>`${researches.costCentsLlm} + ${researches.costCentsSearch}`,
+    })
+    .from(researches)
+    .where(and(eq(researches.status, "done"), gte(researches.createdAt, daysAgo(days))));
+  const costs = rows.map((row) => row.cents).sort((a, b) => a - b);
+  const percentile = (p: number) =>
+    costs.length === 0
+      ? 0
+      : costs[Math.min(costs.length - 1, Math.ceil(costs.length * p) - 1)] / 100;
+  return { p50Usd: percentile(0.5), p90Usd: percentile(0.9), samples: costs.length };
 }
 
 export interface DaySignups {

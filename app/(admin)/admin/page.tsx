@@ -1,4 +1,5 @@
 import {
+  getCostPercentiles,
   getNegativeBalances,
   getPurchases,
   getRunsByDay,
@@ -19,16 +20,25 @@ export const dynamic = "force-dynamic";
 const WINDOW_DAYS = 30;
 
 export default async function AdminOverviewPage() {
-  const [economics, unpaidCost, runsByDay, stuckRuns, topCompanies, purchases, negativeBalances] =
-    await Promise.all([
-      getUnitEconomics(WINDOW_DAYS),
-      getUnpaidCost(WINDOW_DAYS),
-      getRunsByDay(WINDOW_DAYS),
-      getStuckRuns(),
-      getTopCompanies(10),
-      getPurchases(WINDOW_DAYS),
-      getNegativeBalances(),
-    ]);
+  const [
+    economics,
+    unpaidCost,
+    runsByDay,
+    stuckRuns,
+    topCompanies,
+    purchases,
+    negativeBalances,
+    costPercentiles,
+  ] = await Promise.all([
+    getUnitEconomics(WINDOW_DAYS),
+    getUnpaidCost(WINDOW_DAYS),
+    getRunsByDay(WINDOW_DAYS),
+    getStuckRuns(),
+    getTopCompanies(10),
+    getPurchases(WINDOW_DAYS),
+    getNegativeBalances(),
+    getCostPercentiles(WINDOW_DAYS),
+  ]);
 
   const revenueUsd = economics.reduce((sum, d) => sum + d.revenueUsd, 0);
   const costUsd = economics.reduce((sum, d) => sum + d.costUsd, 0);
@@ -36,7 +46,9 @@ export default async function AdminOverviewPage() {
   const totalRuns = runsByDay.reduce((sum, d) => sum + d.runs, 0);
   const failedRuns = runsByDay.filter((d) => d.status === "failed").reduce((s, d) => s + d.runs, 0);
   const failureRate = totalRuns > 0 ? (failedRuns / totalRuns) * 100 : 0;
-  const purchaseUsd = purchases.reduce((sum, d) => sum + d.purchaseUsd, 0);
+  const purchaseUsd = purchases
+    .filter((purchase) => purchase.currency === "USD")
+    .reduce((sum, purchase) => sum + purchase.amountMinor / 100, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -78,7 +90,13 @@ export default async function AdminOverviewPage() {
         <TopCompaniesTable companies={topCompanies} />
       </div>
 
-      <p className="text-muted-foreground text-xs">Real cash in (30d): ${purchaseUsd.toFixed(2)}</p>
+      <p className="text-muted-foreground text-xs">
+        Provider-reported net cash in (30d): ${purchaseUsd.toFixed(2)} USD
+        {purchases.some((purchase) => purchase.currency !== "USD")
+          ? " (other currencies excluded from this total)"
+          : ""}
+        . COGS percentiles use {costPercentiles.samples} completed runs.
+      </p>
     </div>
   );
 }

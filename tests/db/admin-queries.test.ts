@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { creditsLedger, researches } from "@/lib/db/schema";
+import { creditsLedger, payments, researches } from "@/lib/db/schema";
 
 import { type TestDb, createTestDb, resetDb, seedUser } from "./harness";
 
@@ -22,6 +22,7 @@ const {
   getPurchases,
   getUserGrowth,
   getNegativeBalances,
+  getCostPercentiles,
 } = await import("@/lib/admin/queries");
 
 let db: TestDb;
@@ -201,16 +202,41 @@ describe("getTopCompanies", () => {
 });
 
 describe("getPurchases", () => {
-  it("counts only ledger rows tied to a payment", async () => {
+  it("uses the provider-reported amount rather than granted bonus credits", async () => {
     const userId = await seedUser(db);
-    await db.insert(creditsLedger).values([
-      { userId, delta: 500, reason: "purchase:pro", paymentRef: "pay_1" },
-      { userId, delta: -46, reason: "research" },
-    ]);
+    await db.insert(payments).values({
+      userId,
+      providerPaymentId: "pay_1",
+      amountMinor: 500,
+      currency: "USD",
+      pack: "bundle",
+      creditsGranted: 550,
+    });
 
     const [day] = await getPurchases(30);
 
-    expect(day.purchaseUsd).toBeCloseTo(5, 5);
+    expect(day).toMatchObject({ currency: "USD", amountMinor: 500 });
+  });
+});
+
+describe("COGS percentiles", () => {
+  it("calculates p50 and p90 from completed report cost", async () => {
+    const userId = await seedUser(db);
+    await db.insert(researches).values(
+      [10, 20, 30, 40, 100].map((costCentsLlm, index) => ({
+        userId,
+        companyName: `C${index}`,
+        interviewType: "dsa",
+        status: "done" as const,
+        costCentsLlm,
+      }))
+    );
+
+    await expect(getCostPercentiles(30)).resolves.toEqual({
+      p50Usd: 0.3,
+      p90Usd: 1,
+      samples: 5,
+    });
   });
 });
 
