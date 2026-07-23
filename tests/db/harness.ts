@@ -41,7 +41,8 @@ export async function createTestDb(): Promise<TestDb> {
 /** Truncates every table between tests, keeping the (slow) schema build once per file. */
 export async function resetDb(db: TestDb): Promise<void> {
   await db.execute(
-    `truncate table question_feedback, reports, credits_ledger, researches,
+    `truncate table product_events, payment_refunds, payments, question_feedback,
+     reports, credits_ledger, researches,
      sessions, accounts, verifications, research_cache, users restart identity cascade`
   );
 }

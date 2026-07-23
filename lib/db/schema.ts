@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   boolean,
@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -68,7 +69,9 @@ export const users = pgTable("users", {
    * columns plus the ledger are the whole feature — no separate referrals table.
    */
   referralCode: text("referral_code").unique(),
-  referredBy: uuid("referred_by").references((): AnyPgColumn => users.id),
+  referredBy: uuid("referred_by").references((): AnyPgColumn => users.id, {
+    onDelete: "set null",
+  }),
   marketingEmailOptIn: boolean("marketing_email_opt_in").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -85,11 +88,13 @@ export const creditsLedger = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     delta: integer("delta").notNull(),
     reason: text("reason").notNull(),
     paymentRef: text("payment_ref").unique(),
-    researchId: uuid("research_id").references(() => researches.id),
+    researchId: uuid("research_id").references(() => researches.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("credits_ledger_user_id_idx").on(table.userId)]
@@ -97,29 +102,37 @@ export const creditsLedger = pgTable(
 
 export const researchStatus = ["pending", "running", "degraded", "done", "failed"] as const;
 
-export const researches = pgTable("researches", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  companyDomain: text("company_domain"),
-  companyName: text("company_name").notNull(),
-  interviewers: jsonb("interviewers").$type<{ name: string; url?: string }[]>(),
-  interviewType: text("interview_type").notNull(), // comma-joined categories, or "full_loop"
-  roleContext: text("role_context"),
-  status: text("status", { enum: researchStatus }).notNull().default("pending"),
-  costCentsLlm: integer("cost_cents_llm").notNull().default(0),
-  costCentsSearch: integer("cost_cents_search").notNull().default(0),
-  /** Null until the run settles. Only successful runs are charged. */
-  creditsCharged: integer("credits_charged"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const researches = pgTable(
+  "researches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    companyDomain: text("company_domain"),
+    companyName: text("company_name").notNull(),
+    interviewers: jsonb("interviewers").$type<{ name: string; url?: string }[]>(),
+    interviewType: text("interview_type").notNull(), // comma-joined categories, or "full_loop"
+    roleContext: text("role_context"),
+    status: text("status", { enum: researchStatus }).notNull().default("pending"),
+    costCentsLlm: integer("cost_cents_llm").notNull().default(0),
+    costCentsSearch: integer("cost_cents_search").notNull().default(0),
+    /** Null until the run settles. Only successful runs are charged. */
+    creditsCharged: integer("credits_charged"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("researches_one_running_per_user_idx")
+      .on(table.userId)
+      .where(sql`${table.status} = 'running'`),
+  ]
+);
 
 export const reports = pgTable("reports", {
   id: uuid("id").primaryKey().defaultRandom(),
   researchId: uuid("research_id")
     .notNull()
-    .references(() => researches.id),
+    .references(() => researches.id, { onDelete: "cascade" }),
   jsonPayload: jsonb("json_payload").notNull(),
   shareToken: text("share_token").unique(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -127,15 +140,77 @@ export const reports = pgTable("reports", {
 
 export const feedbackVerdict = ["asked", "similar", "not_asked"] as const;
 
-export const questionFeedback = pgTable("question_feedback", {
+export const questionFeedback = pgTable(
+  "question_feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    reportId: uuid("report_id")
+      .notNull()
+      .references(() => reports.id, { onDelete: "cascade" }),
+    questionIdx: integer("question_idx").notNull(),
+    category: text("category").notNull().default("unknown"),
+    confidence: text("confidence").notNull().default("unknown"),
+    verdict: text("verdict", { enum: feedbackVerdict }).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("question_feedback_report_question_idx").on(table.reportId, table.questionIdx),
+  ]
+);
+
+export const paymentStatus = ["succeeded", "partially_refunded", "refunded"] as const;
+
+/** Provider-backed payment facts. Credits are deliberately separate in the ledger. */
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull().default("dodo"),
+    providerPaymentId: text("provider_payment_id").notNull().unique(),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    pack: text("pack").notNull(),
+    creditsGranted: integer("credits_granted").notNull(),
+    creditsReversed: integer("credits_reversed").notNull().default(0),
+    refundedAmountMinor: integer("refunded_amount_minor").notNull().default(0),
+    status: text("status", { enum: paymentStatus }).notNull().default("succeeded"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [index("payments_user_id_idx").on(table.userId)]
+);
+
+/** One row per provider refund makes redelivery and partial refunds idempotent. */
+export const paymentRefunds = pgTable("payment_refunds", {
   id: uuid("id").primaryKey().defaultRandom(),
-  reportId: uuid("report_id")
+  paymentId: uuid("payment_id")
     .notNull()
-    .references(() => reports.id),
-  questionIdx: integer("question_idx").notNull(),
-  verdict: text("verdict", { enum: feedbackVerdict }).notNull(),
+    .references(() => payments.id, { onDelete: "cascade" }),
+  providerRefundId: text("provider_refund_id").notNull().unique(),
+  amountMinor: integer("amount_minor").notNull(),
+  currency: text("currency").notNull(),
+  creditsReversed: integer("credits_reversed").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const productEvents = pgTable(
+  "product_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    name: text("name").notNull(),
+    properties: jsonb("properties").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("product_events_name_created_at_idx").on(table.name, table.createdAt),
+    index("product_events_user_id_idx").on(table.userId),
+  ]
+);
 
 export const researchCache = pgTable("research_cache", {
   key: text("key").primaryKey(), // domain + interview_type
@@ -147,6 +222,7 @@ export const researchCache = pgTable("research_cache", {
 export const usersRelations = relations(users, ({ many }) => ({
   researches: many(researches),
   creditsLedger: many(creditsLedger),
+  payments: many(payments),
   sessions: many(sessions),
   accounts: many(accounts),
 }));
@@ -168,4 +244,13 @@ export const reportsRelations = relations(reports, ({ one, many }) => ({
 
 export const questionFeedbackRelations = relations(questionFeedback, ({ one }) => ({
   report: one(reports, { fields: [questionFeedback.reportId], references: [reports.id] }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one, many }) => ({
+  user: one(users, { fields: [payments.userId], references: [users.id] }),
+  refunds: many(paymentRefunds),
+}));
+
+export const paymentRefundsRelations = relations(paymentRefunds, ({ one }) => ({
+  payment: one(payments, { fields: [paymentRefunds.paymentId], references: [payments.id] }),
 }));

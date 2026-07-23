@@ -15,6 +15,13 @@
       "when": 1783704804276,
       "tag": "0001_square_ares",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784836191889,
+      "tag": "0002_strange_firelord",
+      "breakpoints": true
     }
   ]
 }
