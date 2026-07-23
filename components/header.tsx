@@ -34,9 +34,13 @@ export function Header() {
     };
   }, [session]);
 
+  // `show` is per-link because they don't all fit at the same width: two links
+  // clear the wordmark and CTA at sm, but a third overflows the viewport until
+  // md. Every destination is also in the footer, so dropping one costs nothing.
   const navLinks = [
-    { href: "/#how-it-works", label: "How it works" },
-    { href: "/#pricing", label: "Pricing" },
+    { href: "/#how-it-works", label: "How it works", show: "sm:inline" },
+    { href: "/#how-agent-works", label: "Under the hood", show: "md:inline" },
+    { href: "/#pricing", label: "Pricing", show: "sm:inline" },
   ];
 
   return (
@@ -61,7 +65,7 @@ export function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className={`font-display hidden text-base font-medium transition-colors sm:inline ${
+              className={`font-display hidden text-base font-medium transition-colors ${link.show} ${
                 pathname === link.href ? "text-white" : "text-white/80 hover:text-white"
               }`}>
               {link.label}

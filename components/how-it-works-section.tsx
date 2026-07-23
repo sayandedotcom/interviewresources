@@ -603,7 +603,7 @@ export function HowItWorksSection() {
   return (
     <section
       id="how-it-works"
-      className="mx-auto w-full max-w-7xl px-6 pt-32 pb-12 md:px-8 md:pt-44">
+      className="mx-auto w-full max-w-7xl px-6 pt-16 pb-12 md:px-8 md:pt-20">
       <div className="mb-12 text-center">
         <p className="text-tertiary mb-3 text-xs font-semibold tracking-[0.25em] uppercase">
           {howItWorks.eyebrow}
