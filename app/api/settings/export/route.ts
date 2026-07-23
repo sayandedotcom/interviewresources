@@ -1,8 +1,18 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db/index";
-import { creditsLedger, reports, researches, users } from "@/lib/db/schema";
+import {
+  creditsLedger,
+  paymentRefunds,
+  payments,
+  productEvents,
+  questionFeedback,
+  reports,
+  researches,
+  users,
+} from "@/lib/db/schema";
+import { recordProductEvent } from "@/lib/events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,8 +36,23 @@ export async function GET(request: Request) {
   const researchIds = userResearches.map((r) => r.id);
   const userReports =
     researchIds.length > 0
-      ? await db.select().from(reports).where(eq(reports.researchId, researchIds[0]))
+      ? await db.select().from(reports).where(inArray(reports.researchId, researchIds))
       : [];
+  const reportIds = userReports.map((report) => report.id);
+  const feedback =
+    reportIds.length > 0
+      ? await db
+          .select()
+          .from(questionFeedback)
+          .where(inArray(questionFeedback.reportId, reportIds))
+      : [];
+  const userPayments = await db.select().from(payments).where(eq(payments.userId, userId));
+  const paymentIds = userPayments.map((payment) => payment.id);
+  const refunds =
+    paymentIds.length > 0
+      ? await db.select().from(paymentRefunds).where(inArray(paymentRefunds.paymentId, paymentIds))
+      : [];
+  const events = await db.select().from(productEvents).where(eq(productEvents.userId, userId));
 
   const exportData = {
     exportedAt: new Date().toISOString(),
@@ -47,17 +72,30 @@ export async function GET(request: Request) {
       status: r.status,
       createdAt: r.createdAt,
     })),
+    reports: userReports.map((report) => ({
+      id: report.id,
+      researchId: report.researchId,
+      payload: report.jsonPayload,
+      shareToken: report.shareToken,
+      createdAt: report.createdAt,
+    })),
+    questionFeedback: feedback,
     credits: userCredits.map((c) => ({
       id: c.id,
       delta: c.delta,
       reason: c.reason,
       createdAt: c.createdAt,
     })),
+    payments: userPayments,
+    refunds,
+    productEvents: events,
   };
 
-  return Response.json(exportData, {
+  const response = Response.json(exportData, {
     headers: {
       "Content-Disposition": `attachment; filename="gathered-resources-data-${new Date().toISOString().split("T")[0]}.json"`,
     },
   });
+  await recordProductEvent("report_exported", userId, { scope: "account" });
+  return response;
 }
