@@ -24,8 +24,38 @@ export default function PrivacyPolicyPage() {
           </p>
         </section>
 
+        {/* Required by Google's OAuth verification: the policy has to name the
+            Google account data the app receives and state the Limited Use
+            commitment. Keep the scope list in step with the scopes requested in
+            the Google Cloud consent screen. */}
         <section>
-          <h2 className="font-display text-xl font-semibold">2. How We Use Your Information</h2>
+          <h2 className="font-display text-xl font-semibold">
+            2. Google Account Data ({siteConfig.name} sign-in)
+          </h2>
+          <p className="text-muted-foreground mt-2">
+            You sign in to {siteConfig.name} with your Google account. We request only the basic
+            profile and email scopes, which give us your name, email address, profile picture, and
+            Google account ID. We use them solely to create your account, sign you in, show your
+            name and picture in the app, and email you about your reports and receipts.
+          </p>
+          <p className="text-muted-foreground mt-2">
+            We do not access your Gmail, Drive, Calendar, Contacts, or any other Google service, and
+            we never sell this data or use it for advertising. {siteConfig.name}&apos;s use of
+            information received from Google APIs adheres to the{" "}
+            <a
+              href="https://developers.google.com/terms/api-services-user-data-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline">
+              Google API Services User Data Policy
+            </a>
+            , including the Limited Use requirements. You can delete your account and the data tied
+            to it at any time by emailing {siteConfig.emails.privacy}.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-display text-xl font-semibold">3. How We Use Your Information</h2>
           <p className="text-muted-foreground mt-2">
             We use the information we collect to provide, maintain, and improve our services,
             process transactions, send you technical notices and support messages, and respond to
@@ -34,7 +64,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">3. Information Sharing</h2>
+          <h2 className="font-display text-xl font-semibold">4. Information Sharing</h2>
           <p className="text-muted-foreground mt-2">
             We do not share your personal information with third parties except as described in this
             policy. We may share information with service providers who assist us in operating our
@@ -43,7 +73,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">4. Data Security</h2>
+          <h2 className="font-display text-xl font-semibold">5. Data Security</h2>
           <p className="text-muted-foreground mt-2">
             We implement appropriate technical and organizational measures to protect the security
             of your personal information. However, no method of transmission over the Internet or
@@ -52,7 +82,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">5. Your Rights</h2>
+          <h2 className="font-display text-xl font-semibold">6. Your Rights</h2>
           <p className="text-muted-foreground mt-2">
             Depending on your location, you may have certain rights regarding your personal
             information, including the right to access, correct, or delete your data. Contact us at{" "}
@@ -61,7 +91,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">6. Contact Us</h2>
+          <h2 className="font-display text-xl font-semibold">7. Contact Us</h2>
           <p className="text-muted-foreground mt-2">
             If you have any questions about this Privacy Policy, please contact us at{" "}
             <a

@@ -36,6 +36,21 @@ export const copyConfig = {
     heroCtaSecondary: { label: "See how it works", href: "/#how-it-works" },
     heroFomo:
       "Someone else interviewing for your role is already prepping with the questions. Are you?",
+    /**
+     * Plain-prose statement of what the product is, sitting directly below the
+     * hero. Google's OAuth branding review reads the homepage looking for the
+     * app name exactly as configured on the consent screen, next to a sentence
+     * that explains the app's purpose and what it does with a signed-in Google
+     * account — the hero's marketing phrasing alone doesn't satisfy it. Keep
+     * the first sentence in the form "<app name> is a …".
+     */
+    about: {
+      title: "What is Interview Resources?",
+      paragraphs: [
+        "Interview Resources is a web app that helps candidates prepare for job interviews. You name the company you're interviewing with, and our AI agent researches its public engineering blogs, job descriptions, first-hand interview reports, and public talks, then produces a report of the questions you're likely to face — each one linked to the source it came from.",
+        "You sign in with your Google account. We use it only to create and identify your account: we read your name, email address, and profile picture, and nothing else from your Google account. Reports are billed as one-off credits, with no subscription.",
+      ],
+    },
     stats: [
       { value: "<$0.50", label: "Per report" },
       { value: "~3 min", label: "Start to finish" },

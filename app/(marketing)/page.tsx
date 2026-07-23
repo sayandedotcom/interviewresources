@@ -8,6 +8,7 @@ import { Header } from "@/components/header";
 import { HowAgentWorksSection } from "@/components/how-agent-works-section";
 import { HowItWorksSection } from "@/components/how-it-works-section";
 import { HowWeSourceSection } from "@/components/how-we-source-section";
+import { AboutSection } from "@/components/sections/about-section";
 import { CompaniesSection } from "@/components/sections/companies-section";
 import { ComparisonSection } from "@/components/sections/comparison-section";
 import { FaqSection } from "@/components/sections/faq-section";
@@ -42,6 +43,8 @@ export default function Home() {
       <HeroSection />
 
       {/* <ResearchExperience /> */}
+
+      <AboutSection />
 
       <HowItWorksSection />
 
