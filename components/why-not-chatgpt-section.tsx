@@ -46,7 +46,7 @@ export function WhyNotChatgptSection() {
                 </p>
                 <div className="flex items-start gap-2.5 p-5">
                   <span className="bg-muted mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
-                    <X className="text-muted-foreground/70 h-3 w-3" strokeWidth={2.5} />
+                    <X className="text-muted-foreground-subtle h-3 w-3" strokeWidth={2.5} />
                   </span>
                   <span className="font-display text-muted-foreground text-base">
                     {row.chatgpt}

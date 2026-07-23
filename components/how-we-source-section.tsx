@@ -147,7 +147,9 @@ export function HowWeSourceSection() {
           </Cradle>
           <Caption name={hunt.name} body={hunt.body} />
           {hunt.note && (
-            <p className="font-display text-muted-foreground/70 mt-3 text-sm italic">{hunt.note}</p>
+            <p className="font-display text-muted-foreground-subtle mt-3 text-sm italic">
+              {hunt.note}
+            </p>
           )}
         </div>
 

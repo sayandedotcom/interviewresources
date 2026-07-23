@@ -22,6 +22,7 @@ export function CtaSection() {
         <div className="mt-6 flex justify-center gap-4">
           <Link
             href={session ? "/payments" : "/signin"}
+            aria-label={session ? undefined : siteConfig.cta.signedOutAriaLabel}
             className="font-display inline-flex cursor-pointer items-center gap-1 rounded-full bg-[image:var(--gradient-glossy)] px-8 py-3 text-sm font-semibold text-white shadow-[var(--shadow-glossy)] transition-all [text-shadow:0_1px_1px_oklch(0.25_0.09_255/0.35)] hover:bg-[image:var(--gradient-glossy-hover)] hover:shadow-[var(--shadow-glossy-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-active)]">
             {session ? siteConfig.cta.signedInLabel : siteConfig.cta.signedOutLabel}
             <ChevronRight className="h-4 w-4" />
