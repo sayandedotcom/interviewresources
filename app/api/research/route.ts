@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { MIN_RUN_CREDITS, chargeCredits, creditsToBudgetUsd, usdToCredits } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
+import { recordProductEvent } from "@/lib/events";
 import { BudgetTracker, type CostEntry, EFFORT_PRESETS } from "@/lib/research/budget";
 import { runResearchPipeline } from "@/lib/research/pipeline";
 import { startResearchRun } from "@/lib/research/sessions";
@@ -101,6 +102,11 @@ export async function POST(request: Request) {
           reason: "research",
           researchId,
         });
+        await recordProductEvent("research_completed", user.id, {
+          researchId,
+          companyName: input.companyName,
+          creditsCharged,
+        });
 
         controller.enqueue(
           sse({
@@ -125,6 +131,10 @@ export async function POST(request: Request) {
             costCentsSearch: costCents(entries, "search"),
           })
           .where(eq(researches.id, researchId));
+        await recordProductEvent("research_failed", user.id, {
+          researchId,
+          companyName: input.companyName,
+        });
 
         controller.enqueue(
           sse({ kind: "error", message: err instanceof Error ? err.message : String(err) })

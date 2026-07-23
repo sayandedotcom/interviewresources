@@ -60,6 +60,8 @@ export default async function AdminOverviewPage() {
           value={`${marginPct.toFixed(0)}%`}
           tone={marginPct >= 0 ? "good" : "critical"}
         />
+        <StatTile label="p50 COGS" value={`$${costPercentiles.p50Usd.toFixed(2)}`} />
+        <StatTile label="p90 COGS" value={`$${costPercentiles.p90Usd.toFixed(2)}`} />
         <StatTile label="Revenue (30d)" value={`$${revenueUsd.toFixed(2)}`} />
         <StatTile label="COGS (30d)" value={`$${costUsd.toFixed(2)}`} />
         <StatTile
@@ -89,7 +91,6 @@ export default async function AdminOverviewPage() {
         <h2 className="font-heading mb-2 text-sm font-medium">Top companies</h2>
         <TopCompaniesTable companies={topCompanies} />
       </div>
-
       <p className="text-muted-foreground text-xs">
         Provider-reported net cash in (30d): ${purchaseUsd.toFixed(2)} USD
         {purchases.some((purchase) => purchase.currency !== "USD")

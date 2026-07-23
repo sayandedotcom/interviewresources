@@ -219,27 +219,6 @@ describe("getPurchases", () => {
   });
 });
 
-describe("COGS percentiles", () => {
-  it("calculates p50 and p90 from completed report cost", async () => {
-    const userId = await seedUser(db);
-    await db.insert(researches).values(
-      [10, 20, 30, 40, 100].map((costCentsLlm, index) => ({
-        userId,
-        companyName: `C${index}`,
-        interviewType: "dsa",
-        status: "done" as const,
-        costCentsLlm,
-      }))
-    );
-
-    await expect(getCostPercentiles(30)).resolves.toEqual({
-      p50Usd: 0.3,
-      p90Usd: 1,
-      samples: 5,
-    });
-  });
-});
-
 describe("getUserGrowth", () => {
   it("counts the day's signups", async () => {
     await seedUser(db);
@@ -270,5 +249,26 @@ describe("getNegativeBalances", () => {
     await db.insert(creditsLedger).values({ userId, delta: 50, reason: "p", paymentRef: "pay_1" });
 
     expect(await getNegativeBalances()).toEqual([]);
+  });
+});
+
+describe("COGS percentiles", () => {
+  it("calculates p50 and p90 from completed report cost", async () => {
+    const userId = await seedUser(db);
+    await db.insert(researches).values(
+      [10, 20, 30, 40, 100].map((costCentsLlm, index) => ({
+        userId,
+        companyName: `C${index}`,
+        interviewType: "dsa",
+        status: "done" as const,
+        costCentsLlm,
+      }))
+    );
+
+    await expect(getCostPercentiles(30)).resolves.toEqual({
+      p50Usd: 0.3,
+      p90Usd: 1,
+      samples: 5,
+    });
   });
 });
