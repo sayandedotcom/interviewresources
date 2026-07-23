@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
       <h1 className="font-display text-3xl font-bold tracking-tight">Privacy Policy</h1>
-      <p className="text-muted-foreground mt-4">Last updated: January 2025</p>
+      <p className="text-muted-foreground mt-4">Last updated: July 24, 2026</p>
 
       <div className="mt-8 space-y-6">
         <section>
@@ -36,7 +36,8 @@ export default function PrivacyPolicyPage() {
             You sign in to {siteConfig.name} with your Google account. We request only the basic
             profile and email scopes, which give us your name, email address, profile picture, and
             Google account ID. We use them solely to create your account, sign you in, show your
-            name and picture in the app, and email you about your reports and receipts.
+            name and picture in the app. We do not currently use Google account data to send report
+            emails.
           </p>
           <p className="text-muted-foreground mt-2">
             We do not access your Gmail, Drive, Calendar, Contacts, or any other Google service, and
@@ -50,7 +51,7 @@ export default function PrivacyPolicyPage() {
               Google API Services User Data Policy
             </a>
             , including the Limited Use requirements. You can delete your account and the data tied
-            to it at any time by emailing {siteConfig.emails.privacy}.
+            to it from Settings. You may also contact {siteConfig.emails.privacy}.
           </p>
         </section>
 
@@ -64,25 +65,41 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">4. Information Sharing</h2>
+          <h2 className="font-display text-xl font-semibold">4. Service providers</h2>
           <p className="text-muted-foreground mt-2">
-            We do not share your personal information with third parties except as described in this
-            policy. We may share information with service providers who assist us in operating our
-            platform, conducting our business, or serving our users.
+            We send data only as needed to operate the service: Vercel (hosting and optional
+            consent-gated analytics), Neon (database), Google (sign-in and Gemini AI generation),
+            Tavily (web search and extraction), Dodo Payments (checkout, payments, and refunds), and
+            Google Analytics when you explicitly accept analytics cookies. Public report links are
+            visible to anyone who receives their unguessable share token.
           </p>
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">5. Data Security</h2>
+          <h2 className="font-display text-xl font-semibold">5. Retention and deletion</h2>
           <p className="text-muted-foreground mt-2">
-            We implement appropriate technical and organizational measures to protect the security
-            of your personal information. However, no method of transmission over the Internet or
-            electronic storage is 100% secure.
+            We retain account, credit, payment, outcome, and product-event records while your
+            account exists. The product keeps at most ten recent research sessions per account;
+            older sessions and their reports are removed automatically while their credit ledger
+            entries remain until account deletion. Deleting your account removes owned sessions,
+            reports, outcomes, credits, payments, refunds, authentication records, and identifiable
+            product events, and clears referral links from other accounts. Infrastructure backups
+            may retain deleted data temporarily according to provider backup cycles.
           </p>
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">6. Your Rights</h2>
+          <h2 className="font-display text-xl font-semibold">6. AI processing and limitations</h2>
+          <p className="text-muted-foreground mt-2">
+            Job and interview context, public-source extracts, and generated drafts are processed by
+            AI and search providers to create reports. Generated predictions can be incomplete or
+            wrong and should not be treated as statements from an employer or guarantees about an
+            interview.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-display text-xl font-semibold">7. Your Rights</h2>
           <p className="text-muted-foreground mt-2">
             Depending on your location, you may have certain rights regarding your personal
             information, including the right to access, correct, or delete your data. Contact us at{" "}
@@ -91,7 +108,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">7. Contact Us</h2>
+          <h2 className="font-display text-xl font-semibold">8. Contact Us</h2>
           <p className="text-muted-foreground mt-2">
             If you have any questions about this Privacy Policy, please contact us at{" "}
             <a

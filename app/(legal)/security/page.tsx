@@ -13,48 +13,56 @@ export default function SecurityPage() {
     <div className="mx-auto max-w-3xl px-5 py-12">
       <h1 className="font-display text-3xl font-bold tracking-tight">Security</h1>
       <p className="text-muted-foreground mt-4">
-        We take security seriously. This page outlines our security practices and how to report
-        vulnerabilities.
+        Last updated: July 24, 2026. This page describes controls implemented in the product today,
+        without claiming certifications or controls we have not independently verified.
       </p>
 
       <div className="mt-8 space-y-6">
         <section>
-          <h2 className="font-display text-xl font-semibold">Data Encryption</h2>
+          <h2 className="font-display text-xl font-semibold">Transport and application controls</h2>
           <p className="text-muted-foreground mt-2">
-            All data transmitted to and from {siteConfig.name} is encrypted using TLS 1.3. At rest,
-            sensitive data is encrypted using AES-256 encryption.
+            Production traffic is served over HTTPS by Vercel. The application sends baseline
+            browser security headers, keeps secrets in server-side environment variables, and scopes
+            report, export, feedback, and deletion operations to the authenticated owner. We do not
+            claim a particular TLS version or at-rest cipher here because those are managed by
+            infrastructure providers and may change.
           </p>
         </section>
 
         <section>
           <h2 className="font-display text-xl font-semibold">Authentication</h2>
           <p className="text-muted-foreground mt-2">
-            We use industry-standard OAuth 2.0 for authentication via Google. Session tokens are
-            securely managed and expire after reasonable inactivity periods.
+            Authentication uses Google sign-in through better-auth. Session records are stored in
+            PostgreSQL and access to authenticated routes is checked on the server.
           </p>
         </section>
 
         <section>
           <h2 className="font-display text-xl font-semibold">Database Security</h2>
           <p className="text-muted-foreground mt-2">
-            Our database is hosted on Neon (PostgreSQL) with built-in security features including
-            row-level security, encrypted connections, and automatic backups.
+            Production data is stored in Neon Postgres. Authorization is enforced in application
+            queries and database foreign keys; we do not currently claim PostgreSQL row-level
+            security. Destructive ownership relationships use database cascades, and referral
+            relationships are cleared when the referenced account is deleted.
           </p>
         </section>
 
         <section>
           <h2 className="font-display text-xl font-semibold">Payment Security</h2>
           <p className="text-muted-foreground mt-2">
-            All payment processing is handled by Dodo Payments, a PCI DSS compliant payment
-            provider. We never store credit card information on our servers.
+            Checkout and card collection are hosted by Dodo Payments. We store provider payment and
+            refund identifiers, amounts, currencies, pack names, statuses, and credit movements; we
+            do not receive or store full card numbers.
           </p>
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">Regular Security Audits</h2>
+          <h2 className="font-display text-xl font-semibold">Operational safeguards</h2>
           <p className="text-muted-foreground mt-2">
-            We regularly review and update our security practices. Our infrastructure is hosted on
-            Vercel, which provides additional layers of security and DDoS protection.
+            Production database migrations use the direct database endpoint and a PostgreSQL
+            advisory lock. Preview builds skip migrations. A secret-protected scheduled endpoint
+            marks abandoned research runs failed. These safeguards are tested in CI; this is not a
+            claim of a formal audit or certification.
           </p>
         </section>
 
@@ -67,17 +75,21 @@ export default function SecurityPage() {
               className="text-primary hover:underline">
               {siteConfig.emails.security}
             </a>
-            . We appreciate responsible disclosure and will work with you to address any issues
-            promptly.
+            . Please include reproduction steps and avoid accessing other users&apos; data. Our
+            machine-readable disclosure contact is also published at{" "}
+            <a href="/.well-known/security.txt" className="text-primary hover:underline">
+              /.well-known/security.txt
+            </a>
+            .
           </p>
         </section>
 
         <section>
-          <h2 className="font-display text-xl font-semibold">Incident Response</h2>
+          <h2 className="font-display text-xl font-semibold">Limitations</h2>
           <p className="text-muted-foreground mt-2">
-            In the event of a security incident, we have procedures in place to respond quickly and
-            transparently. Affected users will be notified promptly in accordance with applicable
-            laws and regulations.
+            No internet service can guarantee absolute security. We investigate credible reports and
+            will provide notices when required by applicable law; we do not claim a certified
+            incident-response program, a guaranteed response time, or continuous external auditing.
           </p>
         </section>
       </div>
