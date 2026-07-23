@@ -16,6 +16,7 @@ import { GuaranteeSection } from "@/components/sections/guarantee-section";
 import { HeroSection } from "@/components/sections/hero-section";
 import { PricingSection } from "@/components/sections/pricing-section";
 import { StatsSection } from "@/components/sections/stats-section";
+import { UnknownCompaniesSection } from "@/components/unknown-companies-section";
 import { WhyNotChatgptSection } from "@/components/why-not-chatgpt-section";
 
 import { faqJsonLd } from "@/lib/seo/json-ld";
@@ -55,6 +56,8 @@ export default function Home() {
       <StatsSection />
 
       <CompaniesSection />
+
+      <UnknownCompaniesSection />
 
       <WhyNotChatgptSection />
 

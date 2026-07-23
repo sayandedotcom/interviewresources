@@ -43,7 +43,7 @@ function SourceSearchMock({ chips }: { chips: readonly string[] }) {
             <span className="font-display text-foreground/80 text-sm">{chip}</span>
           </div>
         ))}
-        <div className="border-border/60 mt-2 flex items-center gap-2.5 border-t pt-2.5">
+        {/* <div className="border-border/60 mt-2 flex items-center gap-2.5 border-t pt-2.5">
           <Ban className="text-muted-foreground/60 h-3.5 w-3.5 shrink-0" />
           <span className="font-display text-muted-foreground/60 text-sm line-through">
             LinkedIn
@@ -51,7 +51,7 @@ function SourceSearchMock({ chips }: { chips: readonly string[] }) {
           <span className="ml-auto rounded-full bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-700">
             Never
           </span>
-        </div>
+        </div> */}
       </div>
     </>
   );
