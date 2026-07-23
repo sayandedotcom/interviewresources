@@ -25,7 +25,7 @@ function Cell({ value, mine = false }: { value: boolean | string; mine?: boolean
         mine ? "bg-primary/15" : "bg-muted"
       }`}>
       <Check
-        className={`h-3.5 w-3.5 ${mine ? "text-primary" : "text-muted-foreground/70"}`}
+        className={`h-3.5 w-3.5 ${mine ? "text-primary" : "text-muted-foreground-subtle"}`}
         strokeWidth={3}
       />
     </span>

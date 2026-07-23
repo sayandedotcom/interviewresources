@@ -11,7 +11,7 @@ export function StatsSection() {
             <p className="font-display text-muted-foreground text-5xl font-bold tracking-tight">
               {stat.value}
             </p>
-            <p className="text-muted-foreground/70 mt-2 text-xs tracking-widest uppercase">
+            <p className="text-muted-foreground-subtle mt-2 text-xs tracking-widest uppercase">
               {stat.label}
             </p>
           </div>

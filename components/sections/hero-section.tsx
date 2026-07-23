@@ -53,6 +53,7 @@ export function HeroSection() {
         <div className="mt-8 flex justify-center gap-4">
           <Link
             href={landing.heroCtaPrimary.href}
+            aria-label={landing.heroCtaPrimary.ariaLabel}
             className="font-display text-brand-700 inline-flex cursor-pointer items-center gap-1 rounded-full bg-[image:var(--gradient-glossy-white)] px-6 py-3 text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-all hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-white-active)]">
             {landing.heroCtaPrimary.label}
             <ChevronRight className="h-4 w-4" />
