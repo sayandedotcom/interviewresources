@@ -8,8 +8,13 @@ export const copyConfig = {
   tagline: "AI gathers your interview resources. For under $0.50.",
   subtagline:
     "Our AI researches a company's stack, culture, and real interview reports. Every question cites its evidence.",
+  /**
+   * Keep under ~160 characters. Google truncates past that, and the tail is
+   * where the price and the no-subscription promise live — the two things most
+   * likely to earn the click.
+   */
   metaDescription:
-    "Interview Resources' AI researches a company's stack, culture, and real interview reports, then gathers the questions you'll face, each backed by evidence. Under $0.50 a report, no subscription.",
+    "AI researches a company's stack, culture, and real interview reports, then gathers the questions you'll face — each backed by evidence. Under $0.50 a report.",
   titleSuffix: "Gather Interview Resources with AI",
   footerTagline: "AI prep intelligence, not prophecy.",
   twitterCreator: "@sayandedotcom",

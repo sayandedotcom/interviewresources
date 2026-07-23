@@ -8,7 +8,7 @@ import { siteConfig } from "@/site";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -47,7 +47,11 @@ export default function SignInPage() {
       <section className="flex flex-1 items-center justify-center px-5 py-16">
         <Card className="mx-auto w-full max-w-sm">
           <CardHeader className="text-center">
-            <CardTitle className="font-display text-lg">Sign in to {siteConfig.name}</CardTitle>
+            {/* A real h1, not CardTitle: that renders a div, which left this
+                page with no heading for crawlers or screen readers. */}
+            <h1 data-slot="card-title" className="font-display text-lg leading-snug font-medium">
+              Sign in to {siteConfig.name}
+            </h1>
           </CardHeader>
           <CardContent className="grid gap-4">
             <Button

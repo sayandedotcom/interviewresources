@@ -15,7 +15,8 @@ export default function PricingPage() {
   return (
     <main className="flex flex-1 flex-col">
       <Header />
-      <PricingSection />
+      {/* The page is about pricing, so this heading is its h1. */}
+      <PricingSection as="h1" />
       <Footer />
     </main>
   );
