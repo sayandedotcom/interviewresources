@@ -40,6 +40,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
+  --color-muted-foreground-subtle: var(--muted-foreground-subtle);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
@@ -96,7 +97,12 @@
   --card-foreground: oklch(0.205 0.012 250);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.205 0.012 250);
-  --primary: oklch(0.576 0.176 252);
+  /* One notch darker than --brand-600, which it used to mirror. At brand-600 it
+     was 4.38:1 on white and 4.25:1 under white button text — both just under
+     AA. This lands at ~5.0:1 in every direction: as text on white, as text on
+     the --brand-50 section bands, and as a button fill behind
+     --primary-foreground. The ramp itself is untouched. */
+  --primary: oklch(0.54 0.176 252);
   --primary-foreground: oklch(0.99 0.004 240);
   --secondary: oklch(0.972 0.01 245);
   --secondary-foreground: oklch(0.417 0.128 255);
@@ -104,6 +110,10 @@
   /* Body/secondary text. Kept dark enough to stay comfortably readable at the
      14-16px sizes it's used at (~7.3:1 on white), not just AA-passing. */
   --muted-foreground: oklch(0.47 0.022 252);
+  /* The step below --muted-foreground, for captions and stat labels that want
+     to recede. Replaces the old `text-muted-foreground/70`, which flattened to
+     3.36:1 on white. Still lighter than body text, but AA at ~4.8:1. */
+  --muted-foreground-subtle: oklch(0.55 0.018 252);
   --accent: oklch(0.955 0.022 243);
   --accent-foreground: oklch(0.493 0.158 254);
   --destructive: oklch(0.577 0.245 27.325);
