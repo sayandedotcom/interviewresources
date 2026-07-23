@@ -223,7 +223,7 @@ export const copyConfig = {
           "Glassdoor",
           "Blind",
           "LeetCode Discuss",
-          "Reddit threads",
+          "Forum threads",
           "Personal write-ups",
           "Engineering blogs",
           "Job postings",
