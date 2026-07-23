@@ -111,7 +111,7 @@ export function Footer() {
           <p className="font-display text-muted-foreground text-sm">
             © {new Date().getFullYear()} {siteConfig.name}
           </p>
-          <div className="flex items-center gap-6">
+          {/* <div className="flex items-center gap-6">
             <a
               href={siteConfig.links.twitter}
               target="_blank"
@@ -126,7 +126,7 @@ export function Footer() {
               className="font-display text-muted-foreground hover:text-foreground text-sm transition-colors">
               GitHub
             </a>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>
