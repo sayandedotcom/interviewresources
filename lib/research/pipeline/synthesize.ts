@@ -2,12 +2,15 @@ import { z } from "zod";
 
 import type { BudgetTracker, EffortPreset } from "../budget";
 import { generateStructured } from "../gemini";
+import { candidateWhy, canonicalizePublicUrl, resourceKind } from "../resources";
 import {
   type CompressedNote,
   type GeneratedReport,
   type ImportantLink,
   type Report,
   type ResearchInput,
+  type ResearchResource,
+  type ResourceCandidate,
   reportSchema,
 } from "../types";
 import { describeInput, wants } from "./shared";
@@ -26,6 +29,7 @@ type OptionalReportField =
 export async function synthesizeStage(
   input: ResearchInput,
   notes: CompressedNote[],
+  resourceCandidates: ResourceCandidate[],
   budget: BudgetTracker,
   preset: EffortPreset,
   broadened: boolean,
@@ -36,6 +40,16 @@ export async function synthesizeStage(
   const generateQuestions = input.generateQuestions !== false;
   const evidenceBlock = notes
     .map((n, i) => `[${i + 1}] (${n.category}) ${n.sourceTitle} — ${n.sourceUrl}\n${n.summary}`)
+    .join("\n\n");
+  const unreadableCatalog = resourceCandidates
+    .filter((candidate) => candidate.access === "link_only")
+    .slice(0, preset.resourceCatalogMax)
+    .map(
+      (candidate, i) =>
+        `[R${i + 1}] ${candidate.title} — ${candidate.url}\n` +
+        `Purpose: ${candidate.purposes.join("; ") || "potentially useful research"}\n` +
+        `Categories: ${candidate.categories.join(", ") || "other"}\nAccess: link_only`
+    )
     .join("\n\n");
 
   // The relaxation block only enters the prompt when the proxy wave fired, so a
@@ -122,6 +136,14 @@ export async function synthesizeStage(
     `- Summarize each named interviewer in interviewerSummary using only public evidence in the
   notes; if several were named, cover each briefly.`,
     `- Do not invent citations. Do not invent company facts not present in the notes.`,
+    `- researchResources is a curated library of useful links discovered in the evidence notes
+  and metadata-only resource catalog. Aim for ${preset.resourcesMin}-${preset.resourcesMax}
+  resources, but never invent or pad links when fewer credible candidates were discovered.
+  Use only URLs present in those two inputs.`,
+    `- Entries marked link_only are navigation metadata, not evidence. You may select them as
+  useful links, but must not infer, summarize, quote, or make claims about their page contents.
+  Explain them only from their title, category, and stated query purpose. They must never
+  influence questions, confidence, summaries, claims, or citations.`,
     generateQuestions &&
       `- Aim for ${preset.questionTarget} questions total across the requested rounds, prioritizing breadth
   across rounds over depth in one. Do not pad: a question you cannot ground in the notes
@@ -186,7 +208,10 @@ ${rules}`,
     prompt: `${describeInput(input)}
 
 Evidence notes:
-${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everything low confidence)"}${excludeBlock}`,
+${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everything low confidence)"}
+
+Metadata-only resource catalog (not evidence; open manually):
+${unreadableCatalog || "(none)"}${excludeBlock}`,
   });
 
   // Field by field, not a spread of defaults under the result: an omitted
@@ -205,10 +230,16 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
 
   // A URL the notes never contained is a hallucination — strip it from both
   // question citations and importantLinks before it reaches the UI as a link.
-  const known = new Set(notes.map((n) => n.sourceUrl));
+  const known = new Set(
+    notes
+      .map((n) => canonicalizePublicUrl(n.sourceUrl))
+      .filter((url): url is string => url !== null)
+  );
 
   for (const q of report.questions) {
-    q.evidenceUrls = q.evidenceUrls.filter((url) => known.has(url));
+    q.evidenceUrls = q.evidenceUrls
+      .map(canonicalizePublicUrl)
+      .filter((url): url is string => Boolean(url && known.has(url)));
     // The prompt requires every question to cite evidence; one that lost all
     // of its citations is ungrounded, so its confidence claim is too.
     if (q.evidenceUrls.length === 0) q.confidence = "low";
@@ -230,9 +261,10 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
     const kept: ImportantLink[] = [];
     for (const link of links) {
       if (kept.length >= preset.linksMax) break;
-      if (!known.has(link.url) || claimed.has(link.url)) continue;
-      claimed.add(link.url);
-      kept.push(link);
+      const url = canonicalizePublicUrl(link.url);
+      if (!url || !known.has(url) || claimed.has(url)) continue;
+      claimed.add(url);
+      kept.push({ ...link, url });
     }
     return kept;
   };
@@ -243,6 +275,54 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
     report.interviewExperiences = keepLinks(report.interviewExperiences);
   }
   report.importantLinks = keepLinks(report.importantLinks);
+
+  const eligibleCandidates = resourceCandidates.slice(0, preset.resourcesMax);
+  const candidateByUrl = new Map(eligibleCandidates.map((candidate) => [candidate.url, candidate]));
+  const selected: ResearchResource[] = [];
+  const selectedUrls = new Set<string>();
+  const modelResources = generated.researchResources ?? [];
+
+  const addResource = (candidate: ResourceCandidate, proposed?: ResearchResource) => {
+    if (selected.length >= preset.resourcesMax || selectedUrls.has(candidate.url)) return;
+    selectedUrls.add(candidate.url);
+    selected.push({
+      title: candidate.title,
+      url: candidate.url,
+      why:
+        candidate.access === "link_only"
+          ? candidateWhy(candidate)
+          : proposed?.why?.trim() || candidateWhy(candidate),
+      kind: resourceKind(candidate),
+      access: candidate.access,
+      usedAsEvidence: known.has(candidate.url),
+    });
+  };
+
+  for (const proposed of modelResources) {
+    const url = canonicalizePublicUrl(proposed.url);
+    if (!url) continue;
+    const candidate = candidateByUrl.get(url);
+    if (candidate) addResource(candidate, proposed);
+  }
+
+  // Metadata-only pages are easiest for a model to omit because it cannot read
+  // them. Preserve the strongest one deterministically before filling the rest.
+  const strongestUnreadable = eligibleCandidates.find(
+    (candidate) => candidate.access === "link_only"
+  );
+  if (strongestUnreadable && !selectedUrls.has(strongestUnreadable.url)) {
+    if (selected.length >= preset.resourcesMax) {
+      const replaceAt = selected.findLastIndex((item) => item.access !== "link_only");
+      if (replaceAt >= 0) {
+        selectedUrls.delete(selected[replaceAt].url);
+        selected.splice(replaceAt, 1);
+      }
+    }
+    addResource(strongestUnreadable);
+  }
+
+  for (const candidate of eligibleCandidates) addResource(candidate);
+  report.researchResources = selected;
 
   return report;
 }

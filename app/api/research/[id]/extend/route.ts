@@ -12,9 +12,15 @@ import {
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
 import { recordProductEvent } from "@/lib/events";
-import { type CostEntry, EFFORT_LEVELS, MAX_EFFORT_LINKS } from "@/lib/research/budget";
+import {
+  type CostEntry,
+  EFFORT_LEVELS,
+  MAX_EFFORT_LINKS,
+  MAX_EFFORT_RESOURCES,
+} from "@/lib/research/budget";
 import { missingSections } from "@/lib/research/display";
 import { runResearchPipeline } from "@/lib/research/pipeline";
+import { canonicalizePublicUrl, mergeResearchResources } from "@/lib/research/resources";
 import {
   type ImportantLink,
   REPORT_SECTIONS,
@@ -70,9 +76,13 @@ function mergeReports(
     force: boolean
   ) => {
     if (a === null && !force) return null;
-    const links = [...(a ?? [])];
-    for (const link of b ?? []) {
-      if (!links.some((l) => l.url === link.url)) links.push(link);
+    const links: ImportantLink[] = [];
+    const seen = new Set<string>();
+    for (const link of [...(a ?? []), ...(b ?? [])]) {
+      const url = canonicalizePublicUrl(link.url);
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      links.push({ ...link, url });
     }
     return links.slice(0, MAX_EFFORT_LINKS);
   };
@@ -95,6 +105,11 @@ function mergeReports(
       opts.sections.includes("experiences")
     ),
     importantLinks: mergeLinks(existing.importantLinks, addition.importantLinks, true) ?? [],
+    researchResources: mergeResearchResources(
+      existing.researchResources,
+      addition.researchResources,
+      MAX_EFFORT_RESOURCES
+    ),
   };
 }
 

@@ -293,6 +293,54 @@ describe("the extension run", () => {
     expect(merged[0].title).toBe("Exp A"); // the original wins, not the duplicate
   });
 
+  it("merges Research library URLs canonically and upgrades access when an extension reads one", async () => {
+    stubSelect({
+      ...row,
+      jsonPayload: {
+        ...existingReport,
+        researchResources: [
+          {
+            title: "Manual result",
+            url: "https://example.com/post?utm_source=old",
+            why: "Open it",
+            kind: "other",
+            access: "link_only",
+            usedAsEvidence: false,
+          },
+        ],
+      } satisfies Report,
+    });
+    pipelineMock.mockResolvedValue({
+      budget: budgetCosting(0.15),
+      report: {
+        ...additionReport,
+        researchResources: [
+          {
+            title: "Readable result",
+            url: "https://example.com/post#details",
+            why: "Useful preview",
+            kind: "discussion",
+            access: "search_preview",
+            usedAsEvidence: true,
+          },
+        ],
+      },
+    });
+
+    const events = await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
+    const resources = (events.find((event) => event.kind === "report")!.report as Report)
+      .researchResources;
+
+    expect(resources).toEqual([
+      expect.objectContaining({
+        title: "Readable result",
+        url: "https://example.com/post",
+        access: "search_preview",
+        usedAsEvidence: true,
+      }),
+    ]);
+  });
+
   it("merges into a report stored before interviewExperiences existed", async () => {
     // Reports written by an older build have no such key at all.
     const legacy = { ...existingReport } as Partial<Report>;

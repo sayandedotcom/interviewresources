@@ -520,8 +520,12 @@ describe("compress stage", () => {
     await runResearchPipeline(input);
 
     const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
-    expect(prompt).not.toContain("short.dev");
-    expect(prompt).toContain("long.dev");
+    const evidence = prompt.split("Metadata-only resource catalog")[0];
+    expect(evidence).not.toContain("short.dev");
+    expect(evidence).toContain("long.dev");
+    // Thin pages are no longer discarded: they survive as manual-open metadata.
+    expect(prompt).toContain("https://short.dev");
+    expect(prompt).toContain("Access: link_only");
   });
 
   it("drops a source whose content is under the 40-character floor", async () => {
@@ -873,6 +877,138 @@ describe("synthesize stage", () => {
     const { report: out } = await runResearchPipeline(input);
 
     expect(out.importantLinks).toEqual([]);
+  });
+
+  it("preserves an unreadable result as link-only without letting it support a question", async () => {
+    const url = "https://www.linkedin.com/posts/example?utm_source=search#detail";
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: [searchResult(url, "A seemingly substantive search snippet. ".repeat(8))],
+    });
+    stubStages({
+      report: report({
+        questions: [
+          {
+            category: "dsa",
+            question: "Claimed LinkedIn question",
+            confidence: "high",
+            rationale: "claimed",
+            prepNote: "prep",
+            evidenceUrls: [url],
+            basis: "evidence",
+          },
+        ],
+        researchResources: [
+          {
+            title: "Invented page summary",
+            url,
+            why: "This page says the interview always includes dynamic programming.",
+            kind: "discussion",
+            access: "full_text",
+            usedAsEvidence: true,
+          },
+        ],
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.questions[0].evidenceUrls).toEqual([]);
+    expect(out.questions[0].confidence).toBe("low");
+    expect(out.researchResources).toEqual([
+      expect.objectContaining({
+        url: "https://www.linkedin.com/posts/example",
+        access: "link_only",
+        usedAsEvidence: false,
+        why: expect.stringContaining("Discovered while researching"),
+      }),
+    ]);
+    expect(extractMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves a thin result when extraction fails instead of dropping its URL", async () => {
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: [searchResult("https://paywall.dev/story", "tiny")],
+    });
+    extractMock.mockRejectedValue(new Error("blocked"));
+    stubStages({});
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.researchResources).toEqual([
+      expect.objectContaining({
+        url: "https://paywall.dev/story",
+        access: "link_only",
+        usedAsEvidence: false,
+      }),
+    ]);
+    const synthPrompt = genMock.mock.calls.find((call) => call[0].stage === "synthesize")![0]
+      .prompt;
+    expect(synthPrompt).toContain("Metadata-only resource catalog");
+    expect(synthPrompt).toContain("https://paywall.dev/story");
+    expect(synthPrompt.split("Metadata-only resource catalog")[0]).not.toContain("paywall.dev");
+  });
+
+  it("labels extracted pages and substantive snippets independently", async () => {
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: [searchResult("https://full.dev/post"), searchResult("https://preview.dev/post")],
+    });
+    extractMock.mockResolvedValue([
+      { url: "https://full.dev/post", rawContent: "Full page evidence. ".repeat(40) },
+    ]);
+    stubStages({});
+
+    const { report: out } = await runResearchPipeline(input);
+    const byUrl = Object.fromEntries(out.researchResources!.map((item) => [item.url, item]));
+
+    expect(byUrl["https://full.dev/post"]).toMatchObject({
+      access: "full_text",
+      usedAsEvidence: true,
+    });
+    expect(byUrl["https://preview.dev/post"]).toMatchObject({
+      access: "search_preview",
+      usedAsEvidence: true,
+    });
+  });
+
+  it("curates resource libraries to the effort ceiling without inventing padding", async () => {
+    const urls = Array.from({ length: 25 }, (_, i) => `https://resource-${i}.dev/post`);
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: urls.map((url, i) => ({
+        ...searchResult(url),
+        score: 1 - i / 100,
+      })),
+    });
+    stubStages({});
+
+    const low = await runResearchPipeline({ ...input, effort: "low" });
+    expect(low.report.researchResources).toHaveLength(12);
+
+    vi.clearAllMocks();
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: urls.map((url, i) => ({
+        ...searchResult(url),
+        score: 1 - i / 100,
+      })),
+    });
+    extractMock.mockResolvedValue([]);
+    stubStages({});
+    const medium = await runResearchPipeline(input);
+    expect(medium.report.researchResources).toHaveLength(16);
+
+    vi.clearAllMocks();
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: [searchResult("https://only.dev/post")],
+    });
+    extractMock.mockResolvedValue([]);
+    stubStages({});
+    const scarce = await runResearchPipeline({ ...input, effort: "high" });
+    expect(scarce.report.researchResources).toHaveLength(1);
   });
 });
 

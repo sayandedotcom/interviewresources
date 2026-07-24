@@ -47,6 +47,11 @@ export interface EffortPreset {
   /** Hard ceiling on importantLinks, and the range shown to the model. */
   linksMax: number;
   linksHint: string;
+  /** Curated Research library size. Never padded when discovery returns fewer links. */
+  resourcesMin: number;
+  resourcesMax: number;
+  /** Maximum metadata-only candidates exposed to synthesis. */
+  resourceCatalogMax: number;
   label: string;
   blurb: string;
 }
@@ -68,6 +73,9 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     questionTarget: "8-15",
     linksMax: 4,
     linksHint: "2-4",
+    resourcesMin: 8,
+    resourcesMax: 12,
+    resourceCatalogMax: 30,
     label: "Low",
     blurb: "Quick scan — fewer searches, the essentials only",
   },
@@ -81,6 +89,9 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     questionTarget: "15-30",
     linksMax: 6,
     linksHint: "3-6",
+    resourcesMin: 12,
+    resourcesMax: 16,
+    resourceCatalogMax: 35,
     label: "Medium",
     blurb: "Balanced — the default depth",
   },
@@ -94,6 +105,9 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     questionTarget: "30-50",
     linksMax: 10,
     linksHint: "6-10",
+    resourcesMin: 16,
+    resourcesMax: 20,
+    resourceCatalogMax: 40,
     label: "High",
     blurb: "Exhaustive — widest search, most questions",
   },
@@ -108,6 +122,9 @@ export const MAX_EFFORT_CAP_USD = Math.max(...EFFORT_LEVELS.map((e) => EFFORT_PR
  * a high-effort report's links down to a lower effort's cap.
  */
 export const MAX_EFFORT_LINKS = Math.max(...EFFORT_LEVELS.map((e) => EFFORT_PRESETS[e].linksMax));
+export const MAX_EFFORT_RESOURCES = Math.max(
+  ...EFFORT_LEVELS.map((e) => EFFORT_PRESETS[e].resourcesMax)
+);
 
 export interface CostEntry {
   stage: string;

@@ -188,6 +188,36 @@ export interface GatheredSource {
   extracted: boolean;
 }
 
+export const RESOURCE_KINDS = [
+  "interview_experience",
+  "company_engineering",
+  "company_docs",
+  "discussion",
+  "interviewer",
+  "video",
+  "code",
+  "other",
+] as const;
+
+export type ResearchResourceKind = (typeof RESOURCE_KINDS)[number];
+
+export const RESOURCE_ACCESS_LEVELS = ["full_text", "search_preview", "link_only"] as const;
+
+export type ResourceAccess = (typeof RESOURCE_ACCESS_LEVELS)[number];
+
+/** Internal gather metadata. Content intentionally lives only on GatheredSource. */
+export interface ResourceCandidate {
+  url: string;
+  title: string;
+  score: number;
+  queries: string[];
+  purposes: string[];
+  categories: string[];
+  domain: string;
+  access: ResourceAccess;
+  extractionOutcome: "not_attempted" | "full_text" | "failed" | "empty";
+}
+
 /** Stage 3 output: one compressed note per source. */
 export interface CompressedNote {
   sourceUrl: string;
@@ -225,6 +255,25 @@ export const importantLinkSchema = z.object({
 });
 
 export type ImportantLink = z.infer<typeof importantLinkSchema>;
+
+const publicHttpUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  }, "Only HTTP and HTTPS resource URLs are allowed");
+
+export const researchResourceSchema = z.object({
+  title: z.string(),
+  url: publicHttpUrlSchema,
+  why: z.string(),
+  kind: z.enum(RESOURCE_KINDS),
+  access: z.enum(RESOURCE_ACCESS_LEVELS),
+  usedAsEvidence: z.boolean(),
+});
+
+export type ResearchResource = z.infer<typeof researchResourceSchema>;
 
 export const requiredSkillSchema = z.object({
   skill: z.string().describe("The skill itself, short enough to read as a badge (1-4 words)"),
@@ -291,6 +340,13 @@ export const reportSchema = z.object({
   importantLinks: z
     .array(importantLinkSchema)
     .describe("3-6 most valuable sources for the candidate to read, chosen from the evidence URLs"),
+  researchResources: z
+    .array(researchResourceSchema)
+    .optional()
+    .describe(
+      "Curated research library. Metadata-only links may be included for manual reading but " +
+        "must never be described as evidence"
+    ),
   /**
    * Assigned by the pipeline, never earned by the model: "sparse" once the
    * proxy-research wave fired because direct evidence was thin, "rich"

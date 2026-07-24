@@ -229,7 +229,7 @@ export const copyConfig = {
     beats: [
       {
         name: "First, we hunt for first-hand accounts",
-        body: "The agent drafts targeted queries and goes looking for people who actually interviewed there, plus what the company publishes about itself. One thing it never touches: LinkedIn.",
+        body: "The agent drafts targeted queries and searches public links across the web for people who interviewed there, plus what the company publishes about itself. If a page is blocked by login, paywall, robots controls, or extraction failure, we keep the link for you to open manually but never treat it as evidence.",
         chips: [
           "Glassdoor",
           "Blind",
@@ -379,7 +379,7 @@ export const copyConfig = {
     {
       question: "Is this legal? Do you scrape LinkedIn?",
       answer:
-        "We only use publicly available web search results. We never scrape LinkedIn or access private profiles. Interviewer names are used only as a search seed to find their public work like talks or blog posts.",
+        "We discover publicly visible links through web search, but never bypass logins, paywalls, robots controls, CAPTCHAs, or private profiles. An inaccessible result — including LinkedIn — may appear as an Open manually link, but we do not read it or use it as evidence. Interviewer names are only search seeds for public work like talks or blog posts.",
     },
     {
       question: "What does Google sign-in let you access?",

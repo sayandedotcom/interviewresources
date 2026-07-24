@@ -80,7 +80,7 @@
       },
       {
         "question": "Ist das legal? Scrapt ihr LinkedIn?",
-        "answer": "Wir verwenden ausschließlich öffentlich zugängliche Websuchergebnisse. Wir scrapen niemals LinkedIn und greifen nicht auf private Profile zu. Interviewernamen werden nur als Suchbegriff verwendet, um ihre öffentlichen Arbeiten wie Vorträge oder Blogbeiträge zu finden."
+        "answer": "Wir finden öffentlich sichtbare Links über die Websuche, umgehen aber niemals Logins, Paywalls, Robots-Regeln, CAPTCHAs oder private Profile. Nicht zugängliche Ergebnisse können als manuell zu öffnende Links erhalten bleiben, werden aber weder gelesen noch als Belege verwendet."
       },
       {
         "question": "Wie genau sind die Vorhersagen?",

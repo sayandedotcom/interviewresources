@@ -311,6 +311,33 @@ describe("reportSchema", () => {
     expect(() => reportSchema.parse({ ...validReport, interviewExperiences: [] })).not.toThrow();
   });
 
+  it("accepts the optional Research library while legacy reports may omit it", () => {
+    const resource = {
+      title: "Engineering",
+      url: "https://example.com/engineering",
+      why: "Architecture context",
+      kind: "company_engineering",
+      access: "full_text",
+      usedAsEvidence: true,
+    };
+    expect(
+      reportSchema.parse({ ...validReport, researchResources: [resource] }).researchResources
+    ).toEqual([resource]);
+    expect(reportSchema.parse(validReport).researchResources).toBeUndefined();
+  });
+
+  it("rejects non-HTTP resource links", () => {
+    const resource = {
+      title: "Unsafe",
+      url: "javascript:alert(1)",
+      why: "no",
+      kind: "other",
+      access: "link_only",
+      usedAsEvidence: false,
+    };
+    expect(() => reportSchema.parse({ ...validReport, researchResources: [resource] })).toThrow();
+  });
+
   it("requires each question to declare its basis", () => {
     const { basis: _omitted, ...noBasis } = question;
     const bad = { ...validReport, questions: [noBasis] };

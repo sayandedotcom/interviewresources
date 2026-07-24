@@ -1,6 +1,7 @@
 import { BudgetTracker, EFFORT_PRESETS } from "../budget";
+import { rankResourceCandidates } from "../resources";
 import { assessEvidenceDensity } from "../sparsity";
-import type { Report, ResearchInput } from "../types";
+import type { Report, ResearchInput, ResourceCandidate } from "../types";
 import { compressStage } from "./compress";
 import { gatherStage } from "./gather";
 import { planStage, proxyPlanStage } from "./plan";
@@ -41,7 +42,9 @@ export async function runResearchPipeline(
   emit(onProgress, "gather", "Gathering evidence from the web...");
   // Owned here so the proxy wave can dedupe its results against wave 1.
   const seenUrls = new Set<string>();
-  const sources = await gatherStage(plan, budget, onProgress, preset, { seenUrls });
+  const candidates = new Map<string, ResourceCandidate>();
+  const gathered = await gatherStage(plan, budget, onProgress, preset, { seenUrls, candidates });
+  const sources = gathered.evidenceSources;
 
   // When direct interview evidence is thin — an early-stage or low-profile
   // company — broaden into proxy research rather than return an empty report.
@@ -56,14 +59,14 @@ export async function runResearchPipeline(
     );
     try {
       const proxyPlan = await proxyPlanStage(input, sources, budget, preset);
-      const proxySources = await gatherStage(
+      const proxyGathered = await gatherStage(
         proxyPlan,
         budget,
         onProgress,
         { ...preset, extractLimit: preset.proxyExtractLimit },
-        { seenUrls, stage: "broaden" }
+        { seenUrls, candidates, stage: "broaden" }
       );
-      sources.push(...proxySources);
+      sources.push(...proxyGathered.evidenceSources);
       broadened = true;
     } catch {
       emit(onProgress, "broaden", "Broadened research failed — continuing with direct evidence");
@@ -72,12 +75,21 @@ export async function runResearchPipeline(
 
   emit(onProgress, "compress", `Compressing ${sources.length} sources...`);
   const notes = await compressStage(sources, budget, onProgress);
+  const rankedResources = rankResourceCandidates([...candidates.values()], input);
 
   emit(onProgress, "synthesize", "Synthesizing final report...");
   // Sparse evidence should still produce useful preparation questions. The
   // synthesizer labels those role-standard questions as baseline rather than
   // pretending the company asked them.
-  const report = await synthesizeStage(input, notes, budget, preset, broadened, density.sparse);
+  const report = await synthesizeStage(
+    input,
+    notes,
+    rankedResources,
+    budget,
+    preset,
+    broadened,
+    density.sparse
+  );
   // Assigned in code, not trusted to the model: sparse means direct evidence was
   // thin, even when the budget prevented or the proxy planner failed to broaden.
   report.evidenceCoverage = density.sparse ? "sparse" : "rich";
