@@ -9,7 +9,7 @@ export function WhyNotChatgptSection() {
   const { vsChatgpt } = siteConfig.copy;
 
   return (
-    <section className="bg-brand-50/40 w-full">
+    <section id="why-us" className="bg-brand-50/40 w-full">
       <div className="mx-auto w-full max-w-6xl px-6 py-24 md:px-8">
         <div className="mb-12 text-center">
           <p className="text-tertiary mb-3 text-xs font-semibold tracking-[0.25em] uppercase">

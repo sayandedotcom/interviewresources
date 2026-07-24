@@ -76,6 +76,21 @@ export function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/#how-agent-works" className={linkClass}>
+                Under the hood
+              </Link>
+            </li>
+            <li>
+              <Link href="/#why-us" className={linkClass}>
+                Why us
+              </Link>
+            </li>
+            <li>
+              <Link href="/#trust" className={linkClass}>
+                Trust
+              </Link>
+            </li>
+            <li>
               <Link href="/licenses" className={linkClass}>
                 Open Source
               </Link>

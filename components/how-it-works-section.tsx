@@ -29,11 +29,6 @@ import { motion, useReducedMotion } from "motion/react";
 
 import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
 
-/**
- * Staggered entrance for a panel row. Panels remount when their stage becomes
- * active (keyed by index in the sticky reveal), so the stagger replays on every
- * stage change. Reduced-motion users get the final state instantly.
- */
 function Stagger({
   index,
   children,
@@ -55,10 +50,6 @@ function Stagger({
   );
 }
 
-/** A mini card mirroring the gather form's Card + grey heading with a brand icon.
- * Everything in this panel tracks the real /prepare form — if that form's
- * styling changes, these mocks should follow, or the landing page ends up
- * advertising a product that no longer looks like this. */
 function FormCard({
   icon: Icon,
   title,
@@ -86,8 +77,6 @@ function FormCard({
   );
 }
 
-/** A picker chip, styled to match the real form's ToggleChip: tinted when on,
- * with a leading check, and no short code on the face. */
 function Chip({ icon: Icon, label, on }: { icon: LucideIcon; label: string; on: boolean }) {
   return (
     <span
@@ -103,9 +92,6 @@ function Chip({ icon: Icon, label, on }: { icon: LucideIcon; label: string; on: 
   );
 }
 
-/** A mock text field matching the form's label + Input look, extended to cover
- * every variant the real Target card uses: the info-tooltip icon, a full-width
- * field for the longer ones, and the textarea look for the two free-text notes. */
 function Field({
   label,
   hint,
@@ -118,15 +104,11 @@ function Field({
 }: {
   label: string;
   hint?: string;
-  /** Shows the same muted info glyph the real form uses next to fields that
-      have a hover tooltip explaining what they're for. */
   info?: boolean;
   value?: string;
   placeholder?: string;
   caret?: boolean;
-  /** Taller, top-aligned box for the two textarea fields. */
   area?: boolean;
-  /** Spans both columns — matches the real form's col-span-2 fields. */
   wide?: boolean;
 }) {
   return (
@@ -138,8 +120,6 @@ function Field({
         </p>
         {info && <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
       </div>
-      {/* bg-muted mirrors the real Input's recessed fill — a bordered transparent
-          box reads as a different control entirely. */}
       <div
         className={`border-input bg-muted flex rounded-lg border px-2.5 ${
           area ? "min-h-16 items-start py-2" : "h-8 items-center"
@@ -155,9 +135,7 @@ function Field({
   );
 }
 
-/** 01 · Target: the gather form as it really looks: target card, rounds, sections, effort. */
 function TargetPanel() {
-  // The seven real interview categories from CATEGORY_META, with their real icons.
   const rounds: { icon: LucideIcon; label: string; on: boolean }[] = [
     { icon: Puzzle, label: "Algorithmic Coding", on: true },
     { icon: Building2, label: "System Design", on: true },
@@ -167,14 +145,12 @@ function TargetPanel() {
     { icon: MessageCircle, label: "Behavioral", on: true },
     { icon: Handshake, label: "HR / Culture", on: false },
   ];
-  // The four real report sections from SECTION_META, with their real icons.
   const sections: { icon: LucideIcon; label: string; on: boolean }[] = [
     { icon: Building2, label: "The company", on: true },
     { icon: Compass, label: "The loop", on: true },
     { icon: Wrench, label: "Skills required", on: true },
     { icon: MessagesSquare, label: "Interview experiences", on: false },
   ];
-  // The real effort presets: label, credit ceiling, blurb.
   const efforts = [
     {
       label: "Low",
@@ -185,6 +161,7 @@ function TargetPanel() {
     { label: "Medium", credits: 100, blurb: "Balanced, the default depth", on: true },
     { label: "High", credits: 200, blurb: "Exhaustive, widest search, most questions", on: false },
   ];
+
   return (
     <div className="bg-background flex h-full flex-col gap-3 overflow-y-auto p-4">
       <FormCard
@@ -222,8 +199,6 @@ function TargetPanel() {
             wide
             value="Phone screen done. Next: two coding rounds, a system design round, and a team-fit chat."
           />
-
-          {/* Interviewers: repeatable name/URL pairs, matching the real field array. */}
           <div className="grid gap-1.5 sm:col-span-2">
             <div className="flex items-center gap-1">
               <p className="text-foreground font-display text-sm font-medium">
@@ -303,7 +278,6 @@ function TargetPanel() {
   );
 }
 
-/** 02 · Research: a live activity log of the pipeline as it actually runs. */
 function ResearchPanel() {
   const lines: { text: string; note: string; status: "done" | "active" | "pending" }[] = [
     { text: "Resolving company domain", note: "stripe.com", status: "done" },
@@ -322,7 +296,6 @@ function ResearchPanel() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Status header with the run's progress so far. */}
       <div className="border-border/60 border-b px-5 py-4">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2 shrink-0">
@@ -398,7 +371,6 @@ function ResearchPanel() {
   );
 }
 
-/** A single pinpointed question inside the sample report. */
 function SampleQuestion({
   confidence,
   question,
@@ -414,6 +386,7 @@ function SampleQuestion({
     confidence === "High"
       ? "text-status-good border-status-good/30 bg-status-good/10"
       : "text-status-warning border-status-warning/30 bg-status-warning/10";
+
   return (
     <div className="border-border bg-background rounded-lg border p-3.5">
       <div className="flex items-start justify-between gap-3">
@@ -438,12 +411,9 @@ function SampleQuestion({
   );
 }
 
-/** 03 · Report: a realistic sample report, grouped by round, scrollable.
- * Also reused as the hero's floating product card (see hero-product-card.tsx). */
 export function SampleReportPanel() {
   return (
     <div className="flex h-full flex-col">
-      {/* Report window chrome */}
       <div className="border-border flex items-center gap-2 border-b px-4 py-2.5">
         <div className="flex gap-1.5">
           <span className="size-2.5 rounded-full bg-neutral-300" />
@@ -526,7 +496,6 @@ export function SampleReportPanel() {
   );
 }
 
-/** 04 · Prep: a likelihood-ordered checklist you tick off after the interview. */
 function PrepPanel() {
   const items = [
     { q: "Idempotency in the payments API", tag: "High", done: true },
@@ -537,6 +506,7 @@ function PrepPanel() {
     { q: "Why Stripe? Product and culture fit", tag: "Medium", done: false },
   ];
   const doneCount = items.filter((i) => i.done).length;
+
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-5">
       <Stagger index={0}>
