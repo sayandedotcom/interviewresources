@@ -5,6 +5,8 @@ import {
   REPORT_SECTIONS,
   type Report,
   type ReportSection,
+  type ResearchResourceKind,
+  type ResourceAccess,
 } from "./types";
 
 /** UI-facing labels and short codes for each interview category (PRD §5.3). */
@@ -118,6 +120,34 @@ export const BASELINE_BASIS_META = {
   tooltip:
     "A useful question for this role and startup context, but there is no evidence this company has asked it.",
 } as const;
+
+export const RESOURCE_KIND_META: Record<ResearchResourceKind, { label: string }> = {
+  interview_experience: { label: "Interview experiences" },
+  company_engineering: { label: "Company engineering" },
+  company_docs: { label: "Company docs" },
+  discussion: { label: "Discussions" },
+  interviewer: { label: "Interviewer" },
+  video: { label: "Videos" },
+  code: { label: "Code" },
+  other: { label: "Other resources" },
+};
+
+export const RESOURCE_ACCESS_META: Record<ResourceAccess, { label: string; description: string }> =
+  {
+    full_text: {
+      label: "Read in full",
+      description: "The pipeline successfully read the page.",
+    },
+    search_preview: {
+      label: "Search preview",
+      description: "A substantive public search preview was available.",
+    },
+    link_only: {
+      label: "Open manually",
+      description:
+        "The pipeline discovered this link but could not reliably read its contents. It was not used as evidence.",
+    },
+  };
 
 /**
  * Questions bucketed by round: predefined categories in taxonomy order, then

@@ -1,8 +1,15 @@
 import { siteConfig } from "@/site";
 import { jsPDF } from "jspdf";
 
-import { CONFIDENCE_META, categoryCode, categoryLabel, groupByCategory } from "./display";
-import type { ImportantLink, Report } from "./types";
+import {
+  CONFIDENCE_META,
+  RESOURCE_ACCESS_META,
+  RESOURCE_KIND_META,
+  categoryCode,
+  categoryLabel,
+  groupByCategory,
+} from "./display";
+import { type ImportantLink, RESOURCE_KINDS, type Report } from "./types";
 
 /**
  * Renders a report as a print-ready PDF, entirely in the browser.
@@ -259,8 +266,36 @@ export async function buildReportPdf(report: Report, company: string): Promise<B
     }
   }
 
-  linkSection("Interview experiences", report.interviewExperiences);
-  linkSection("Worth reading", report.importantLinks);
+  if (report.researchResources?.length) {
+    heading("Research library");
+    text(
+      '"Open manually" means the link was discovered but could not be reliably read, so it was not used as evidence.',
+      { size: 8.5, color: MUTED, leading: 1.45 }
+    );
+    for (const kind of RESOURCE_KINDS) {
+      const resources = report.researchResources.filter((resource) => resource.kind === kind);
+      if (resources.length === 0) continue;
+      y += 10;
+      eyebrow(RESOURCE_KIND_META[kind].label, ACCENT);
+      for (const resource of resources) {
+        ensure(58);
+        text(resource.title, { size: 10, style: "bold", leading: 1.3 });
+        text(
+          `${RESOURCE_ACCESS_META[resource.access].label} - Used as evidence: ${
+            resource.usedAsEvidence ? "Yes" : "No"
+          }`,
+          { size: 8, color: MUTED }
+        );
+        text(resource.why, { size: 9, color: MUTED, leading: 1.45 });
+        if (isHttpUrl(resource.url)) link(resource.url, resource.url);
+        y += 10;
+      }
+    }
+  } else {
+    // Reports stored before the Research library keep their original sections.
+    linkSection("Interview experiences", report.interviewExperiences);
+    linkSection("Worth reading", report.importantLinks);
+  }
 
   // ---- Footers ----------------------------------------------------------
 
