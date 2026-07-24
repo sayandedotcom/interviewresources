@@ -422,6 +422,74 @@ describe("interview experiences", () => {
   });
 });
 
+describe("research library", () => {
+  it("groups resources and shows each access label with the manual-open explanation", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report({
+          researchResources: [
+            {
+              title: "Acme engineering post",
+              url: "https://acme.dev/engineering",
+              why: "Architecture context",
+              kind: "company_engineering",
+              access: "full_text",
+              usedAsEvidence: true,
+            },
+            {
+              title: "Candidate profile",
+              url: "https://linkedin.com/posts/candidate",
+              why: "Discovered while researching candidate accounts.",
+              kind: "interview_experience",
+              access: "link_only",
+              usedAsEvidence: false,
+            },
+            {
+              title: "Forum preview",
+              url: "https://reddit.com/r/interviews",
+              why: "A substantive search preview",
+              kind: "discussion",
+              access: "search_preview",
+              usedAsEvidence: true,
+            },
+          ],
+          importantLinks: [{ title: "Legacy duplicate", url: "https://old.dev", why: "old" }],
+        })}
+      />
+    );
+
+    expect(screen.getByRole("heading", { name: "Research library" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Company engineering" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Interview experiences" })).toBeInTheDocument();
+    expect(screen.getByText("Read in full")).toBeInTheDocument();
+    expect(screen.getByText("Search preview")).toBeInTheDocument();
+    expect(screen.getByText("Open manually")).toBeInTheDocument();
+    expect(screen.getByText(/could not reliably read it/i)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Legacy duplicate" })).not.toBeInTheDocument();
+  });
+
+  it("keeps legacy link sections for reports created before the library field", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report({
+          interviewExperiences: [
+            { title: "Legacy experience", url: "https://legacy.dev/exp", why: "old report" },
+          ],
+          importantLinks: [
+            { title: "Legacy reading", url: "https://legacy.dev/read", why: "old report" },
+          ],
+        })}
+      />
+    );
+
+    expect(screen.queryByRole("heading", { name: "Research library" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Legacy experience" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Legacy reading" })).toBeInTheDocument();
+  });
+});
+
 describe("cost and export", () => {
   /** The badge shows the bare number; "credits" only appears in its tooltip. */
   const creditsBadge = () => screen.queryByTestId("credits-badge");
@@ -580,6 +648,7 @@ describe("extend controls", () => {
     render(<ReportView {...base} report={report()} researchId="r-1" />);
 
     expect(screen.getByText("Gather more rounds")).toBeInTheDocument();
+    expect(screen.queryByText("New")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /add more algorithmic coding questions/i })
     ).toBeInTheDocument();
@@ -664,7 +733,101 @@ describe("extend controls", () => {
     });
 
     // The merged report replaces what was rendered.
-    expect(await screen.findByText("Two sum")).toBeInTheDocument();
+    const newQuestion = await screen.findByText("Two sum");
+    expect(within(newQuestion.closest("[data-slot='card']")!).getByText("New")).toBeInTheDocument();
+    const oldQuestion = screen.getByText("Implement an LRU cache");
+    expect(
+      within(oldQuestion.closest("[data-slot='card']")!).queryByText("New")
+    ).not.toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("marks a newly gathered round at both the round heading and each new question", async () => {
+    const merged = report({
+      questions: [question(), question({ category: "behavioral", question: "Conflict story" })],
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, body: sseBody(merged) } as unknown as Response)
+    );
+
+    render(<ReportView {...base} report={report()} researchId="r-1" />);
+    const footer = screen.getByText("Gather more rounds").parentElement!;
+    await userEvent.click(within(footer).getByRole("button", { name: /Behavioral/ }));
+    await userEvent.click(screen.getByRole("button", { name: /gather these rounds/i }));
+    await confirmGather();
+
+    const roundHeading = await screen.findByRole("heading", { name: "Behavioral" });
+    expect(within(roundHeading.parentElement!).getByText("New")).toBeInTheDocument();
+    const questionCard = screen
+      .getByText("Conflict story")
+      .closest<HTMLElement>("[data-slot='card']")!;
+    expect(within(questionCard).getByText("New")).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("marks a newly filled report section and each item inside it", async () => {
+    const merged = report({
+      skillsRequired: [{ skill: "Distributed systems", why: "The role owns core infrastructure" }],
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, body: sseBody(merged) } as unknown as Response)
+    );
+
+    render(<ReportView {...base} report={report({ skillsRequired: null })} researchId="r-1" />);
+    await userEvent.click(screen.getByRole("button", { name: /skills required/i }));
+    await userEvent.click(screen.getByRole("button", { name: /gather these rounds/i }));
+    await confirmGather();
+
+    const heading = await screen.findByRole("heading", { name: "Skills required" });
+    expect(within(heading.parentElement!).getByText("New")).toBeInTheDocument();
+    expect(
+      within(screen.getByText("Distributed systems").closest<HTMLElement>(".flex")!).getByText(
+        "New"
+      )
+    ).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it("marks only newly appended Research library links", async () => {
+    const existingResource = {
+      title: "Existing engineering post",
+      url: "https://example.com/existing",
+      why: "Existing context",
+      kind: "company_engineering" as const,
+      access: "full_text" as const,
+      usedAsEvidence: true,
+    };
+    const newResource = {
+      title: "New interview thread",
+      url: "https://example.com/new",
+      why: "Newly discovered context",
+      kind: "discussion" as const,
+      access: "search_preview" as const,
+      usedAsEvidence: true,
+    };
+    const before = report({ researchResources: [existingResource] });
+    const merged = report({ researchResources: [existingResource, newResource] });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, body: sseBody(merged) } as unknown as Response)
+    );
+
+    render(<ReportView {...base} report={before} researchId="r-1" />);
+    await userEvent.click(
+      screen.getByRole("button", { name: /add more algorithmic coding questions/i })
+    );
+    await confirmGather();
+
+    const newCard = (
+      await screen.findByRole("link", { name: "New interview thread" })
+    ).closest<HTMLElement>("[data-slot='card']")!;
+    expect(within(newCard).getByText("New")).toBeInTheDocument();
+    const oldCard = screen
+      .getByRole("link", { name: "Existing engineering post" })
+      .closest<HTMLElement>("[data-slot='card']")!;
+    expect(within(oldCard).queryByText("New")).not.toBeInTheDocument();
     vi.unstubAllGlobals();
   });
 

@@ -57,6 +57,8 @@ import {
   BASELINE_BASIS_META,
   BASIS_META,
   CONFIDENCE_META,
+  RESOURCE_ACCESS_META,
+  RESOURCE_KIND_META,
   SECTION_META,
   categoryCode,
   categoryLabel,
@@ -66,7 +68,13 @@ import {
 import { downloadBlob, reportSlug } from "@/lib/research/download";
 import { estimateExtend } from "@/lib/research/estimate";
 import { buildAnswerPrompt, buildMockInterviewPrompt } from "@/lib/research/prompt";
-import type { ImportantLink, Report, ReportSection } from "@/lib/research/types";
+import {
+  type ImportantLink,
+  RESOURCE_KINDS,
+  type Report,
+  type ReportSection,
+  type ResearchResource,
+} from "@/lib/research/types";
 
 import { EffortPicker } from "@/features/research/effort-picker";
 import { EstimatePanel } from "@/features/research/estimate-panel";
@@ -105,6 +113,93 @@ const SECTION_HEADING = "font-display text-muted-foreground text-lg font-semibol
 /** A heading's own explanatory line — stays tight to the heading it belongs to. */
 const HEADING_SUB = "text-muted-foreground font-display mt-1.5 text-xs";
 
+type NewContent = {
+  questions: Set<string>;
+  categories: Set<string>;
+  sections: Set<string>;
+  skills: Set<string>;
+  resources: Set<string>;
+  interviewExperiences: Set<string>;
+  importantLinks: Set<string>;
+};
+
+function emptyNewContent(): NewContent {
+  return {
+    questions: new Set(),
+    categories: new Set(),
+    sections: new Set(),
+    skills: new Set(),
+    resources: new Set(),
+    interviewExperiences: new Set(),
+    importantLinks: new Set(),
+  };
+}
+
+function questionKey(question: Report["questions"][number]): string {
+  return `${question.category}\u0000${question.question}`;
+}
+
+function skillKey(skill: NonNullable<Report["skillsRequired"]>[number]): string {
+  return `${skill.skill}\u0000${skill.why}`;
+}
+
+/** The transient delta between what was visible and one extension response. */
+function findNewContent(before: Report, after: Report): NewContent {
+  const next = emptyNewContent();
+  const beforeQuestions = new Set(before.questions.map(questionKey));
+  const beforeCategories = new Set(before.questions.map((question) => question.category));
+  const beforeSkills = new Set((before.skillsRequired ?? []).map(skillKey));
+  const beforeResources = new Set((before.researchResources ?? []).map((item) => item.url));
+  const beforeExperiences = new Set((before.interviewExperiences ?? []).map((item) => item.url));
+  const beforeImportantLinks = new Set((before.importantLinks ?? []).map((item) => item.url));
+
+  for (const question of after.questions) {
+    if (!beforeQuestions.has(questionKey(question))) next.questions.add(questionKey(question));
+    if (!beforeCategories.has(question.category)) next.categories.add(question.category);
+  }
+  for (const skill of after.skillsRequired ?? []) {
+    if (!beforeSkills.has(skillKey(skill))) next.skills.add(skillKey(skill));
+  }
+  for (const resource of after.researchResources ?? []) {
+    if (!beforeResources.has(resource.url)) next.resources.add(resource.url);
+  }
+  for (const experience of after.interviewExperiences ?? []) {
+    if (!beforeExperiences.has(experience.url)) next.interviewExperiences.add(experience.url);
+  }
+  for (const link of after.importantLinks ?? []) {
+    if (!beforeImportantLinks.has(link.url)) next.importantLinks.add(link.url);
+  }
+
+  if (!before.companySnapshot && after.companySnapshot) next.sections.add("company");
+  if (!before.likelyLoopStructure && after.likelyLoopStructure) next.sections.add("loop");
+  if (before.skillsRequired == null && after.skillsRequired != null) next.sections.add("skills");
+  if (before.recruiterPitch == null && after.recruiterPitch != null) {
+    next.sections.add("recruiter");
+  }
+  if (
+    (before.interviewExperiences == null || (before.interviewExperiences?.length ?? 0) === 0) &&
+    (after.interviewExperiences?.length ?? 0) > 0
+  ) {
+    next.sections.add("experiences");
+  }
+  if ((before.researchResources?.length ?? 0) === 0 && (after.researchResources?.length ?? 0) > 0) {
+    next.sections.add("researchResources");
+  }
+  if ((before.importantLinks?.length ?? 0) === 0 && (after.importantLinks?.length ?? 0) > 0) {
+    next.sections.add("importantLinks");
+  }
+
+  return next;
+}
+
+function NewBadge() {
+  return (
+    <Badge className="bg-primary text-primary-foreground h-4 px-1.5 text-[9px] font-semibold tracking-wide uppercase">
+      New
+    </Badge>
+  );
+}
+
 export function ReportView({
   report,
   costUsd,
@@ -135,10 +230,12 @@ export function ReportView({
   // parent hands us a different report — React's adjust-state-on-prop-change idiom.
   const [current, setCurrent] = useState(report);
   const [seededFrom, setSeededFrom] = useState(report);
+  const [newContent, setNewContent] = useState<NewContent>(emptyNewContent);
   const [currentBalance, setCurrentBalance] = useState(balance);
   if (seededFrom !== report) {
     setSeededFrom(report);
     setCurrent(report);
+    setNewContent(emptyNewContent());
   }
   if (currentBalance !== balance && balance !== undefined) {
     setCurrentBalance(balance);
@@ -254,7 +351,9 @@ export function ReportView({
         if (msg.kind === "progress") {
           setProgress(String(msg.message ?? ""));
         } else if (msg.kind === "report") {
-          setCurrent(msg.report as Report);
+          const merged = msg.report as Report;
+          setNewContent(findNewContent(current, merged));
+          setCurrent(merged);
           setExtraRounds([]);
           setExtraSections([]);
           if (typeof msg.balanceAfter === "number") setCurrentBalance(msg.balanceAfter);
@@ -305,6 +404,7 @@ export function ReportView({
   const importantLinks = current.importantLinks ?? [];
   const interviewExperiences = current.interviewExperiences ?? [];
   const skillsRequired = current.skillsRequired ?? [];
+  const researchResources = current.researchResources ?? [];
 
   return (
     // The estimate rail is absolutely placed at `left-full` + `ml-5`, so it sits
@@ -466,10 +566,13 @@ export function ReportView({
       {/* Null once the section can be switched off at request time. */}
       {current.companySnapshot && (
         <section className={SECTION}>
-          <h2 className={SECTION_HEADING}>
-            <Building2 className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
-            The company
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className={SECTION_HEADING}>
+              <Building2 className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+              The company
+            </h2>
+            {newContent.sections.has("company") && <NewBadge />}
+          </div>
           <p className={`font-display text-foreground text-[15px] leading-relaxed ${HEADING_GAP}`}>
             {current.companySnapshot}
           </p>
@@ -490,10 +593,13 @@ export function ReportView({
 
       {current.likelyLoopStructure && (
         <section className={SECTION}>
-          <SectionLabel>
-            <Compass className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-            The loop
-          </SectionLabel>
+          <div className="flex items-center gap-2">
+            <SectionLabel>
+              <Compass className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+              The loop
+            </SectionLabel>
+            {newContent.sections.has("loop") && <NewBadge />}
+          </div>
           <p className="font-display border-primary text-foreground mt-2 border-l-2 pl-3 text-[15px] leading-relaxed">
             {current.likelyLoopStructure}
           </p>
@@ -518,30 +624,36 @@ export function ReportView({
           before it existed — either way there is nothing to show. */}
       {skillsRequired.length > 0 && (
         <section className={SECTION}>
-          <h2 className={SECTION_HEADING}>
-            <Wrench className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
-            Skills required
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className={SECTION_HEADING}>
+              <Wrench className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+              Skills required
+            </h2>
+            {newContent.sections.has("skills") && <NewBadge />}
+          </div>
           <p className={HEADING_SUB}>
             What the role actually demands — including what the job post leaves unsaid. Hover a
             skill for why it matters here.
           </p>
           <div className={`flex flex-wrap gap-2 ${HEADING_GAP}`}>
             {skillsRequired.map((s, i) => (
-              <Tooltip key={i}>
-                <TooltipTrigger
-                  render={
-                    <Badge
-                      variant="outline"
-                      className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary cursor-help px-2.5 py-1 transition-colors"
-                    />
-                  }>
-                  <span className="font-display text-[13px]">{s.skill}</span>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <span className="font-display">{s.why}</span>
-                </TooltipContent>
-              </Tooltip>
+              <span key={i} className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Badge
+                        variant="outline"
+                        className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary cursor-help px-2.5 py-1 transition-colors"
+                      />
+                    }>
+                    <span className="font-display text-[13px]">{s.skill}</span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <span className="font-display">{s.why}</span>
+                  </TooltipContent>
+                </Tooltip>
+                {newContent.skills.has(skillKey(s)) && <NewBadge />}
+              </span>
             ))}
           </div>
         </section>
@@ -551,10 +663,13 @@ export function ReportView({
           before it existed — either way there is nothing to show. */}
       {current.recruiterPitch && (
         <section className={SECTION}>
-          <h2 className={SECTION_HEADING}>
-            <UserCheck className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
-            How to impress the recruiter
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className={SECTION_HEADING}>
+              <UserCheck className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+              How to impress the recruiter
+            </h2>
+            {newContent.sections.has("recruiter") && <NewBadge />}
+          </div>
           <p className={`font-display text-foreground text-[15px] leading-relaxed ${HEADING_GAP}`}>
             {current.recruiterPitch.candidateProfile}
           </p>
@@ -591,6 +706,7 @@ export function ReportView({
                   <h3 className="font-display text-muted-foreground text-sm font-semibold tracking-wide uppercase">
                     {categoryLabel(cat)}
                   </h3>
+                  {newContent.categories.has(cat) && <NewBadge />}
                   <div className="ml-auto flex items-center gap-2">
                     {researchId && busy === cat && progress && (
                       <span className="text-muted-foreground hidden max-w-[16rem] truncate text-[11px] sm:inline">
@@ -686,6 +802,7 @@ export function ReportView({
                               {q.question}
                             </p>
                             <div className="flex shrink-0 items-center gap-2">
+                              {newContent.questions.has(questionKey(q)) && <NewBadge />}
                               {(q.basis === "inferred" || q.basis === "baseline") && (
                                 <Tooltip>
                                   <TooltipTrigger
@@ -774,26 +891,50 @@ export function ReportView({
         </section>
       )}
 
-      {interviewExperiences.length > 0 && (
+      {researchResources.length > 0 && (
         <section className={SECTION}>
           <Separator className="mb-5" />
-          <h2 className={SECTION_HEADING}>
-            <MessagesSquare className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
-            Interview experiences
-          </h2>
-          <p className={HEADING_SUB}>First-hand accounts from people who interviewed here.</p>
-          <LinkCards links={interviewExperiences} />
+          <div className="flex items-center gap-2">
+            <h2 className={SECTION_HEADING}>
+              <BookOpen className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+              Research library
+            </h2>
+            {newContent.sections.has("researchResources") && <NewBadge />}
+          </div>
+          <p className={HEADING_SUB}>
+            Discovery links are kept separate from question evidence. “Open manually” means we found
+            the link but could not reliably read it, so it was not used as evidence.
+          </p>
+          <ResourceLibrary resources={researchResources} newUrls={newContent.resources} />
         </section>
       )}
 
-      {importantLinks.length > 0 && (
+      {researchResources.length === 0 && interviewExperiences.length > 0 && (
         <section className={SECTION}>
           <Separator className="mb-5" />
-          <h2 className={SECTION_HEADING}>
-            <BookOpen className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
-            Worth reading
-          </h2>
-          <LinkCards links={importantLinks} />
+          <div className="flex items-center gap-2">
+            <h2 className={SECTION_HEADING}>
+              <MessagesSquare className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+              Interview experiences
+            </h2>
+            {newContent.sections.has("experiences") && <NewBadge />}
+          </div>
+          <p className={HEADING_SUB}>First-hand accounts from people who interviewed here.</p>
+          <LinkCards links={interviewExperiences} newUrls={newContent.interviewExperiences} />
+        </section>
+      )}
+
+      {researchResources.length === 0 && importantLinks.length > 0 && (
+        <section className={SECTION}>
+          <Separator className="mb-5" />
+          <div className="flex items-center gap-2">
+            <h2 className={SECTION_HEADING}>
+              <BookOpen className="mr-1.5 inline h-4 w-4" aria-hidden="true" />
+              Worth reading
+            </h2>
+            {newContent.sections.has("importantLinks") && <NewBadge />}
+          </div>
+          <LinkCards links={importantLinks} newUrls={newContent.importantLinks} />
         </section>
       )}
 
@@ -982,8 +1123,72 @@ export function ReportView({
   );
 }
 
+function ResourceLibrary({
+  resources,
+  newUrls,
+}: {
+  resources: ResearchResource[];
+  newUrls: Set<string>;
+}) {
+  return (
+    <div className="mt-6 space-y-7">
+      {RESOURCE_KINDS.map((kind) => {
+        const items = resources.filter((resource) => resource.kind === kind);
+        if (items.length === 0) return null;
+        return (
+          <div key={kind}>
+            <h3 className="text-muted-foreground font-display text-sm font-semibold tracking-wide uppercase">
+              {RESOURCE_KIND_META[kind].label}
+            </h3>
+            <ul className="mt-3 space-y-3">
+              {items.map((resource) => {
+                const access = RESOURCE_ACCESS_META[resource.access];
+                return (
+                  <li key={resource.url}>
+                    <Card className="hover:ring-primary/30 transition-all hover:shadow-[var(--shadow-md)]">
+                      <CardContent>
+                        <div className="flex flex-wrap items-baseline justify-between gap-3">
+                          <span className="flex min-w-0 items-baseline gap-2">
+                            <LinkIcon
+                              className="text-primary h-3.5 w-3.5 shrink-0"
+                              aria-hidden="true"
+                            />
+                            <a
+                              href={resource.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-display text-foreground hover:text-primary text-[15px] leading-snug font-medium underline-offset-4 hover:underline">
+                              {resource.title}
+                            </a>
+                          </span>
+                          <span
+                            title={access.description}
+                            className="text-primary bg-primary/10 border-primary/20 shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium">
+                            {access.label}
+                          </span>
+                          {newUrls.has(resource.url) && <NewBadge />}
+                        </div>
+                        <p className="font-display text-muted-foreground mt-1.5 text-[13.5px] leading-relaxed">
+                          {resource.why}
+                        </p>
+                        <p className="text-muted-foreground mt-2 text-[10px]">
+                          {hostOf(resource.url)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** The link list shared by "Interview experiences" and "Worth reading". */
-function LinkCards({ links }: { links: ImportantLink[] }) {
+function LinkCards({ links, newUrls }: { links: ImportantLink[]; newUrls: Set<string> }) {
   return (
     <ul className="mt-5 space-y-3">
       {links.map((link, i) => (
@@ -1006,6 +1211,7 @@ function LinkCards({ links }: { links: ImportantLink[] }) {
                 <span className="text-primary bg-primary/10 border-primary/20 shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium">
                   {hostOf(link.url)}
                 </span>
+                {newUrls.has(link.url) && <NewBadge />}
               </div>
               <p className="font-display text-muted-foreground mt-1.5 text-[13.5px] leading-relaxed">
                 {link.why}
