@@ -35,7 +35,7 @@ export default function PrivacyPolicyPage() {
           <p className="text-muted-foreground mt-2">
             You sign in to {siteConfig.name} with your Google account. We request only the basic
             profile and email scopes, which give us your name, email address, profile picture, and
-            Google account ID. We use them solely to create your account, sign you in, show your
+            Google account ID. We use them solely to create your account, sign you in, and show your
             name and picture in the app. We do not currently use Google account data to send report
             emails.
           </p>

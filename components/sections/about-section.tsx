@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { siteConfig } from "@/site";
 
 /**
@@ -11,6 +13,7 @@ import { siteConfig } from "@/site";
  */
 export function AboutSection() {
   const { about } = siteConfig.copy.landing;
+  const [purpose, googleSignIn] = about.paragraphs;
 
   return (
     <section id="about" className="w-full px-6 py-20 md:px-8">
@@ -18,12 +21,20 @@ export function AboutSection() {
         <h2 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
           {about.title}
         </h2>
-        <div className="mt-6 space-y-5">
-          {about.paragraphs.map((p, i) => (
-            <p key={i} className="font-display text-muted-foreground text-lg leading-relaxed">
-              {p}
-            </p>
-          ))}
+        <p className="font-display text-muted-foreground mt-6 text-lg leading-relaxed">{purpose}</p>
+
+        <div className="border-primary/20 bg-primary/5 mt-8 rounded-2xl border p-6">
+          <h3 className="font-display text-xl font-semibold tracking-tight">
+            Google sign-in and your data
+          </h3>
+          <p className="font-display text-muted-foreground mt-3 text-base leading-relaxed">
+            {googleSignIn}
+          </p>
+          <Link
+            href="/privacy-policy"
+            className="font-display text-primary mt-4 inline-flex min-h-11 items-center font-semibold underline-offset-4 hover:underline">
+            Read the Interview Resources Privacy Policy
+          </Link>
         </div>
       </div>
     </section>

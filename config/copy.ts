@@ -59,7 +59,7 @@ export const copyConfig = {
       title: "What is Interview Resources?",
       paragraphs: [
         "Interview Resources is a web app that helps candidates prepare for job interviews. You name the company you're interviewing with, and our AI agent researches its public engineering blogs, job descriptions, first-hand interview reports, and public talks, then produces a report of the questions you're likely to face — each one linked to the source it came from.",
-        "You sign in with your Google account. We use it only to create and identify your account: we read your name, email address, and profile picture, and nothing else from your Google account. Reports are billed as one-off credits, with no subscription.",
+        "You sign in with your Google account. We use only your basic profile data — your Google account ID, name, email address, and profile picture — to create and identify your Interview Resources account. We do not access Gmail, Drive, Calendar, contacts, or other Google services. Reports are billed as one-off credits, with no subscription.",
       ],
     },
     stats: [
