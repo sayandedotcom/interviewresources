@@ -92,6 +92,82 @@ test.describe("marketing surface", () => {
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
   });
 
+  test("the landing funnel works on desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/");
+
+    await expect(page.getByRole("heading", { level: 1, name: /ai gathers your/i })).toBeVisible();
+    await expect(page.getByText("Stripe · Senior Engineer report").first()).toBeVisible();
+    await expect(page.getByRole("navigation").getByRole("link", { name: "Pricing" })).toBeVisible();
+
+    await page
+      .getByRole("navigation")
+      .getByRole("link", { name: "How it works", exact: true })
+      .focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/#how-it-works$/);
+
+    await expect(page.getByText("Starter").first()).toBeVisible();
+    await expect(page.getByText("Bundle").first()).toBeVisible();
+    await expect(page.getByText("Max").first()).toBeVisible();
+    await expect(page.getByText("stripe backend interview experience")).toBeVisible();
+    await expect(page.locator("#how-we-source").getByText("LeetCode Discuss")).toBeVisible();
+    await expect(page.getByText("How we research small, early-stage startups")).toBeVisible();
+    await expect(page.getByRole("link", { name: /try it for \$1/i }).last()).toBeVisible();
+
+    const essentialOpacity = await page.evaluate(() => {
+      const labels = [
+        "Stripe · Senior Engineer report",
+        "Simple, transparent pricing",
+        "Selected under-the-hood details",
+      ];
+
+      return labels.map((label) => {
+        const node = [...document.querySelectorAll<HTMLElement>("body *")].find(
+          (element) => element.textContent?.trim() === label
+        );
+
+        return node ? getComputedStyle(node).opacity : null;
+      });
+    });
+    expect(essentialOpacity).toEqual(["1", "1", "1"]);
+
+    const faqTrigger = page.getByRole("button", {
+      name: /what does google sign-in let you access/i,
+    });
+    await faqTrigger.click();
+    await expect(faqTrigger).toHaveAttribute("aria-expanded", "true");
+
+    const trustDisclosure = page.getByText("Selected under-the-hood details");
+    await trustDisclosure.click();
+    await expect(
+      page.locator("details").filter({ hasText: "Selected under-the-hood details" })
+    ).toHaveAttribute("open", "");
+  });
+
+  test("the landing funnel works on mobile", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    await expect(page.getByRole("link", { name: /try it for \$1/i }).first()).toBeVisible();
+    await page.getByRole("button", { name: /open navigation menu/i }).click();
+    await page.getByRole("link", { name: "Trust" }).click();
+    await expect(page).toHaveURL(/#trust$/);
+
+    await page.goto("/#how-it-works");
+    await expect(page.getByText("01 · Target")).toBeVisible();
+    await expect(page.getByText("Name your target")).toBeVisible();
+    await expect(page.getByText("Company URL")).toBeVisible();
+
+    const noOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    );
+    expect(noOverflow).toBe(true);
+
+    await expect(page.getByText("Starter").first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /try it for \$1/i }).last()).toBeVisible();
+  });
+
   test("pricing shows every credit pack", async ({ page }) => {
     await page.goto("/pricing");
 
