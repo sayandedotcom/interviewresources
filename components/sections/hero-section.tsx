@@ -39,7 +39,11 @@ export function HeroSection() {
           </div>
         </div>
 
-        <h1 className="font-display mx-auto max-w-3xl text-5xl leading-[1.05] font-semibold tracking-tight text-white/80 md:text-7xl">
+        <h1 className="font-display mx-auto max-w-3xl text-5xl leading-[1.05] font-semibold tracking-tight text-white md:text-7xl">
+          {siteConfig.name}
+        </h1>
+
+        <p className="font-display mx-auto mt-4 max-w-3xl text-4xl leading-[1.05] font-semibold tracking-tight text-white/80 md:text-6xl">
           {emphasized(landing.heroTitle.line1)}
           <br />
           {landing.heroTitle.line2}{" "}
@@ -47,7 +51,7 @@ export function HeroSection() {
             {emphasized(landing.heroTitle.highlight)}
             <span className="absolute -bottom-1 left-0 h-3 w-full bg-white/25" />
           </span>
-        </h1>
+        </p>
 
         <p className="font-display mx-auto mt-6 max-w-xl text-lg leading-relaxed text-white/85">
           {landing.heroSub}
