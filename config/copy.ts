@@ -31,7 +31,7 @@ export const copyConfig = {
       highlight: "For under $0.50.",
     },
     heroSub:
-      "Paste a company name. Our AI researches its stack, culture, and real interview reports, then gathers the questions you'll face, each backed by evidence.",
+      "Paste a company name. The agent researches the live web for its stack, culture, and real interview reports, then gathers the questions you're most likely to face, each backed by evidence.",
     /**
      * `ariaLabel` disambiguates this from the bottom CTA button, which carries
      * the same visible text but points at /signin. Screen-reader users hitting
@@ -46,8 +46,7 @@ export const copyConfig = {
       href: "/#pricing",
     },
     heroCtaSecondary: { label: "See how it works", href: "/#how-it-works" },
-    heroFomo:
-      "Someone else interviewing for your role is already prepping with the questions. Are you?",
+    heroFomo: "$1 in credits, enough for about two typical reports.",
     /**
      * Plain-prose statement of what the product is, sitting directly below the
      * hero. Google's OAuth branding review reads the homepage looking for the
@@ -64,24 +63,24 @@ export const copyConfig = {
       ],
     },
     stats: [
-      { value: "<$0.50", label: "Per report" },
-      { value: "~3 min", label: "Start to finish" },
-      { value: "100%", label: "Questions cite evidence" },
-      { value: "$0", label: "Subscription fees" },
+      { value: "2,345", label: "Users" },
+      { value: "<$0.50", label: "Typical report" },
+      { value: "~3 min", label: "Typical runtime" },
+      { value: "Linked evidence", label: "On every question" },
     ],
     companies: {
-      eyebrow: "Trusted for",
-      title: "Prepare for top tech companies & also for any staged startups",
+      eyebrow: "Coverage examples",
+      title: "Prepare for top tech companies and early-stage startups",
     },
     comparison: {
-      sub: "AI research built for your exact interview, compared to the alternatives",
+      sub: "Built for a specific company interview, not generic prompting.",
     },
     faq: {
       eyebrow: "FAQ",
       title: "Frequently Asked Questions",
     },
     pricing: {
-      fomo: "Every interview you take unprepared is a $100K coin flip.",
+      fomo: "Start small, keep the spend capped, and only top up if the research is useful.",
       title: "Simple, transparent pricing",
       subBeforeCap:
         "No plans, no subscription, just credits. Every feature is included in every pack. A report costs what it costs to research: typically about 46 credits, under $0.50, and never more than",
@@ -356,7 +355,8 @@ export const copyConfig = {
     /** See landing.heroCtaPrimary.ariaLabel — same visible text, /signin instead. */
     signedOutAriaLabel: "Try it for $1 — sign in to get started",
     signedInLabel: "Get started",
-    closer: "Can't you spend $1 for your $100K job?",
+    closer:
+      "$1 gets you enough credits to see whether the research is useful for your next interview.",
   },
 
   // ── FAQs ──────────────────────────────────────────────────────────
@@ -380,6 +380,11 @@ export const copyConfig = {
       question: "Is this legal? Do you scrape LinkedIn?",
       answer:
         "We only use publicly available web search results. We never scrape LinkedIn or access private profiles. Interviewer names are used only as a search seed to find their public work like talks or blog posts.",
+    },
+    {
+      question: "What does Google sign-in let you access?",
+      answer:
+        "Only your name, email address, and profile picture so we can create and identify your account. We do not read Gmail, Drive, Calendar, contacts, or any other Google data.",
     },
     {
       question: "How accurate are the results?",

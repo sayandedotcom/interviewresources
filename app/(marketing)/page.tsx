@@ -1,21 +1,18 @@
 import { siteConfig } from "@/site";
 
-import { ConfidenceExplainerSection } from "@/components/confidence-explainer-section";
 import { CtaSection } from "@/components/cta-section";
 import { Footer } from "@/components/footer";
 import { FounderNoteSection } from "@/components/founder-note-section";
 import { Header } from "@/components/header";
 import { HowAgentWorksSection } from "@/components/how-agent-works-section";
 import { HowItWorksSection } from "@/components/how-it-works-section";
-import { HowWeSourceSection } from "@/components/how-we-source-section";
-import { AboutSection } from "@/components/sections/about-section";
 import { CompaniesSection } from "@/components/sections/companies-section";
-import { ComparisonSection } from "@/components/sections/comparison-section";
 import { FaqSection } from "@/components/sections/faq-section";
-import { GuaranteeSection } from "@/components/sections/guarantee-section";
 import { HeroSection } from "@/components/sections/hero-section";
 import { PricingSection } from "@/components/sections/pricing-section";
-import { StatsSection } from "@/components/sections/stats-section";
+import { ProofStripSection } from "@/components/sections/proof-strip-section";
+import { ResearchSourcesSection } from "@/components/sections/research-sources-section";
+import { TrustSection } from "@/components/sections/trust-section";
 import { UnknownCompaniesSection } from "@/components/unknown-companies-section";
 import { WhyNotChatgptSection } from "@/components/why-not-chatgpt-section";
 
@@ -43,33 +40,25 @@ export default function Home() {
 
       <HeroSection />
 
-      {/* <ResearchExperience /> */}
-
-      <AboutSection />
+      <ProofStripSection />
 
       <HowItWorksSection />
 
       <HowAgentWorksSection />
 
-      <HowWeSourceSection />
+      <WhyNotChatgptSection />
 
-      <StatsSection />
+      <PricingSection />
 
-      <CompaniesSection />
+      <ResearchSourcesSection />
 
       <UnknownCompaniesSection />
 
-      <WhyNotChatgptSection />
+      <TrustSection />
 
-      <ConfidenceExplainerSection />
-
-      <ComparisonSection />
+      <CompaniesSection />
 
       <FaqSection />
-
-      <GuaranteeSection />
-
-      <PricingSection />
 
       <FounderNoteSection />
 
