@@ -50,22 +50,22 @@ export function HeroSection() {
           {landing.heroSub}
         </p>
 
-        <div className="mt-8 flex justify-center gap-4">
+        <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
             href={landing.heroCtaPrimary.href}
             aria-label={landing.heroCtaPrimary.ariaLabel}
-            className="font-display text-brand-700 inline-flex cursor-pointer items-center gap-1 rounded-full bg-[image:var(--gradient-glossy-white)] px-6 py-3 text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-all hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-white-active)]">
+            className="font-display text-brand-700 inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full bg-[image:var(--gradient-glossy-white)] px-6 py-3 text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-all hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-white-active)]">
             {landing.heroCtaPrimary.label}
             <ChevronRight className="h-4 w-4" />
           </Link>
           <Link
             href={landing.heroCtaSecondary.href}
-            className="font-display cursor-pointer rounded-full bg-[image:var(--gradient-glossy-ghost)] px-6 py-3 text-sm font-semibold text-white shadow-[var(--shadow-glossy-ghost)] backdrop-blur-sm transition-all hover:bg-[image:var(--gradient-glossy-ghost-hover)] hover:shadow-[var(--shadow-glossy-ghost-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-ghost-active)]">
+            className="font-display inline-flex min-h-11 cursor-pointer items-center rounded-full bg-[image:var(--gradient-glossy-ghost)] px-6 py-3 text-sm font-semibold text-white shadow-[var(--shadow-glossy-ghost)] backdrop-blur-sm transition-all hover:bg-[image:var(--gradient-glossy-ghost-hover)] hover:shadow-[var(--shadow-glossy-ghost-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-ghost-active)]">
             {landing.heroCtaSecondary.label}
           </Link>
         </div>
 
-        <p className="font-display mt-6 text-sm text-white/70 italic">{landing.heroFomo}</p>
+        <p className="font-display mt-6 text-sm text-white/70">{landing.heroFomo}</p>
       </div>
 
       <div className="px-6 md:px-8">

@@ -13,6 +13,9 @@ export function FaqSection() {
 
   return (
     <Section tone="plain">
+      <p className="text-tertiary mb-3 text-xs font-semibold tracking-[0.25em] uppercase">
+        {landing.faq.eyebrow}
+      </p>
       <h2 className="font-display mb-10 text-4xl font-semibold tracking-tight sm:text-5xl">
         {landing.faq.title}
       </h2>
