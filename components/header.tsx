@@ -51,7 +51,7 @@ function SignedOutCta({ compact = false }: { compact?: boolean }) {
       className={`text-brand-700 font-display inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-glossy-white)] text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-all hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-white-active)] ${
         compact ? "px-4" : "px-5"
       }`}>
-      {compact ? "Start" : "Try it for $1"}
+      {compact ? "Start preparing" : "Try it for $1"}
     </Link>
   );
 }
