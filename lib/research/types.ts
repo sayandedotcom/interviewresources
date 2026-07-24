@@ -101,6 +101,8 @@ export const researchInputSchema = z.object({
     .default([]),
   /** How wide to search and how many questions to produce. See EFFORT_PRESETS. */
   effort: z.enum(EFFORT_LEVELS).default("medium"),
+  /** Extensions that only fill prose sections do not need to synthesize questions. */
+  generateQuestions: z.boolean().optional(),
   /**
    * Which optional sections to produce. Defaulted rather than required so a
    * caller predating the field — and the stored inputs of an older run — still
@@ -205,11 +207,12 @@ export const questionSchema = z.object({
   prepNote: z.string().describe("What a strong answer covers"),
   evidenceUrls: z.array(z.string()),
   basis: z
-    .enum(["evidence", "inferred"])
+    .enum(["evidence", "inferred", "baseline"])
     .describe(
       '"evidence" when grounded in direct accounts of interviewing at THIS company; ' +
         '"inferred" when derived from proxy signals (founders\' prior companies, comparable ' +
-        "companies, funding-stage norms)"
+        'companies, funding-stage norms); "baseline" when it is role-standard preparation ' +
+        "without evidence that this company asks it"
     ),
 });
 
@@ -264,7 +267,8 @@ export const reportSchema = z.object({
     .string()
     .describe("The reported interview process/rounds for this company, if discoverable"),
   interviewerSummary: z.string().nullable().describe("Null if no interviewer was provided"),
-  questions: z.array(questionSchema).min(1),
+  // Section-only extensions intentionally produce no new questions.
+  questions: z.array(questionSchema),
   skillsRequired: z
     .array(requiredSkillSchema)
     .describe(

@@ -74,10 +74,13 @@ export async function runResearchPipeline(
   const notes = await compressStage(sources, budget, onProgress);
 
   emit(onProgress, "synthesize", "Synthesizing final report...");
-  const report = await synthesizeStage(input, notes, budget, preset, broadened);
-  // Assigned in code, not trusted to the model: "sparse" exactly when the proxy
-  // wave ran, so the UI can flag inferred content honestly.
-  report.evidenceCoverage = broadened ? "sparse" : "rich";
+  // Sparse evidence should still produce useful preparation questions. The
+  // synthesizer labels those role-standard questions as baseline rather than
+  // pretending the company asked them.
+  const report = await synthesizeStage(input, notes, budget, preset, broadened, density.sparse);
+  // Assigned in code, not trusted to the model: sparse means direct evidence was
+  // thin, even when the budget prevented or the proxy planner failed to broaden.
+  report.evidenceCoverage = density.sparse ? "sparse" : "rich";
 
   emit(onProgress, "done", `Done. Total cost: $${budget.totalUsd.toFixed(4)}`);
 

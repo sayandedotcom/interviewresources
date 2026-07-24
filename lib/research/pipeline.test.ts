@@ -922,7 +922,7 @@ describe("sparse-evidence proxy wave", () => {
     const stages = genMock.mock.calls.map((c) => c[0].stage);
     expect(stages).not.toContain("plan_proxy");
     expect(events.some((e) => e.stage === "broaden")).toBe(false);
-    expect(out.evidenceCoverage).toBe("rich");
+    expect(out.evidenceCoverage).toBe("sparse");
   });
 
   it("completes on wave-1 evidence when the proxy plan call fails", async () => {
@@ -938,8 +938,8 @@ describe("sparse-evidence proxy wave", () => {
     const { report: out } = await runResearchPipeline(input, (e) => events.push(e));
 
     expect(out.companySnapshot).toBe("Payments");
-    // The wave still ran and failed gracefully, so nothing was inferred.
-    expect(out.evidenceCoverage).toBe("rich");
+    // Direct evidence was still sparse, even though the proxy wave failed.
+    expect(out.evidenceCoverage).toBe("sparse");
     expect(events.some((e) => e.message.startsWith("Broadened research failed"))).toBe(true);
   });
 

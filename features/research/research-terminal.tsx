@@ -20,7 +20,8 @@ import type { PipelineProgressEvent } from "@/lib/research/types";
 /**
  * The live-run terminal: the landing page's How-it-works mock made real, so the
  * run a user paid for looks like the one the marketing promised. Deliberately
- * dark in both themes — it is a terminal, not a card.
+ * Light in both themes so the live run feels integrated with the research
+ * workspace rather than introducing a separate dark surface.
  */
 
 export interface TerminalLine extends PipelineProgressEvent {
@@ -75,18 +76,20 @@ function LogLine({
       }`}>
       <Icon
         className={`h-3.5 w-3.5 shrink-0 ${
-          isError ? "text-destructive" : latest ? "text-tertiary" : "text-neutral-600"
+          isError ? "text-destructive" : latest ? "text-tertiary" : "text-muted-foreground"
         }`}
         aria-hidden="true"
       />
       <span
         className={`w-16 shrink-0 tracking-widest ${
-          isError ? "text-destructive" : latest ? "text-tertiary" : "text-neutral-600"
+          isError ? "text-destructive" : latest ? "text-tertiary" : "text-muted-foreground"
         }`}>
         {line.stage}
       </span>
       <span
-        className={isError ? "text-destructive" : latest ? "text-neutral-200" : "text-neutral-500"}>
+        className={
+          isError ? "text-destructive" : latest ? "text-foreground" : "text-muted-foreground"
+        }>
         {line.message}
       </span>
       {latest && !isError && !failed && (
@@ -130,11 +133,11 @@ export function ResearchTerminal({
   const currentIdx = TRACKED_STAGES.indexOf(current);
 
   return (
-    <div className="flex h-[calc(100dvh-10rem)] min-h-[28rem] flex-col overflow-hidden rounded-xl bg-neutral-950 font-mono text-xs text-neutral-300 ring-1 ring-neutral-800">
-      <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-2.5">
-        <Terminal className="h-3.5 w-3.5 text-neutral-500" aria-hidden="true" />
-        <span className="text-[11px] text-neutral-500">interview-resources · {session}</span>
-        <span className="ml-auto text-[11px] text-neutral-600">
+    <div className="bg-background text-foreground ring-border flex h-[calc(100dvh-10rem)] min-h-[28rem] flex-col overflow-hidden rounded-xl font-mono text-xs ring-1">
+      <div className="border-border flex items-center gap-2 border-b px-4 py-2.5">
+        <Terminal className="text-muted-foreground h-3.5 w-3.5" aria-hidden="true" />
+        <span className="text-muted-foreground text-[11px]">interview-resources · {session}</span>
+        <span className="text-muted-foreground/70 ml-auto text-[11px]">
           {formatElapsed(elapsed)} elapsed
         </span>
       </div>
@@ -144,7 +147,9 @@ export function ResearchTerminal({
           {lines.map((line, i) => (
             <LogLine key={line.id} line={line} latest={i === lines.length - 1} failed={failed} />
           ))}
-          {lines.length === 0 && <li className="px-2 py-1 text-neutral-500">establishing feed…</li>}
+          {lines.length === 0 && (
+            <li className="text-muted-foreground px-2 py-1">establishing feed…</li>
+          )}
         </ul>
         {!failed && (
           <span
@@ -154,7 +159,7 @@ export function ResearchTerminal({
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-neutral-800 px-4 py-2 text-[11px] text-neutral-600">
+      <div className="border-border text-muted-foreground/70 flex items-center justify-between gap-3 border-t px-4 py-2 text-[11px]">
         <span className="truncate">metered · charged what the run spends</span>
         <span className="flex shrink-0 items-center gap-1.5">
           {TRACKED_STAGES.map((stage, i) => (
@@ -163,10 +168,10 @@ export function ResearchTerminal({
               <span
                 className={
                   i < currentIdx
-                    ? "text-neutral-500"
+                    ? "text-muted-foreground"
                     : i === currentIdx
                       ? "text-tertiary"
-                      : "text-neutral-700"
+                      : "text-muted-foreground/50"
                 }>
                 {i < currentIdx && (
                   <Check className="mr-0.5 inline h-3 w-3 align-[-2px]" aria-hidden="true" />

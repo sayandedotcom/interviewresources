@@ -113,6 +113,12 @@ export const BASIS_META = {
     "stage norms — not first-hand accounts of interviewing here. See the rationale for the basis.",
 } as const;
 
+export const BASELINE_BASIS_META = {
+  label: "Role baseline",
+  tooltip:
+    "A useful question for this role and startup context, but there is no evidence this company has asked it.",
+} as const;
+
 /**
  * Questions bucketed by round: predefined categories in taxonomy order, then
  * custom rounds in the order they first appear. The model can also return a

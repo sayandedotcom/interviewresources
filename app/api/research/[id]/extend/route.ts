@@ -182,6 +182,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
             fullLoop: false,
             sections,
             excludeQuestions: existing.questions.map((q) => q.question),
+            generateQuestions: body.interviewTypes.length > 0,
             // The caller picks how hard this extension searches, independent of
             // the original run's effort (which isn't persisted). The budget is
             // still capped at half this effort's full-run cap; see extendCapUsd.

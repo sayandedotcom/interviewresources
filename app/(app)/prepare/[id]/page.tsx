@@ -22,6 +22,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     db
       .select({
         companyName: researches.companyName,
+        roleContext: researches.roleContext,
         costCentsLlm: researches.costCentsLlm,
         costCentsSearch: researches.costCentsSearch,
         creditsCharged: researches.creditsCharged,
@@ -45,6 +46,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         costUsd={costUsd}
         creditsCharged={row.creditsCharged}
         company={row.companyName}
+        roleContext={row.roleContext ?? undefined}
         researchId={id}
         extendCredits={extendCredits()}
         balance={balance}

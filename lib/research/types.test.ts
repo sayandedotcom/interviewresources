@@ -278,8 +278,8 @@ describe("reportSchema", () => {
     expect(() => storedReportSchema.parse(legacy)).not.toThrow();
   });
 
-  it("rejects a report with no questions — that is a failed run, not an empty one", () => {
-    expect(() => reportSchema.parse({ ...validReport, questions: [] })).toThrow();
+  it("allows a report with no questions for a section-only extension", () => {
+    expect(() => reportSchema.parse({ ...validReport, questions: [] })).not.toThrow();
   });
 
   it("allows a null interviewerSummary when no interviewer was named", () => {
@@ -325,6 +325,18 @@ describe("reportSchema", () => {
   it("accepts an inferred question", () => {
     const inferred = { ...validReport, questions: [{ ...question, basis: "inferred" }] };
     expect(reportSchema.parse(inferred).questions[0].basis).toBe("inferred");
+  });
+
+  it("accepts a role-baseline question without evidence urls", () => {
+    const baseline = {
+      ...question,
+      basis: "baseline",
+      confidence: "low",
+      evidenceUrls: [],
+    };
+    expect(reportSchema.parse({ ...validReport, questions: [baseline] }).questions[0].basis).toBe(
+      "baseline"
+    );
   });
 
   it("treats evidenceCoverage as optional so legacy reports still parse", () => {

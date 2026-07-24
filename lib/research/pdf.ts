@@ -29,8 +29,8 @@ const BOTTOM = FOOTER_Y - 16;
 const INK: RGB = [24, 24, 27];
 const MUTED: RGB = [113, 113, 122];
 const RULE: RGB = [224, 224, 228];
-/** A darkened form of the app's lime `--tertiary`, legible as ink on paper. */
-const ACCENT: RGB = [86, 102, 0];
+/** A darkened form of the app's blue primary, legible as ink on paper. */
+const ACCENT: RGB = [37, 90, 150];
 
 type RGB = [number, number, number];
 type Style = "normal" | "bold" | "italic";

@@ -54,6 +54,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 import type { Effort } from "@/lib/research/budget";
 import {
+  BASELINE_BASIS_META,
   BASIS_META,
   CONFIDENCE_META,
   SECTION_META,
@@ -134,9 +135,13 @@ export function ReportView({
   // parent hands us a different report — React's adjust-state-on-prop-change idiom.
   const [current, setCurrent] = useState(report);
   const [seededFrom, setSeededFrom] = useState(report);
+  const [currentBalance, setCurrentBalance] = useState(balance);
   if (seededFrom !== report) {
     setSeededFrom(report);
     setCurrent(report);
+  }
+  if (currentBalance !== balance && balance !== undefined) {
+    setCurrentBalance(balance);
   }
 
   // Which extend request is in flight: a category slug for a "More" click, or
@@ -252,6 +257,7 @@ export function ReportView({
           setCurrent(msg.report as Report);
           setExtraRounds([]);
           setExtraSections([]);
+          if (typeof msg.balanceAfter === "number") setCurrentBalance(msg.balanceAfter);
         } else if (msg.kind === "error") {
           setExtendError(String(msg.message ?? "Extend failed."));
         }
@@ -680,19 +686,23 @@ export function ReportView({
                               {q.question}
                             </p>
                             <div className="flex shrink-0 items-center gap-2">
-                              {q.basis === "inferred" && (
+                              {(q.basis === "inferred" || q.basis === "baseline") && (
                                 <Tooltip>
                                   <TooltipTrigger
                                     render={
                                       <Badge
                                         variant="outline"
                                         className="text-muted-foreground cursor-default text-[10px]">
-                                        {BASIS_META.label}
+                                        {q.basis === "baseline"
+                                          ? BASELINE_BASIS_META.label
+                                          : BASIS_META.label}
                                       </Badge>
                                     }
                                   />
                                   <TooltipContent className="max-w-xs">
-                                    {BASIS_META.tooltip}
+                                    {q.basis === "baseline"
+                                      ? BASELINE_BASIS_META.tooltip
+                                      : BASIS_META.tooltip}
                                   </TooltipContent>
                                 </Tooltip>
                               )}
@@ -892,7 +902,7 @@ export function ReportView({
       {researchId && extendEstimate && extendCredits && (
         <EstimatePanel
           estimate={extendEstimate}
-          balance={balance}
+          balance={currentBalance}
           ceiling={extendCredits[effort]}
           controls={
             <div>

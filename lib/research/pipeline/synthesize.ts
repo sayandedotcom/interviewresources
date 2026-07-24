@@ -14,6 +14,7 @@ import { describeInput, wants } from "./shared";
 
 /** The report fields a switched-off section removes from the generation schema. */
 type OptionalReportField =
+  | "questions"
   | "companySnapshot"
   | "companyExplainer"
   | "likelyLoopStructure"
@@ -27,8 +28,12 @@ export async function synthesizeStage(
   notes: CompressedNote[],
   budget: BudgetTracker,
   preset: EffortPreset,
-  broadened: boolean
+  broadened: boolean,
+  allowBaseline = false
 ): Promise<Report> {
+  // Direct callers and legacy stored inputs predate this flag; only an explicit
+  // false means a section-only extension.
+  const generateQuestions = input.generateQuestions !== false;
   const evidenceBlock = notes
     .map((n, i) => `[${i + 1}] (${n.category}) ${n.sourceTitle} — ${n.sourceUrl}\n${n.summary}`)
     .join("\n\n");
@@ -45,8 +50,20 @@ export async function synthesizeStage(
   rationale must name the specific proxy signal it leans on (e.g. "the CTO ran Stripe's
   infra loop 2019-2022, so expect practical systems questions" or "Series A infra startups
   of this size typically run a take-home plus a pairing round"). An inferred question is
-  never confidence "high".`
-    : `- Set every question's "basis" to "evidence".`;
+  never confidence "high".${
+    allowBaseline
+      ? `
+- Fill remaining useful coverage with "baseline" questions tailored to the role and startup
+  context. They may have no evidence URL and must always be confidence "low"; never imply the
+  company has asked them.`
+      : ""
+  }`
+    : allowBaseline
+      ? `- Direct company interview evidence is limited. Use "evidence" only for direct accounts,
+  "inferred" for proxy/company signals, and "baseline" for role-standard preparation that is
+  useful but not claimed to have been asked at this company. Baseline questions may have no
+  evidence URL and must always be confidence "low".`
+      : `- Set every question's "basis" to "evidence".`;
 
   // Only present on an extension run, where the caller wants fresh questions
   // rather than the ones the report already shows.
@@ -74,6 +91,7 @@ export async function synthesizeStage(
   if (!skills) omitMask.skillsRequired = true;
   if (!experiences) omitMask.interviewExperiences = true;
   if (!recruiter) omitMask.recruiterPitch = true;
+  if (!generateQuestions) omitMask.questions = true;
 
   // The cast keeps the full generated shape in the types: which keys the schema
   // actually carries is a runtime decision, and the reads below are already
@@ -89,7 +107,10 @@ export async function synthesizeStage(
   technical view: stack, scale signals, engineering culture.`,
     `- Set each question's "category" to one of the round identifiers from "Rounds to gather",
   copied character-for-character. Never invent a new identifier or reformat an existing one.`,
-    `- Every question must cite at least one evidence URL from the notes it's grounded in.`,
+    generateQuestions &&
+      `- Every evidence or inferred question must cite at least one evidence URL from the notes.
+  A baseline question may have no URL, but must say in its rationale that it is role-standard
+  preparation rather than a reported company question.`,
     basisRules,
     `- If evidence for a requested round is thin, say so honestly in the rationale and
   mark confidence "low" rather than fabricating specifics.`,
@@ -101,9 +122,11 @@ export async function synthesizeStage(
     `- Summarize each named interviewer in interviewerSummary using only public evidence in the
   notes; if several were named, cover each briefly.`,
     `- Do not invent citations. Do not invent company facts not present in the notes.`,
-    `- Aim for ${preset.questionTarget} questions total across the requested rounds, prioritizing breadth
+    generateQuestions &&
+      `- Aim for ${preset.questionTarget} questions total across the requested rounds, prioritizing breadth
   across rounds over depth in one. Do not pad: a question you cannot ground in the notes
-  does not belong in the report, even if that leaves you short of the range.`,
+  belongs in the baseline bucket only when company evidence is sparse; otherwise it does not
+  belong in the report, even if that leaves you short of the range.`,
     `- If an "Already predicted" list is present, treat those questions as taken: never repeat
   one, and never restate one in different words. Cover different ground instead.`,
     skills &&
@@ -171,6 +194,7 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
   // more than the schema asked for.
   const report: Report = {
     ...generated,
+    questions: generateQuestions ? (generated.questions ?? []) : [],
     companySnapshot: company ? generated.companySnapshot : null,
     companyExplainer: company ? generated.companyExplainer : null,
     likelyLoopStructure: loop ? generated.likelyLoopStructure : null,
@@ -190,8 +214,12 @@ ${evidenceBlock || "(no evidence gathered — degrade gracefully, mark everythin
     if (q.evidenceUrls.length === 0) q.confidence = "low";
     // Belt-and-suspenders on the basis label: default a missing one to the
     // safe reading, and never let an inferred question claim high confidence.
-    if (!q.basis) q.basis = "evidence";
+    if (!q.basis) q.basis = allowBaseline ? "baseline" : "evidence";
     if (q.basis === "inferred" && q.confidence === "high") q.confidence = "medium";
+    if (q.basis === "baseline") {
+      q.confidence = "low";
+      q.evidenceUrls = [];
+    }
   }
 
   // `claimed` spans both link sections, so a URL kept as an interview experience
