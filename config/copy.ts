@@ -408,6 +408,41 @@ export const copyConfig = {
     },
   ],
 
+  // ── Changelog (/changelog) ───────────────────────────────────────
+  /**
+   * Same rule as config/public-claims.ts: nothing lands here that isn't
+   * verifiably true. This page previously shipped two invented releases dated
+   * 18 months before the repository's first commit — on a product whose pitch
+   * is "we show our sources", that is the most expensive kind of copy to get
+   * wrong.
+   *
+   * Two conventions that keep it honest:
+   *  - User-visible changes only. Refactors and dependency bumps are what the
+   *    git log is for; this is for people deciding whether to spend $1.
+   *  - `date` renders verbatim, so keep it at a precision you can defend.
+   *    Month-level is fine. An invented day is not.
+   *
+   * No version numbers until releases are actually tagged — `0.1.0` in
+   * package.json is a default, not a release. The page renders an honest empty
+   * state when this list is empty, so removing an entry is always safe.
+   */
+  changelog: [
+    {
+      date: "July 2026",
+      title: "First public release",
+      changes: [
+        "Paste a company name and get the questions you're most likely to face, grouped by interview round, each with a confidence level and links to the evidence behind it.",
+        "Choose which rounds and report sections to research — the agent skips what you switch off, so you don't pay for it.",
+        "See the credit estimate for a run before you commit to it, and pick an effort level to cap the spend.",
+        "When public interview data on a company is thin, the agent broadens into founder backgrounds, funding stage, and how comparable companies interview — and labels those questions Inferred rather than passing them off as evidence.",
+        "Extend a finished report with extra rounds without re-running the research you already paid for.",
+        "Export a report as PDF or JSON, copy it as a ready-made prompt, or share it as a read-only link.",
+        "Credit packs instead of a subscription: buy once, spend only when you run a report.",
+        "Sign in with Google. Export your data or delete your account from settings at any time.",
+      ],
+    },
+  ],
+
   // ── Pricing page (/pricing) ──────────────────────────────────────
   /**
    * The landing page and /pricing used to render character-identical headings

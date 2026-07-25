@@ -27,7 +27,8 @@ export const publicRoutes = {
   "/about": { priority: 0.6, changeFrequency: "monthly", label: "About" },
   "/blog": { priority: 0.6, changeFrequency: "weekly", label: "Blog" },
   "/help": { priority: 0.6, changeFrequency: "monthly", label: "Help" },
-  "/changelog": { priority: 0.5, changeFrequency: "weekly", label: "Changelog" },
+  /** `monthly`, not `weekly`: claim the cadence the page actually keeps. */
+  "/changelog": { priority: 0.5, changeFrequency: "monthly", label: "Changelog" },
   "/contact": { priority: 0.5, changeFrequency: "yearly", label: "Contact" },
   "/privacy-policy": { priority: 0.3, changeFrequency: "yearly", label: "Privacy Policy" },
   "/terms-of-service": { priority: 0.3, changeFrequency: "yearly", label: "Terms of Service" },
