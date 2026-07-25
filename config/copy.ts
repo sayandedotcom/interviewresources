@@ -225,11 +225,11 @@ export const copyConfig = {
   sourcing: {
     eyebrow: "Transparency",
     title: "Where the questions actually come from",
-    sub: "We search the open web, then measure what came back. What we found is what decides the report you get.",
+    sub: "We search the public web, classify what we could reliably read, and synthesize questions from evidence only. Useful unreadable links are kept separately for you to open.",
     beats: [
       {
         name: "First, we hunt for first-hand accounts",
-        body: "The agent drafts targeted queries and searches public links across the web for people who interviewed there, plus what the company publishes about itself. If a page is blocked by login, paywall, robots controls, or extraction failure, we keep the link for you to open manually but never treat it as evidence.",
+        body: "The agent drafts targeted queries for people who interviewed there, plus what the company publishes about itself. Every promising public result is classified by what we could reliably read. Unreadable results stay in the Research library, but never become evidence.",
         chips: [
           "Glassdoor",
           "Blind",
@@ -240,11 +240,11 @@ export const copyConfig = {
           "Job postings",
           "Interviewer talks & open source",
         ],
-        note: "These are search targets, not partnerships. We hit the open web like you would, just faster and wider.",
+        note: "No scraping restricted pages. We do not bypass logins, paywalls, robots controls, CAPTCHAs, or other access restrictions.",
       },
       {
         name: "Then we count what came back",
-        body: "A result only counts as evidence if it carries real content, not a title echo or a nav blurb. Company overviews and interviewer pages don't count toward it at all: they say nothing about how the place interviews. Below three substantial sources, or below five with not a single full page worth pulling, the agent stops and broadens instead of shipping you a thin report.",
+        body: "A result only counts as evidence when it contains reliable, substantive content—not merely a title, thin snippet, or navigation blurb. Link-only resources never create claims, citations, summaries, or confidence. When evidence is thin, the agent broadens its search instead of pretending the report is complete.",
       },
     ],
     rules: {
@@ -252,8 +252,8 @@ export const copyConfig = {
       sub: "Applied in code after the model answers, not instructions we ask it to follow.",
       items: [
         {
-          rule: "No source link, no confidence",
-          body: "If a question comes back without a single citation behind it, its confidence is forced to Low, whatever the model claimed.",
+          rule: "No evidence citation, no confidence",
+          body: "If a question comes back without a citation to readable evidence, its confidence is forced to Low. A discovery link that must be opened manually never counts.",
         },
         {
           rule: "Inferred can never be High",
