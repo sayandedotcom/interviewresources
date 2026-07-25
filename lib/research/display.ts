@@ -98,6 +98,29 @@ export function categoryCode(cat: string): string {
   );
 }
 
+/**
+ * The bare hostname of a source URL, for labelling a link by where it leads.
+ *
+ * On the public company pages this replaces "Source 1": a reader deciding
+ * whether to trust a predicted question is persuaded by `stripe.com` or
+ * `leetcode.com`, and an ordinal throws that away.
+ */
+export function hostLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "source";
+  }
+}
+
+/** Up to two initials, for the avatar on a company card with no logo to show. */
+export function companyMonogram(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  const initials = words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[1][0];
+  return initials.toUpperCase();
+}
+
 export const CONFIDENCE_META: Record<
   "high" | "medium" | "low",
   { label: string; signal: "●●●" | "●●○" | "●○○" }

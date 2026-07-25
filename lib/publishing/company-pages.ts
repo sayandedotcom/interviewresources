@@ -21,6 +21,21 @@ export type PublishedPage = PublishedPageSummary & {
 };
 
 /**
+ * A summary plus the handful of counts the directory card shows. Derived from
+ * the redacted report, never the raw payload, so the index cannot leak a field
+ * the detail page withholds.
+ */
+export type PublishedPageCard = PublishedPageSummary & {
+  /** First sentence of the snapshot or explainer — one line of "why this company". */
+  blurb: string | null;
+  questionCount: number;
+  evidenceCount: number;
+  sourceCount: number;
+  /** Distinct question categories, in the order the questions appear. */
+  categories: string[];
+};
+
+/**
  * Turns a company name into a URL slug.
  *
  * Deliberately lossy and ASCII-only: these paths end up in search results, get
@@ -56,6 +71,69 @@ export async function listPublishedPages(): Promise<PublishedPageSummary[]> {
       ? [{ slug: r.slug, companyName: r.companyName, publishedAt: r.publishedAt }]
       : []
   );
+}
+
+/**
+ * The first sentence of a paragraph, capped so a card stays one or two lines.
+ *
+ * Deliberately naive: these are model-written marketing paragraphs, not prose
+ * with abbreviations, so splitting on ". " is right far more often than a
+ * sentence segmenter would be worth.
+ */
+function firstSentence(text: string | null, max = 140): string | null {
+  const trimmed = text?.trim();
+  if (!trimmed) return null;
+
+  const end = trimmed.search(/\.\s/);
+  const sentence = end === -1 ? trimmed : trimmed.slice(0, end + 1);
+  return sentence.length > max ? `${sentence.slice(0, max).trimEnd()}…` : sentence;
+}
+
+/**
+ * Every published page with the counts the directory cards show.
+ *
+ * Reads each report payload, which `listPublishedPages` deliberately does not —
+ * the sitemap wants slugs and nothing else. Only the index page calls this, and
+ * only behind an hour of ISR, so the extra payload read is paid once an hour
+ * across a set of pages that is published by hand.
+ */
+export async function listPublishedPageCards(): Promise<PublishedPageCard[]> {
+  const rows = await db
+    .select({
+      slug: reports.publishedSlug,
+      companyName: researches.companyName,
+      publishedAt: reports.publishedAt,
+      payload: reports.jsonPayload,
+    })
+    .from(reports)
+    .innerJoin(researches, eq(reports.researchId, researches.id))
+    .where(and(isNotNull(reports.publishedSlug), isNotNull(reports.publishedAt)))
+    .orderBy(desc(reports.publishedAt));
+
+  return rows.flatMap((row) => {
+    if (!row.slug || !row.publishedAt) return [];
+
+    // A row whose payload no longer fits the schema 404s on the detail page, so
+    // listing it here would only produce a card that leads to a dead end.
+    const parsed = storedReportSchema.safeParse(row.payload);
+    if (!parsed.success) return [];
+
+    const report = toPublicReport(parsed.data);
+    const sources = new Set(report.questions.flatMap((q) => q.evidenceUrls));
+
+    return [
+      {
+        slug: row.slug,
+        companyName: row.companyName,
+        publishedAt: row.publishedAt,
+        blurb: firstSentence(report.companySnapshot ?? report.companyExplainer),
+        questionCount: report.questions.length,
+        evidenceCount: report.questions.filter((q) => q.basis === "evidence").length,
+        sourceCount: sources.size,
+        categories: [...new Set(report.questions.map((q) => q.category))],
+      },
+    ];
+  });
 }
 
 /**

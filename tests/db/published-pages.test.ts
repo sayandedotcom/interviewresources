@@ -99,3 +99,35 @@ describe("published company pages", () => {
     expect(serialised).not.toContain("SECRET-PREP-PLAN");
   });
 });
+
+describe("listPublishedPageCards", () => {
+  it("derives the directory card counts from the redacted report", async () => {
+    const { listPublishedPageCards } = await import("@/lib/publishing/company-pages");
+
+    await seedReport(null, "Unpublished Co");
+    await seedReport({ slug: "stripe", at: new Date("2026-07-20") }, "Stripe");
+
+    const [card, ...rest] = await listPublishedPageCards();
+
+    expect(rest).toHaveLength(0);
+    expect(card).toMatchObject({
+      slug: "stripe",
+      companyName: "Stripe",
+      blurb: "A payments company.",
+      questionCount: 1,
+      evidenceCount: 1,
+      sourceCount: 1,
+      categories: ["system_design"],
+    });
+  });
+
+  it("keeps the paid fields out of the index payload", async () => {
+    const { listPublishedPageCards } = await import("@/lib/publishing/company-pages");
+
+    await seedReport({ slug: "stripe", at: new Date("2026-07-20") }, "Stripe");
+
+    const serialised = JSON.stringify(await listPublishedPageCards());
+    expect(serialised).not.toContain("SECRET-PREP-NOTE");
+    expect(serialised).not.toContain("SECRET-PREP-PLAN");
+  });
+});

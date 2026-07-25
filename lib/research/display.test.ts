@@ -5,6 +5,8 @@ import {
   CONFIDENCE_META,
   categoryCode,
   categoryLabel,
+  companyMonogram,
+  hostLabel,
   missingSections,
 } from "./display";
 import { INTERVIEW_CATEGORIES, type Report } from "./types";
@@ -126,6 +128,39 @@ describe("missingSections", () => {
   it("counts a legacy report predating recruiterPitch as missing it", () => {
     const { recruiterPitch: _gone, ...legacy } = fullReport;
     expect(missingSections(legacy as Report)).toEqual(["recruiter"]);
+  });
+});
+
+describe("hostLabel", () => {
+  it("strips the scheme, www prefix and path", () => {
+    expect(hostLabel("https://www.leetcode.com/discuss/123?x=1")).toBe("leetcode.com");
+    expect(hostLabel("https://stripe.com/blog/how-we-hire")).toBe("stripe.com");
+  });
+
+  it("keeps subdomains that are not www", () => {
+    expect(hostLabel("https://engineering.fb.com/post")).toBe("engineering.fb.com");
+  });
+
+  // Evidence URLs come from a model, so a malformed one must degrade to a label
+  // rather than throw inside a server-rendered marketing page.
+  it("falls back to a generic label on an unparseable url", () => {
+    expect(hostLabel("not a url")).toBe("source");
+  });
+});
+
+describe("companyMonogram", () => {
+  it("takes the first two initials of a multi-word name", () => {
+    expect(companyMonogram("Basis Theory")).toBe("BT");
+    expect(companyMonogram("  Vercel   Labs ")).toBe("VL");
+  });
+
+  it("takes the first two letters of a single-word name", () => {
+    expect(companyMonogram("Stripe")).toBe("ST");
+    expect(companyMonogram("X")).toBe("X");
+  });
+
+  it("degrades rather than rendering an empty avatar", () => {
+    expect(companyMonogram("   ")).toBe("?");
   });
 });
 
