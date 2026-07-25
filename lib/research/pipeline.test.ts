@@ -79,8 +79,8 @@ function report(overrides: Partial<Report> = {}): Report {
   };
 }
 
-function searchResult(url: string, content = "x".repeat(200)) {
-  return { title: `Title ${url}`, url, content, score: 0.9 };
+function searchResult(url: string, content = "x".repeat(200), favicon?: string) {
+  return { title: `Title ${url}`, url, content, score: 0.9, ...(favicon ? { favicon } : {}) };
 }
 
 function proxyPlan(overrides: Partial<ProxyPlan> = {}): ProxyPlan {
@@ -971,6 +971,78 @@ describe("synthesize stage", () => {
       access: "search_preview",
       usedAsEvidence: true,
     });
+  });
+
+  it("propagates valid Tavily favicons without exposing them to synthesis", async () => {
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: [
+        searchResult(
+          "https://a.dev",
+          "Substantive evidence about the interview process. ".repeat(5),
+          "https://icons.tavily.com/a.ico"
+        ),
+      ],
+    });
+    stubStages({
+      report: report({
+        researchResources: [
+          {
+            title: "Model resource",
+            url: "https://a.dev",
+            faviconUrl: "https://invented.dev/favicon.ico",
+            why: "Useful source",
+            kind: "other",
+            access: "search_preview",
+            usedAsEvidence: true,
+          },
+        ],
+      }),
+    });
+
+    const { report: out } = await runResearchPipeline(input);
+    const synthPrompt = genMock.mock.calls.find((call) => call[0].stage === "synthesize")![0]
+      .prompt;
+
+    expect(out.researchResources?.[0].faviconUrl).toBe("https://icons.tavily.com/a.ico");
+    expect(synthPrompt).not.toContain("icons.tavily.com");
+    expect(synthPrompt).not.toContain("invented.dev/favicon.ico");
+  });
+
+  it("preserves the first duplicate favicon and backfills a missing one", async () => {
+    stubStages({});
+    searchMock
+      .mockResolvedValueOnce({
+        query: "q1",
+        results: [
+          searchResult("https://kept.dev/post", undefined, "https://icons.dev/original.ico"),
+          searchResult("https://backfilled.dev/post"),
+        ],
+      })
+      .mockResolvedValueOnce({
+        query: "q2",
+        results: [
+          searchResult("https://kept.dev/post#later", undefined, "https://icons.dev/new.ico"),
+          searchResult(
+            "https://backfilled.dev/post?utm_source=search",
+            undefined,
+            "https://icons.dev/backfill.ico"
+          ),
+        ],
+      })
+      .mockResolvedValue({
+        query: "q3",
+        results: [searchResult("https://third.dev/post"), searchResult("https://fourth.dev/post")],
+      });
+    extractMock.mockResolvedValue([
+      { url: "https://kept.dev/post", rawContent: "Full page evidence. ".repeat(40) },
+    ]);
+
+    const { report: out } = await runResearchPipeline(input);
+    const byUrl = Object.fromEntries(out.researchResources!.map((item) => [item.url, item]));
+
+    expect(byUrl["https://kept.dev/post"].faviconUrl).toBe("https://icons.dev/original.ico");
+    expect(byUrl["https://backfilled.dev/post"].faviconUrl).toBe("https://icons.dev/backfill.ico");
   });
 
   it("curates resource libraries to the effort ceiling without inventing padding", async () => {

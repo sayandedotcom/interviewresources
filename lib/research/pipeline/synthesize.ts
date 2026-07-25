@@ -12,6 +12,7 @@ import {
   type ResearchResource,
   type ResourceCandidate,
   reportSchema,
+  researchResourceSchema,
 } from "../types";
 import { describeInput, wants } from "./shared";
 
@@ -110,7 +111,13 @@ export async function synthesizeStage(
   // The cast keeps the full generated shape in the types: which keys the schema
   // actually carries is a runtime decision, and the reads below are already
   // guarded by the same flags that built the mask.
-  const genSchema = reportSchema.omit(omitMask) as unknown as z.ZodType<GeneratedReport>;
+  // Favicons are trusted search metadata, not model output. Excluding the field
+  // here prevents synthesis from inventing one; the deterministic pass below
+  // attaches only the URL carried by a gathered candidate.
+  const modelReportSchema = reportSchema.extend({
+    researchResources: z.array(researchResourceSchema.omit({ faviconUrl: true })).optional(),
+  });
+  const genSchema = modelReportSchema.omit(omitMask) as unknown as z.ZodType<GeneratedReport>;
 
   const rules = [
     company &&
@@ -288,6 +295,7 @@ ${unreadableCatalog || "(none)"}${excludeBlock}`,
     selected.push({
       title: candidate.title,
       url: candidate.url,
+      ...(candidate.faviconUrl ? { faviconUrl: candidate.faviconUrl } : {}),
       why:
         candidate.access === "link_only"
           ? candidateWhy(candidate)

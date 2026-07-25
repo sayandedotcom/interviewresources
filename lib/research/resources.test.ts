@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { canonicalizePublicUrl, mergeResearchResources, rankResourceCandidates } from "./resources";
+import {
+  canonicalizePublicUrl,
+  mergeResearchResources,
+  normalizeFaviconUrl,
+  rankResourceCandidates,
+} from "./resources";
 import { DEFAULT_SECTIONS, type ResearchInput, type ResourceCandidate } from "./types";
 
 const input: ResearchInput = {
@@ -40,6 +45,19 @@ describe("canonicalizePublicUrl", () => {
     expect(canonicalizePublicUrl("javascript:alert(1)")).toBeNull();
     expect(canonicalizePublicUrl("ftp://example.com/file")).toBeNull();
     expect(canonicalizePublicUrl("not a url")).toBeNull();
+  });
+});
+
+describe("normalizeFaviconUrl", () => {
+  it("accepts HTTPS URLs and ignores missing, malformed, and unsafe values", () => {
+    expect(normalizeFaviconUrl("https://icons.example.com/favicon.ico?size=16")).toBe(
+      "https://icons.example.com/favicon.ico?size=16"
+    );
+    expect(normalizeFaviconUrl(undefined)).toBeUndefined();
+    expect(normalizeFaviconUrl("not a url")).toBeUndefined();
+    expect(normalizeFaviconUrl("http://icons.example.com/favicon.ico")).toBeUndefined();
+    expect(normalizeFaviconUrl("javascript:alert(1)")).toBeUndefined();
+    expect(normalizeFaviconUrl({ url: "https://icons.example.com/favicon.ico" })).toBeUndefined();
   });
 });
 
@@ -142,5 +160,63 @@ describe("mergeResearchResources", () => {
       access: "search_preview",
       usedAsEvidence: true,
     });
+  });
+
+  it("preserves or backfills favicons independently of access precedence", () => {
+    const merged = mergeResearchResources(
+      [
+        {
+          title: "Readable",
+          url: "https://example.com/kept",
+          faviconUrl: "https://icons.example.com/original.ico",
+          why: "read",
+          kind: "company_engineering",
+          access: "full_text",
+          usedAsEvidence: true,
+        },
+        {
+          title: "Also readable",
+          url: "https://example.com/backfilled",
+          why: "read",
+          kind: "company_engineering",
+          access: "full_text",
+          usedAsEvidence: true,
+        },
+      ],
+      [
+        {
+          title: "Weaker duplicate",
+          url: "https://example.com/kept#details",
+          faviconUrl: "https://icons.example.com/replacement.ico",
+          why: "manual",
+          kind: "other",
+          access: "link_only",
+          usedAsEvidence: false,
+        },
+        {
+          title: "Weaker duplicate",
+          url: "https://example.com/backfilled?utm_source=new",
+          faviconUrl: "https://icons.example.com/backfill.ico",
+          why: "manual",
+          kind: "other",
+          access: "link_only",
+          usedAsEvidence: false,
+        },
+      ],
+      20
+    );
+
+    expect(merged).toEqual([
+      expect.objectContaining({
+        url: "https://example.com/kept",
+        access: "full_text",
+        faviconUrl: "https://icons.example.com/original.ico",
+      }),
+      expect.objectContaining({
+        url: "https://example.com/backfilled",
+        access: "full_text",
+        faviconUrl: "https://icons.example.com/backfill.ico",
+      }),
+    ]);
   });
 });

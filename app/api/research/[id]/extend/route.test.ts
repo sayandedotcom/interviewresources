@@ -318,6 +318,7 @@ describe("the extension run", () => {
           {
             title: "Readable result",
             url: "https://example.com/post#details",
+            faviconUrl: "https://icons.example.com/favicon.ico",
             why: "Useful preview",
             kind: "discussion",
             access: "search_preview",
@@ -335,6 +336,7 @@ describe("the extension run", () => {
       expect.objectContaining({
         title: "Readable result",
         url: "https://example.com/post",
+        faviconUrl: "https://icons.example.com/favicon.ico",
         access: "search_preview",
         usedAsEvidence: true,
       }),

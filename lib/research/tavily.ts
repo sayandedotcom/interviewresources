@@ -12,6 +12,7 @@ export interface TavilySearchResult {
   url: string;
   content: string;
   score: number;
+  favicon?: string;
 }
 
 export interface TavilySearchResponse {
@@ -31,6 +32,7 @@ export async function tavilySearch(
       query,
       search_depth: opts.depth,
       max_results: opts.maxResults ?? 5,
+      include_favicon: true,
     }),
   });
 

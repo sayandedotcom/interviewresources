@@ -39,6 +39,17 @@ export function canonicalizePublicUrl(raw: string): string | null {
   }
 }
 
+/** Preserves Tavily's image URL while rejecting mixed-content and unsafe schemes. */
+export function normalizeFaviconUrl(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function resourceKind(candidate: Pick<ResourceCandidate, "domain" | "url" | "categories">) {
   const domain = candidate.domain.toLowerCase();
   const path = new URL(candidate.url).pathname.toLowerCase();
@@ -158,10 +169,18 @@ export function mergeResearchResources(
       merged.set(url, {
         ...current,
         ...normalized,
+        faviconUrl: current.faviconUrl ?? normalized.faviconUrl,
         usedAsEvidence: current.usedAsEvidence || normalized.usedAsEvidence,
       });
-    } else if (normalized.usedAsEvidence && !current.usedAsEvidence) {
-      merged.set(url, { ...current, usedAsEvidence: true });
+    } else if (
+      (!current.faviconUrl && normalized.faviconUrl) ||
+      (normalized.usedAsEvidence && !current.usedAsEvidence)
+    ) {
+      merged.set(url, {
+        ...current,
+        faviconUrl: current.faviconUrl ?? normalized.faviconUrl,
+        usedAsEvidence: current.usedAsEvidence || normalized.usedAsEvidence,
+      });
     }
   }
 

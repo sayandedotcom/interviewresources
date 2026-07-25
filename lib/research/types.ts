@@ -209,6 +209,7 @@ export type ResourceAccess = (typeof RESOURCE_ACCESS_LEVELS)[number];
 export interface ResourceCandidate {
   url: string;
   title: string;
+  faviconUrl?: string;
   score: number;
   queries: string[];
   purposes: string[];
@@ -264,9 +265,15 @@ const publicHttpUrlSchema = z
     return protocol === "http:" || protocol === "https:";
   }, "Only HTTP and HTTPS resource URLs are allowed");
 
+const faviconUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => new URL(value).protocol === "https:", "Only HTTPS favicon URLs are allowed");
+
 export const researchResourceSchema = z.object({
   title: z.string(),
   url: publicHttpUrlSchema,
+  faviconUrl: faviconUrlSchema.optional(),
   why: z.string(),
   kind: z.enum(RESOURCE_KINDS),
   access: z.enum(RESOURCE_ACCESS_LEVELS),

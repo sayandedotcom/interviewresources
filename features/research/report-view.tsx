@@ -1149,9 +1149,9 @@ function ResourceLibrary({
                       <CardContent>
                         <div className="flex flex-wrap items-baseline justify-between gap-3">
                           <span className="flex min-w-0 items-baseline gap-2">
-                            <LinkIcon
-                              className="text-primary h-3.5 w-3.5 shrink-0"
-                              aria-hidden="true"
+                            <ResourceLinkIcon
+                              key={resource.faviconUrl}
+                              faviconUrl={resource.faviconUrl}
                             />
                             <a
                               href={resource.url}
@@ -1184,6 +1184,32 @@ function ResourceLibrary({
         );
       })}
     </div>
+  );
+}
+
+function ResourceLinkIcon({ faviconUrl }: { faviconUrl?: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!faviconUrl || failed) {
+    return <LinkIcon className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />;
+  }
+
+  return (
+    // Tavily can return icons from any source domain, so this intentionally
+    // bypasses Next's fixed remote-image allowlist and loads the cosmetic URL
+    // directly in the browser.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={faviconUrl}
+      alt=""
+      aria-hidden="true"
+      width={16}
+      height={16}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      className="h-4 w-4 shrink-0 object-contain"
+      onError={() => setFailed(true)}
+    />
   );
 }
 

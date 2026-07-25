@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -487,6 +487,51 @@ describe("research library", () => {
     expect(screen.queryByRole("heading", { name: "Research library" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Legacy experience" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Legacy reading" })).toBeInTheDocument();
+  });
+
+  it("renders a lazy decorative favicon and falls back to the link icon", () => {
+    const { container } = render(
+      <ReportView
+        {...base}
+        report={report({
+          researchResources: [
+            {
+              title: "With favicon",
+              url: "https://acme.dev/engineering",
+              faviconUrl: "https://icons.acme.dev/favicon.ico",
+              why: "Architecture context",
+              kind: "company_engineering",
+              access: "full_text",
+              usedAsEvidence: true,
+            },
+            {
+              title: "Without favicon",
+              url: "https://example.dev/post",
+              why: "Interview context",
+              kind: "other",
+              access: "search_preview",
+              usedAsEvidence: true,
+            },
+          ],
+        })}
+      />
+    );
+
+    const favicon = container.querySelector<HTMLImageElement>(
+      'img[src="https://icons.acme.dev/favicon.ico"]'
+    );
+    expect(favicon).toHaveAttribute("alt", "");
+    expect(favicon).toHaveAttribute("width", "16");
+    expect(favicon).toHaveAttribute("height", "16");
+    expect(favicon).toHaveAttribute("loading", "lazy");
+    expect(favicon).toHaveAttribute("referrerpolicy", "no-referrer");
+
+    const withoutIcon = screen.getByRole("link", { name: "Without favicon" }).parentElement!;
+    expect(withoutIcon.querySelector("svg.lucide-link")).toBeInTheDocument();
+
+    fireEvent.error(favicon!);
+    const failedIcon = screen.getByRole("link", { name: "With favicon" }).parentElement!;
+    expect(failedIcon.querySelector("svg.lucide-link")).toBeInTheDocument();
   });
 });
 

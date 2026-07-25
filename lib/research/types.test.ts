@@ -326,6 +326,35 @@ describe("reportSchema", () => {
     expect(reportSchema.parse(validReport).researchResources).toBeUndefined();
   });
 
+  it("accepts only HTTPS favicon metadata", () => {
+    const resource = {
+      title: "Engineering",
+      url: "https://example.com/engineering",
+      faviconUrl: "https://icons.example.com/favicon.ico",
+      why: "Architecture context",
+      kind: "company_engineering",
+      access: "full_text",
+      usedAsEvidence: true,
+    };
+
+    expect(
+      reportSchema.parse({ ...validReport, researchResources: [resource] }).researchResources?.[0]
+        .faviconUrl
+    ).toBe(resource.faviconUrl);
+    for (const faviconUrl of [
+      "http://icons.example.com/favicon.ico",
+      "javascript:alert(1)",
+      "not a url",
+    ]) {
+      expect(() =>
+        reportSchema.parse({
+          ...validReport,
+          researchResources: [{ ...resource, faviconUrl }],
+        })
+      ).toThrow();
+    }
+  });
+
   it("rejects non-HTTP resource links", () => {
     const resource = {
       title: "Unsafe",

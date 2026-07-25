@@ -1,5 +1,5 @@
 import type { BudgetTracker, EffortPreset } from "../budget";
-import { canonicalizePublicUrl } from "../resources";
+import { canonicalizePublicUrl, normalizeFaviconUrl } from "../resources";
 import { tavilyExtract, tavilyExtractCredits, tavilySearch, tavilySearchCredits } from "../tavily";
 import type {
   GatheredSource,
@@ -88,11 +88,13 @@ export async function gatherStage(
     for (const r of results) {
       const url = canonicalizePublicUrl(r.url);
       if (!url) continue;
+      const faviconUrl = normalizeFaviconUrl(r.favicon);
 
       const existingCandidate = candidates.get(url);
       if (existingCandidate) {
         existingCandidate.score = Math.max(existingCandidate.score, Number(r.score) || 0);
         if (!existingCandidate.title && r.title) existingCandidate.title = r.title;
+        if (!existingCandidate.faviconUrl && faviconUrl) existingCandidate.faviconUrl = faviconUrl;
         addOnce(existingCandidate.queries, query);
         addOnce(existingCandidate.purposes, purpose);
         addOnce(existingCandidate.categories, category);
@@ -100,6 +102,7 @@ export async function gatherStage(
         candidates.set(url, {
           url,
           title: r.title || new URL(url).hostname,
+          ...(faviconUrl ? { faviconUrl } : {}),
           score: Number(r.score) || 0,
           queries: [query],
           purposes: [purpose],

@@ -54,7 +54,7 @@ describe("tavilyExtractCredits", () => {
 });
 
 describe("tavilySearch", () => {
-  it("sends the query, depth, and bearer token", async () => {
+  it("sends the query, depth, favicon option, and bearer token", async () => {
     const fetchMock = mockFetch({ json: async () => ({ query: "q", results: [] }) });
 
     await tavilySearch("stripe interview process", { depth: "advanced", maxResults: 3 });
@@ -66,6 +66,7 @@ describe("tavilySearch", () => {
       query: "stripe interview process",
       search_depth: "advanced",
       max_results: 3,
+      include_favicon: true,
     });
   });
 
