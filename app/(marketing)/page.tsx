@@ -6,7 +6,6 @@ import { FounderNoteSection } from "@/components/founder-note-section";
 import { Header } from "@/components/header";
 import { HowAgentWorksSection } from "@/components/how-agent-works-section";
 import { HowItWorksSection } from "@/components/how-it-works-section";
-import { AboutSection } from "@/components/sections/about-section";
 import { CompaniesSection } from "@/components/sections/companies-section";
 import { FaqSection } from "@/components/sections/faq-section";
 import { HeroSection } from "@/components/sections/hero-section";
@@ -41,7 +40,7 @@ export default function Home() {
 
       <HeroSection />
 
-      <AboutSection />
+      {/* <AboutSection /> */}
 
       <ProofStripSection />
 

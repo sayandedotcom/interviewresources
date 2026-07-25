@@ -25,9 +25,6 @@ export function HeroSection() {
   return (
     <section className="w-full">
       <div className="mx-auto w-full max-w-4xl px-6 pt-20 pb-16 text-center md:px-8 md:pt-28">
-        <p className="font-display mb-4 text-sm font-semibold tracking-tight text-white">
-          {siteConfig.name}
-        </p>
         <div className="mb-6 flex items-center justify-center gap-3">
           <p className="text-[11px] tracking-[0.22em] text-white/70 uppercase">{landing.eyebrow}</p>
           <div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 backdrop-blur-sm">
@@ -38,10 +35,6 @@ export function HeroSection() {
             <span className="text-[10px] text-white/90">{siteConfig.userCount} users</span>
           </div>
         </div>
-
-        <h1 className="font-display mx-auto max-w-3xl text-5xl leading-[1.05] font-semibold tracking-tight text-white md:text-7xl">
-          {siteConfig.name}
-        </h1>
 
         <p className="font-display mx-auto mt-4 max-w-3xl text-4xl leading-[1.05] font-semibold tracking-tight text-white/80 md:text-6xl">
           {emphasized(landing.heroTitle.line1)}
