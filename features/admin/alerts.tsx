@@ -5,11 +5,14 @@ import type { NegativeBalance, StuckRun } from "@/lib/admin/queries";
 interface AlertsProps {
   stuckRuns: StuckRun[];
   negativeBalances: NegativeBalance[];
+  economicsAlerts: string[];
 }
 
 /** Silent when healthy — only renders when there's something to act on. */
-export function Alerts({ stuckRuns, negativeBalances }: AlertsProps) {
-  if (stuckRuns.length === 0 && negativeBalances.length === 0) return null;
+export function Alerts({ stuckRuns, negativeBalances, economicsAlerts }: AlertsProps) {
+  if (stuckRuns.length === 0 && negativeBalances.length === 0 && economicsAlerts.length === 0) {
+    return null;
+  }
 
   return (
     <div className="border-status-warning/40 bg-status-warning/10 flex flex-col gap-3 rounded-xl border p-4">
@@ -43,6 +46,16 @@ export function Alerts({ stuckRuns, negativeBalances }: AlertsProps) {
               <li key={u.userId}>
                 {u.email} — {u.balance} credits
               </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {economicsAlerts.length > 0 && (
+        <div className="text-sm">
+          <p className="text-muted-foreground">Economics controls:</p>
+          <ul className="mt-1 list-inside list-disc">
+            {economicsAlerts.map((alert) => (
+              <li key={alert}>{alert}</li>
             ))}
           </ul>
         </div>

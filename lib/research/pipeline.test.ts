@@ -172,8 +172,8 @@ describe("stage orchestration", () => {
     await runResearchPipeline(input);
 
     const byStage = Object.fromEntries(genMock.mock.calls.map((c) => [c[0].stage, c[0].model]));
-    expect(byStage.plan).toBe("gemini-3.1-flash-lite-preview");
-    expect(byStage.compress).toBe("gemini-3.1-flash-lite-preview");
+    expect(byStage.plan).toBe("gemini-3.1-flash-lite");
+    expect(byStage.compress).toBe("gemini-3.1-flash-lite");
     expect(byStage.synthesize).toBe("gemini-3.1-pro-preview");
   });
 
@@ -476,19 +476,16 @@ describe("gather stage", () => {
     expect(extractMock).not.toHaveBeenCalled();
   });
 
-  it("degrades advanced searches to basic once 85% of the budget is spent", async () => {
-    // Cap $1. Plan burns $0.86 → shouldDegrade() is true before the first search.
+  it("preserves the synthesis reserve once plan spend reaches 85% of the budget", async () => {
+    // Cap $1. Plan burns $0.86, leaving less than the protected synthesis budget.
     stubStages({ tokensByStage: { plan: [3_440_000, 0] } }); // 3.44M * $0.25/M = $0.86
 
     await runResearchPipeline(input, undefined, 1.0);
 
-    expect(searchMock).toHaveBeenCalledTimes(3);
-    for (const call of searchMock.mock.calls) {
-      expect(call[1]!.depth).toBe("basic");
-    }
+    expect(searchMock).not.toHaveBeenCalled();
   });
 
-  it("stops mid-plan when a search chunk pushes the run over its cap", async () => {
+  it("does not dispatch a concurrent search chunk without enough reserved budget", async () => {
     stubStages({
       plan: plan({
         queries: Array.from({ length: 8 }, (_, i) => ({
@@ -503,9 +500,7 @@ describe("gather stage", () => {
 
     await runResearchPipeline(input, undefined, 1.0);
 
-    // Searches run in chunks of four. The first chunk was allowed (shouldStop()
-    // was false at $0.99) and lands at $1.022, so the second chunk is blocked.
-    expect(searchMock).toHaveBeenCalledTimes(4);
+    expect(searchMock).not.toHaveBeenCalled();
   });
 });
 
@@ -1104,7 +1099,7 @@ describe("sparse-evidence proxy wave", () => {
     await runResearchPipeline(input);
 
     const proxy = genMock.mock.calls.find((c) => c[0].stage === "plan_proxy")![0];
-    expect(proxy.model).toBe("gemini-3.1-flash-lite-preview");
+    expect(proxy.model).toBe("gemini-3.1-flash-lite");
   });
 
   it("does not broaden when direct evidence is plentiful", async () => {

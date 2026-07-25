@@ -215,7 +215,7 @@ retrieval.
  flash-lite   Tavily      Tavily (broad)     flash-lite       3.1 Pro        BudgetTracker
 ```
 
-**1 — Plan** (`gemini-3.1-flash-lite-preview`). Normalises inputs, resolves the
+**1 — Plan** (`gemini-3.1-flash-lite`). Normalises inputs, resolves the
 domain, emits a structured search plan: queries tailored to the selected types,
 always including the loop-format discovery query. Query count comes from the
 effort preset.
@@ -230,7 +230,7 @@ a small or private company with no Glassdoor presence — a second, deliberately
 broader wave fires against adjacent sources. Proxy pages are treated as
 **context, not primary evidence**, and get a much smaller extract budget.
 
-**3 — Compress** (`gemini-3.1-flash-lite-preview`). Each raw source becomes dense
+**3 — Compress** (`gemini-3.1-flash-lite`). Each raw source becomes dense
 notes (~300 tokens) with citations preserved. **This is the single biggest cost
 lever** — the synthesiser never sees a raw page.
 
@@ -305,8 +305,8 @@ thin-evidence company, and vendor price drift.
    "about two reports" is a truthful claim, not a rounded one.
 2. **Effort becomes a real choice.** Users who want a quick scan pay for a quick
    scan.
-3. **Costs can't silently invert margin.** The charge is derived from spend, so
-   an expensive company can't be sold at a loss.
+3. **Costs are bounded before calls begin.** Provider spend and user credits are
+   reserved before concurrent work, with synthesis capacity protected.
 
 The trade-off is that "about N reports" is approximate, which the pricing copy
 states plainly.
@@ -319,11 +319,11 @@ states plainly.
 
 Presentational config in `config/pricing.ts`; grants in `lib/packs.ts`.
 
-| Pack        | Price | Credits | Rate              | ≈ Reports |
-| ----------- | ----- | ------- | ----------------- | --------- |
-| **Starter** | $1    | 100     | 100/$             | ~2        |
-| **Bundle**  | $5    | 550     | 110/$ (10% bonus) | ~11       |
-| **Max**     | $10   | 1200    | 120/$ (20% bonus) | ~26       |
+| Pack        | Price  | Credits | ≈ Reports |
+| ----------- | ------ | ------- | --------- |
+| **Starter** | $1.49  | 100     | ~2        |
+| **Bundle**  | $6.49  | 550     | ~11       |
+| **Max**     | $12.49 | 1200    | ~26       |
 
 All packs unlock the same product — they differ only in credit volume. No
 subscription.
@@ -333,7 +333,8 @@ subscription.
 Two nullable columns on `users` plus the ledger — no separate table
 (`lib/referrals.ts`).
 
-- Referrer earns **100 credits** when a referred user first purchases
+- Referrer earns **100 credits** when a referred user’s first purchase is
+  Bundle or Max; Starter-first users remain ineligible on later purchases
 - Referred user earns **50 credits** on that same purchase
 - Capped at **10 rewarded referrals** per account, bounding abuse at $10 of
   granted value even if fully farmed
@@ -390,12 +391,12 @@ _Competitor pricing is deliberately omitted — it hasn't been verified._
 
 ### AI layer
 
-| Concern        | Choice                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------ |
-| LLM            | Google Gemini — `gemini-3.1-pro-preview` (synthesis), `gemini-3.1-flash-lite-preview` (plan, compress) |
-| Search         | Tavily Search + Extract, called directly over REST (not MCP)                                           |
-| Prompt caching | Gemini explicit context caching for static prompt + rubrics                                            |
-| Cost guard     | `BudgetTracker` reading real usage per call + Tavily credit counts                                     |
+| Concern        | Choice                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| LLM            | Google Gemini — `gemini-3.1-pro-preview` (synthesis), `gemini-3.1-flash-lite` (plan, compress) |
+| Search         | Tavily Search + Extract, called directly over REST (not MCP)                                   |
+| Prompt caching | Gemini explicit context caching for static prompt + rubrics                                    |
+| Cost guard     | `BudgetTracker` reading real usage per call + Tavily credit counts                             |
 
 **On Tavily REST vs. MCP:** the pipeline is a fixed-shape server-side workflow.
 MCP's dynamic tool discovery buys nothing here, and direct calls make credit
@@ -428,7 +429,7 @@ credits_ledger(id, user_id, delta, reason,
 
 researches(id, user_id, company_domain, company_name,
            interviewers JSONB[{name, url}], interview_type,
-           role_context, status, cost_cents_llm, cost_cents_search,
+           role_context, status, cost_micros_llm, cost_micros_search,
            credits_charged, created_at)
     -- interview_type: comma-joined categories, or "full_loop"
     -- credits_charged: null until settled; only successful runs are charged

@@ -18,13 +18,16 @@ import {
 } from "@/components/ui/sheet";
 
 import { signOut, useSession } from "@/lib/auth-client";
+import { CREDIT_PACKS_BY_SLUG } from "@/lib/economics";
 
 const NAV_LINKS = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#how-agent-works", label: "Under the hood" },
   { href: "/#why-us", label: "Why us" },
+  { href: "/#trust", label: "Trust" },
   { href: "/#pricing", label: "Pricing" },
 ];
+const STARTER_PRICE = `$${(CREDIT_PACKS_BY_SLUG.starter.priceUsdMinor / 100).toFixed(2)}`;
 
 function Brand() {
   return (
@@ -46,12 +49,14 @@ function SignedOutCta({ compact = false }: { compact?: boolean }) {
     <Link
       href="/signin"
       aria-label={
-        compact ? "Start for $1 — sign in to get started" : "Try it for $1 — sign in to get started"
+        compact
+          ? `Start for ${STARTER_PRICE} — sign in to get started`
+          : `Try it for ${STARTER_PRICE} — sign in to get started`
       }
       className={`text-brand-700 font-display inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-glossy-white)] text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-all hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-white-active)] ${
         compact ? "px-4" : "px-5"
       }`}>
-      {compact ? "Start preparing" : "Try it for $1"}
+      {compact ? "Start preparing" : `Try it for ${STARTER_PRICE}`}
     </Link>
   );
 }

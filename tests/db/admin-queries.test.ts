@@ -1,6 +1,12 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { creditsLedger, payments, researches } from "@/lib/db/schema";
+import {
+  creditsLedger,
+  paymentDisputes,
+  paymentRefunds,
+  payments,
+  researches,
+} from "@/lib/db/schema";
 
 import { type TestDb, createTestDb, resetDb, seedUser } from "./harness";
 
@@ -15,6 +21,10 @@ vi.mock("@/lib/db/index", async () => ({ db: await dbPromise }));
 
 const {
   getUnitEconomics,
+  getContributionEconomics,
+  getEconomicsAlerts,
+  getOutstandingCreditLiability,
+  getPackMargins,
   getUnpaidCost,
   getRunsByDay,
   getStuckRuns,
@@ -36,22 +46,35 @@ afterEach(async () => {
 });
 
 describe("getUnitEconomics", () => {
-  it("splits revenue (billed) from cost (metered) for a done run", async () => {
+  it("splits actual receipts from metered API COGS for a done run", async () => {
     const userId = await seedUser(db);
+    await db.insert(payments).values({
+      userId,
+      providerPaymentId: "pay_1",
+      amountMinor: 149,
+      currency: "USD",
+      pack: "starter",
+      catalogPriceUsdMinor: 149,
+      creditsGranted: 100,
+      estimatedDodoFeeMicros: 459_600,
+      economicsVersion: "test",
+    });
     await db.insert(researches).values({
       userId,
       companyName: "Stripe",
       interviewType: "dsa",
       status: "done",
-      costCentsLlm: 20,
-      costCentsSearch: 4,
+      costMicrosLlm: 200_000,
+      costMicrosSearch: 40_000,
       creditsCharged: 46,
     });
 
     const [day] = await getUnitEconomics(30);
 
-    expect(day.revenueUsd).toBeCloseTo(0.46, 5);
-    expect(day.costUsd).toBeCloseTo(0.24, 5);
+    expect(day.grossSalesUsd).toBeCloseTo(1.49, 5);
+    expect(day.netReceiptsUsd).toBeCloseTo(1.0304, 5);
+    expect(day.apiCogsUsd).toBeCloseTo(0.24, 5);
+    expect(day.contributionUsd).toBeCloseTo(0.7904, 5);
   });
 
   it("still counts a failed run's cost even though it was never billed", async () => {
@@ -61,15 +84,17 @@ describe("getUnitEconomics", () => {
       companyName: "Stripe",
       interviewType: "dsa",
       status: "failed",
-      costCentsLlm: 20,
-      costCentsSearch: 4,
+      costMicrosLlm: 200_000,
+      costMicrosSearch: 40_000,
       creditsCharged: null,
     });
 
     const [day] = await getUnitEconomics(30);
 
-    expect(day.revenueUsd).toBe(0);
-    expect(day.costUsd).toBeCloseTo(0.24, 5);
+    expect(day.grossSalesUsd).toBe(0);
+    expect(day.netReceiptsUsd).toBe(0);
+    expect(day.apiCogsUsd).toBeCloseTo(0.24, 5);
+    expect(day.contributionUsd).toBeCloseTo(-0.24, 5);
   });
 
   it("excludes runs outside the requested window", async () => {
@@ -80,7 +105,7 @@ describe("getUnitEconomics", () => {
       interviewType: "dsa",
       status: "done",
       createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
-      costCentsLlm: 100,
+      costMicrosLlm: 1_000_000,
       creditsCharged: 100,
     });
 
@@ -97,8 +122,8 @@ describe("getUnpaidCost", () => {
         companyName: "Stripe",
         interviewType: "dsa",
         status: "failed",
-        costCentsLlm: 20,
-        costCentsSearch: 4,
+        costMicrosLlm: 200_000,
+        costMicrosSearch: 40_000,
         creditsCharged: null,
       },
       {
@@ -106,8 +131,8 @@ describe("getUnpaidCost", () => {
         companyName: "Stripe",
         interviewType: "dsa",
         status: "done",
-        costCentsLlm: 20,
-        costCentsSearch: 4,
+        costMicrosLlm: 200_000,
+        costMicrosSearch: 40_000,
         creditsCharged: 46,
       },
     ]);
@@ -120,6 +145,152 @@ describe("getUnpaidCost", () => {
 
   it("returns zero for a window with no unpaid runs", async () => {
     await expect(getUnpaidCost(30)).resolves.toEqual({ runs: 0, costUsd: 0 });
+  });
+});
+
+describe("getContributionEconomics", () => {
+  it("includes refunds, refund fees, paid COGS, and unpaid failed-run COGS", async () => {
+    const userId = await seedUser(db);
+    const [payment] = await db
+      .insert(payments)
+      .values({
+        userId,
+        providerPaymentId: "pay_bundle",
+        amountMinor: 649,
+        currency: "USD",
+        pack: "bundle",
+        catalogPriceUsdMinor: 649,
+        creditsGranted: 550,
+        estimatedDodoFeeMicros: 659_600,
+        economicsVersion: "test",
+        refundedAmountMinor: 100,
+      })
+      .returning({ id: payments.id });
+    await db.insert(paymentRefunds).values({
+      paymentId: payment.id,
+      providerRefundId: "refund_1",
+      amountMinor: 100,
+      currency: "USD",
+      creditsReversed: 85,
+      estimatedFeeMicros: 1_000_000,
+      economicsVersion: "test",
+    });
+    await db.insert(researches).values([
+      {
+        userId,
+        companyName: "Paid",
+        interviewType: "dsa",
+        status: "done",
+        costMicrosLlm: 317_000,
+        creditsCharged: 42,
+      },
+      {
+        userId,
+        companyName: "Failed",
+        interviewType: "dsa",
+        status: "failed",
+        costMicrosLlm: 83_000,
+        creditsCharged: null,
+      },
+    ]);
+
+    const summary = await getContributionEconomics(30);
+
+    expect(summary).toMatchObject({
+      grossSalesUsd: 6.49,
+      estimatedDodoTransactionFeesUsd: 0.6596,
+      refundAmountsUsd: 1,
+      refundFeesUsd: 1,
+      netReceiptsUsd: 3.8304,
+      apiCogsUsd: 0.317,
+      unpaidFailedRunCogsUsd: 0.083,
+      contributionUsd: 3.4304,
+    });
+  });
+
+  it("recognizes an open or lost dispute as receipts at risk plus the dispute fee", async () => {
+    const userId = await seedUser(db);
+    const [payment] = await db
+      .insert(payments)
+      .values({
+        userId,
+        providerPaymentId: "pay_max",
+        amountMinor: 1_249,
+        currency: "USD",
+        pack: "max",
+        catalogPriceUsdMinor: 1_249,
+        creditsGranted: 1_200,
+        estimatedDodoFeeMicros: 899_600,
+        economicsVersion: "test",
+      })
+      .returning({ id: payments.id });
+    await db.insert(paymentDisputes).values({
+      paymentId: payment.id,
+      providerDisputeId: "dispute_1",
+      amountMinor: 1_249,
+      currency: "USD",
+      status: "dispute_lost",
+      estimatedFeeMicros: 30_000_000,
+      economicsVersion: "test",
+    });
+
+    const summary = await getContributionEconomics(30);
+
+    expect(summary.disputeAmountsUsd).toBe(12.49);
+    expect(summary.disputeFeesUsd).toBe(30);
+    expect(summary.netReceiptsUsd).toBeCloseTo(-30.8996, 5);
+  });
+});
+
+describe("liability and margin controls", () => {
+  it("values only positive outstanding balances at replacement cost", async () => {
+    const healthy = await seedUser(db);
+    const negative = await seedUser(db);
+    await db.insert(creditsLedger).values([
+      { userId: healthy, delta: 550, reason: "purchase" },
+      { userId: negative, delta: -10, reason: "refund" },
+    ]);
+
+    await expect(getOutstandingCreditLiability()).resolves.toEqual({
+      credits: 550,
+      apiLiabilityUsd: expect.closeTo(4.230769, 6),
+    });
+  });
+
+  it("keeps all base and eligible referred worst-case margins above their floors", () => {
+    const margins = getPackMargins();
+
+    expect(margins.every((pack) => pack.baseContributionUsd > 0 && pack.baseMargin >= 0.2)).toBe(
+      true
+    );
+    expect(
+      margins
+        .filter((pack) => pack.referredMargin !== null)
+        .every((pack) => pack.referredContributionUsd! > 0 && pack.referredMargin! >= 0.05)
+    ).toBe(true);
+  });
+
+  it("alerts on weak blended margin, excessive failed-run spend, and stale rates", () => {
+    const alerts = getEconomicsAlerts(
+      {
+        grossSalesUsd: 10,
+        estimatedDodoTransactionFeesUsd: 1,
+        refundAmountsUsd: 0,
+        refundFeesUsd: 0,
+        disputeAmountsUsd: 0,
+        disputeFeesUsd: 0,
+        netReceiptsUsd: 9,
+        apiCogsUsd: 8,
+        unpaidFailedRunCogsUsd: 1,
+        contributionUsd: 0,
+        contributionMargin: 0,
+      },
+      new Date("2026-10-01T00:00:00Z")
+    );
+
+    expect(alerts).toContain("Blended contribution margin is below 10%.");
+    expect(alerts).toContain("Unpaid failed-run spend exceeds 10% of paid-run API COGS.");
+    expect(alerts.some((alert) => alert.includes("pricing verification is stale"))).toBe(true);
   });
 });
 
@@ -210,7 +381,10 @@ describe("getPurchases", () => {
       amountMinor: 500,
       currency: "USD",
       pack: "bundle",
+      catalogPriceUsdMinor: 649,
       creditsGranted: 550,
+      estimatedDodoFeeMicros: 659_600,
+      economicsVersion: "test",
     });
 
     const [day] = await getPurchases(30);
@@ -256,12 +430,12 @@ describe("COGS percentiles", () => {
   it("calculates p50 and p90 from completed report cost", async () => {
     const userId = await seedUser(db);
     await db.insert(researches).values(
-      [10, 20, 30, 40, 100].map((costCentsLlm, index) => ({
+      [100_000, 200_000, 300_000, 400_000, 1_000_000].map((costMicrosLlm, index) => ({
         userId,
         companyName: `C${index}`,
         interviewType: "dsa",
         status: "done" as const,
-        costCentsLlm,
+        costMicrosLlm,
       }))
     );
 

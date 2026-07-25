@@ -20,8 +20,8 @@ import {
   TAVILY_CREDIT_COST_USD,
 } from "./budget";
 
-const PLAN_MODEL: GeminiModel = "gemini-3.1-flash-lite-preview";
-const COMPRESS_MODEL: GeminiModel = "gemini-3.1-flash-lite-preview";
+const PLAN_MODEL: GeminiModel = "gemini-3.1-flash-lite";
+const COMPRESS_MODEL: GeminiModel = "gemini-3.1-flash-lite";
 const SYNTH_MODEL: GeminiModel = "gemini-3.1-pro-preview";
 
 /** Typical token counts per call, calibrated so a default medium run lands near

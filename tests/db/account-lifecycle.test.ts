@@ -58,7 +58,10 @@ describe("account deletion foreign keys", () => {
         amountMinor: 100,
         currency: "USD",
         pack: "starter",
+        catalogPriceUsdMinor: 149,
         creditsGranted: 100,
+        estimatedDodoFeeMicros: 459_600,
+        economicsVersion: "test",
       })
       .returning({ id: payments.id });
     await db.insert(paymentRefunds).values({
@@ -67,6 +70,8 @@ describe("account deletion foreign keys", () => {
       amountMinor: 100,
       currency: "USD",
       creditsReversed: 100,
+      estimatedFeeMicros: 1_000_000,
+      economicsVersion: "test",
     });
     await db.insert(productEvents).values({ userId: owner, name: "sign_in" });
 

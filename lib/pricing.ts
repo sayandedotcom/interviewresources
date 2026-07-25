@@ -6,13 +6,14 @@
  * into the browser bundle. lib/credits.ts re-exports all of this, so server
  * code can keep importing from the one place.
  */
+import { ECONOMICS } from "./economics";
 import { EFFORT_LEVELS, EFFORT_PRESETS, type Effort, MAX_EFFORT_CAP_USD } from "./research/budget";
 
-/** 1 credit = $0.01. Packs: Starter $1 → 100, Bundle $5 → 550, Max $10 → 1200. */
-export const USD_PER_CREDIT = 0.01;
+/** Face value used to turn metered provider cost into customer credits. */
+export const USD_PER_CREDIT = ECONOMICS.credits.usdPerCredit;
 
 /** Users pay the run's real metered cost times this. Covers payment fees + retries. */
-export const CREDIT_MARKUP = 1.3;
+export const CREDIT_MARKUP = ECONOMICS.credits.markup;
 
 /**
  * The most a single run can ever cost: the priciest effort's cap, since the

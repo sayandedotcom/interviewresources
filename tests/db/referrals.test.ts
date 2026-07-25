@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { creditsLedger, users } from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
+import { CREDIT_PACKS_BY_SLUG, type PackSlug } from "@/lib/economics";
 
 import { type TestDb, createTestDb, resetDb, seedUser } from "./harness";
 
@@ -23,7 +24,7 @@ const {
   processReferralReward,
   resolveReferrerByCode,
 } = await import("@/lib/referrals");
-const { getBalance } = await import("@/lib/credits");
+const { getBalance, settlePayment } = await import("@/lib/credits");
 
 let db: TestDb;
 
@@ -35,11 +36,22 @@ afterEach(async () => {
   await resetDb(db);
 });
 
-/** Simulates the webhook's purchase grant: a positive ledger row with a payment ref. */
-async function recordPurchase(userId: string, paymentRef: string, credits = 100): Promise<void> {
-  await db
-    .insert(creditsLedger)
-    .values({ userId, delta: credits, reason: "purchase:starter", paymentRef });
+/** Simulates the webhook's atomic payment snapshot and credit grant. */
+async function recordPurchase(
+  userId: string,
+  paymentRef: string,
+  pack: PackSlug = "bundle"
+): Promise<void> {
+  const item = CREDIT_PACKS_BY_SLUG[pack];
+  await settlePayment({
+    userId,
+    credits: item.credits,
+    reason: `purchase:${pack}`,
+    paymentRef,
+    amountMinor: item.priceUsdMinor,
+    currency: "USD",
+    pack,
+  });
 }
 
 describe("getOrCreateReferralCode", () => {
@@ -91,8 +103,7 @@ describe("processReferralReward", () => {
     await processReferralReward(referred);
 
     await expect(getBalance(referrer)).resolves.toBe(REFERRER_REWARD_CREDITS);
-    // Referred user: their 100-credit purchase plus the 50-credit bonus.
-    await expect(getBalance(referred)).resolves.toBe(100 + REFEREE_BONUS_CREDITS);
+    await expect(getBalance(referred)).resolves.toBe(550 + REFEREE_BONUS_CREDITS);
 
     const stats = await getReferralStats(referrer);
     expect(stats).toEqual({ convertedCount: 1, creditsEarned: REFERRER_REWARD_CREDITS });
@@ -104,7 +115,7 @@ describe("processReferralReward", () => {
     await recordPurchase(buyer, "pay_1");
     await processReferralReward(buyer);
 
-    await expect(getBalance(buyer)).resolves.toBe(100);
+    await expect(getBalance(buyer)).resolves.toBe(550);
   });
 
   it("pays out only on the first purchase, not later ones", async () => {
@@ -132,7 +143,7 @@ describe("processReferralReward", () => {
     await processReferralReward(referred);
 
     await expect(getBalance(referrer)).resolves.toBe(REFERRER_REWARD_CREDITS);
-    await expect(getBalance(referred)).resolves.toBe(100 + REFEREE_BONUS_CREDITS);
+    await expect(getBalance(referred)).resolves.toBe(550 + REFEREE_BONUS_CREDITS);
   });
 
   it("stops rewarding the referrer once the cap is reached", async () => {
@@ -166,7 +177,42 @@ describe("processReferralReward", () => {
     await processReferralReward(referred);
 
     await expect(getBalance(referrer)).resolves.toBe(REFERRAL_REWARD_CAP * REFERRER_REWARD_CREDITS);
-    await expect(getBalance(referred)).resolves.toBe(100 + REFEREE_BONUS_CREDITS);
+    await expect(getBalance(referred)).resolves.toBe(550 + REFEREE_BONUS_CREDITS);
+  });
+
+  it("never rewards a Starter first purchase", async () => {
+    const referrer = await seedUser(db);
+    const referred = await seedUser(db, { referredBy: referrer });
+
+    await recordPurchase(referred, "pay_starter", "starter");
+    await processReferralReward(referred);
+
+    await expect(getBalance(referrer)).resolves.toBe(0);
+    await expect(getBalance(referred)).resolves.toBe(100);
+  });
+
+  it("keeps a Starter-first buyer ineligible after a later eligible purchase", async () => {
+    const referrer = await seedUser(db);
+    const referred = await seedUser(db, { referredBy: referrer });
+
+    await recordPurchase(referred, "pay_starter", "starter");
+    await processReferralReward(referred);
+    await recordPurchase(referred, "pay_bundle", "bundle");
+    await processReferralReward(referred);
+
+    await expect(getBalance(referrer)).resolves.toBe(0);
+    await expect(getBalance(referred)).resolves.toBe(650);
+  });
+
+  it("rewards a Max first purchase", async () => {
+    const referrer = await seedUser(db);
+    const referred = await seedUser(db, { referredBy: referrer });
+
+    await recordPurchase(referred, "pay_max", "max");
+    await processReferralReward(referred);
+
+    await expect(getBalance(referrer)).resolves.toBe(REFERRER_REWARD_CREDITS);
+    await expect(getBalance(referred)).resolves.toBe(1_200 + REFEREE_BONUS_CREDITS);
   });
 });
 

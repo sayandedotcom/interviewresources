@@ -107,7 +107,13 @@ async function deleteRuns(tx: Tx, ids: string[]): Promise<void> {
 }
 
 export type StartResearchResult =
-  | { status: "started"; researchId: string; balance: number }
+  | {
+      status: "started";
+      researchId: string;
+      balance: number;
+      reservationRef: string;
+      reservedCredits: number;
+    }
   | { status: "insufficient_credits"; balance: number }
   | { status: "run_in_flight" };
 
@@ -122,6 +128,7 @@ export type StartResearchResult =
 export async function startResearchRun(opts: {
   userId: string;
   minimumCredits: number;
+  maximumCredits: number;
   companyName: string;
   interviewers: { name: string; url?: string }[];
   interviewType: string;
@@ -171,7 +178,22 @@ export async function startResearchRun(opts: {
       })
       .returning({ id: researches.id });
 
-    return { status: "started" as const, researchId: research.id, balance };
+    const reservedCredits = Math.min(balance, opts.maximumCredits);
+    await tx.insert(creditsLedger).values({
+      userId: opts.userId,
+      delta: -reservedCredits,
+      reason: "research:reservation",
+      paymentRef: `reservation:${research.id}`,
+      researchId: research.id,
+    });
+
+    return {
+      status: "started" as const,
+      researchId: research.id,
+      balance,
+      reservationRef: research.id,
+      reservedCredits,
+    };
   });
 }
 

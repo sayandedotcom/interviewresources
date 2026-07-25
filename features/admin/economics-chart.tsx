@@ -18,9 +18,7 @@ import { ChartTooltip } from "./chart-tooltip";
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
 /**
- * Revenue (billed) vs cost (metered) per day — two categorical series, fixed
- * hue order (chart-1 blue = revenue, chart-2 aqua = cost), one axis. Never
- * dual-axis: both series are already the same unit (USD).
+ * Cash economics and provider cost per day. Every series is USD on one axis.
  */
 export function EconomicsChart({ data }: { data: DayEconomics[] }) {
   return (
@@ -47,21 +45,30 @@ export function EconomicsChart({ data }: { data: DayEconomics[] }) {
           iconSize={8}
         />
         <Line
-          name="Revenue"
+          name="Net receipts"
           type="monotone"
-          dataKey="revenueUsd"
+          dataKey="netReceiptsUsd"
           stroke="var(--chart-1)"
           strokeWidth={2}
           dot={{ r: 2, fill: "var(--chart-1)" }}
           activeDot={{ r: 4, stroke: "var(--card)", strokeWidth: 2 }}
         />
         <Line
-          name="Cost"
+          name="API COGS"
           type="monotone"
-          dataKey="costUsd"
+          dataKey="apiCogsUsd"
           stroke="var(--chart-2)"
           strokeWidth={2}
           dot={{ r: 2, fill: "var(--chart-2)" }}
+          activeDot={{ r: 4, stroke: "var(--card)", strokeWidth: 2 }}
+        />
+        <Line
+          name="Contribution"
+          type="monotone"
+          dataKey="contributionUsd"
+          stroke="var(--chart-3)"
+          strokeWidth={2}
+          dot={{ r: 2, fill: "var(--chart-3)" }}
           activeDot={{ r: 4, stroke: "var(--card)", strokeWidth: 2 }}
         />
       </LineChart>

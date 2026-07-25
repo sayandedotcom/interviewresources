@@ -74,7 +74,7 @@ export function tavilySearchCredits(depth: "basic" | "advanced"): number {
 }
 
 export function tavilyExtractCredits(urlCount: number): number {
-  return Math.max(1, Math.ceil(urlCount / 5));
+  return Math.ceil(Math.max(0, urlCount) / 5);
 }
 
 function requireApiKey(): string {

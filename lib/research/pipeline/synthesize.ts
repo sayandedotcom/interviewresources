@@ -204,6 +204,7 @@ export async function synthesizeStage(
     stage: "synthesize",
     schema: genSchema,
     budget,
+    maxOutputTokens: preset.synthesisMaxOutputTokens,
     system: `You are an expert interview coach. Using ONLY the evidence notes provided,
 produce a report predicting likely interview questions for the given company and rounds.
 Standard rounds follow the PRD §5.3 taxonomy: dsa, system_design, domain_quiz, take_home,

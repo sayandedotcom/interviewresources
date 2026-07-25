@@ -87,7 +87,7 @@ breakdown per stage with the total checked against the $1.00 cap:
 { ... }
 
 ===== COST BREAKDOWN =====
-  [plan] llm — gemini-3.1-flash-lite-preview (3021in/612out) — $0.0017
+  [plan] llm — gemini-3.1-flash-lite (3021in/612out) — $0.0017
   ...
   TOTAL: $0.3421 (cap: $1.00)
 ```

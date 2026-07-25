@@ -3,20 +3,21 @@ import { randomInt } from "node:crypto";
 
 import { grantCredits } from "./credits";
 import { db } from "./db/index";
-import { creditsLedger, users } from "./db/schema";
+import { creditsLedger, payments, users } from "./db/schema";
+import { ECONOMICS, type PackSlug } from "./economics";
 
 /** Credits the referrer earns when someone they referred makes a first purchase. */
-export const REFERRER_REWARD_CREDITS = 100;
+export const REFERRER_REWARD_CREDITS = ECONOMICS.referrals.referrerRewardCredits;
 
 /** Bonus the referred user earns on that same first purchase. */
-export const REFEREE_BONUS_CREDITS = 50;
+export const REFEREE_BONUS_CREDITS = ECONOMICS.referrals.refereeBonusCredits;
 
 /**
  * The most referrals one account can be paid for. Caps the blast radius of a
  * user farming rewards with throwaway Google accounts and $1 starter packs:
  * even fully abused, the ceiling is 10 × 100 = 1,000 credits ($10 of value).
  */
-export const REFERRAL_REWARD_CAP = 10;
+export const REFERRAL_REWARD_CAP = ECONOMICS.referrals.rewardCap;
 
 /**
  * base32-ish, minus the characters people misread (0/o, 1/l/i). An 8-char code
@@ -126,14 +127,22 @@ export async function processReferralReward(buyerId: string): Promise<void> {
   const referrerId = buyer?.referredBy;
   if (!referrerId) return;
 
-  // First-purchase gate: exactly one purchase row means the one just inserted by
-  // the webhook is the buyer's first, so this payout fires once per referral.
-  const [purchases] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(creditsLedger)
-    .where(and(eq(creditsLedger.userId, buyerId), sql`${creditsLedger.reason} like 'purchase:%'`));
-
-  if ((purchases?.count ?? 0) !== 1) return;
+  // Query payments, not ledger reason strings: a Starter first purchase remains
+  // the first forever, so a later Bundle or Max can never unlock rewards.
+  const purchases = await db
+    .select({ pack: payments.pack })
+    .from(payments)
+    .where(eq(payments.userId, buyerId))
+    .orderBy(payments.createdAt, payments.id)
+    .limit(2);
+  if (purchases.length !== 1) return;
+  if (
+    !ECONOMICS.referrals.eligiblePacks.some(
+      (eligible) => eligible === (purchases[0].pack as PackSlug)
+    )
+  ) {
+    return;
+  }
 
   // The referrer reward is capped. Take a row lock on the referrer so two of
   // their referees converting at the same instant can't both slip past the cap.

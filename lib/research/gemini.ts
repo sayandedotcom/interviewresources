@@ -20,20 +20,33 @@ export async function generateStructured<T>(opts: {
   system: string;
   prompt: string;
   budget: BudgetTracker;
+  maxOutputTokens: number;
 }): Promise<T> {
-  const { object, usage } = await generateObject({
-    model: google(opts.model),
-    schema: opts.schema,
-    system: opts.system,
-    prompt: opts.prompt,
+  const { reservation, maxOutputTokens } = opts.budget.reserveLlmCall({
+    stage: opts.stage,
+    model: opts.model,
+    promptBytes: Buffer.byteLength(`${opts.system}\n${opts.prompt}`, "utf8"),
+    requestedMaxOutputTokens: opts.maxOutputTokens,
   });
 
-  opts.budget.recordLlmCall(
-    opts.stage,
-    opts.model,
-    usage.inputTokens ?? 0,
-    usage.outputTokens ?? 0
-  );
+  try {
+    const { object, usage } = await generateObject({
+      model: google(opts.model),
+      schema: opts.schema,
+      system: opts.system,
+      prompt: opts.prompt,
+      maxOutputTokens,
+    });
 
-  return object;
+    opts.budget.commitLlmCall(
+      reservation,
+      opts.model,
+      usage.inputTokens ?? 0,
+      usage.outputTokens ?? 0
+    );
+    return object;
+  } catch (error) {
+    opts.budget.cancelReservation(reservation);
+    throw error;
+  }
 }

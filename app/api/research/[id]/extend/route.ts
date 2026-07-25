@@ -1,12 +1,14 @@
 import { and, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import {
   MIN_EXTEND_CREDITS,
-  chargeCredits,
   creditsToBudgetUsd,
   extendCapUsd,
-  getBalance,
+  releaseCreditReservation,
+  reserveCredits,
+  settleCreditReservation,
   usdToCredits,
 } from "@/lib/credits";
 import { db } from "@/lib/db/index";
@@ -50,9 +52,10 @@ function sse(data: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
 }
 
-function costCents(entries: CostEntry[], kind: CostEntry["kind"]): number {
-  const usd = entries.filter((e) => e.kind === kind).reduce((sum, e) => sum + e.costUsd, 0);
-  return Math.round(usd * 100);
+function costMicros(entries: CostEntry[], kind: CostEntry["kind"]): number {
+  return entries
+    .filter((entry) => entry.kind === kind)
+    .reduce((sum, entry) => sum + entry.costMicros, 0);
 }
 
 /**
@@ -140,8 +143,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       roleContext: researches.roleContext,
       interviewType: researches.interviewType,
       status: researches.status,
-      costCentsLlm: researches.costCentsLlm,
-      costCentsSearch: researches.costCentsSearch,
+      costMicrosLlm: researches.costMicrosLlm,
+      costMicrosSearch: researches.costMicrosSearch,
       creditsCharged: researches.creditsCharged,
       reportId: reports.id,
       jsonPayload: reports.jsonPayload,
@@ -161,14 +164,29 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     );
   }
 
-  const balance = await getBalance(user.id);
-  if (balance < MIN_EXTEND_CREDITS) {
+  const reservationRef = `extend:${randomUUID()}`;
+  const reservationResult = await reserveCredits({
+    userId: user.id,
+    minimumCredits: MIN_EXTEND_CREDITS,
+    maximumCredits: usdToCredits(extendCapUsd(body.effort)),
+    reference: reservationRef,
+    reason: "research_extend",
+    researchId: row.researchId,
+  });
+  if (reservationResult.status === "insufficient_credits") {
     return Response.json(
-      { error: "insufficient_credits", balance, required: MIN_EXTEND_CREDITS },
+      {
+        error: "insufficient_credits",
+        balance: reservationResult.balance,
+        required: MIN_EXTEND_CREDITS,
+      },
       { status: 402 }
     );
   }
-  const capUsd = Math.min(extendCapUsd(body.effort), creditsToBudgetUsd(balance));
+  const capUsd = Math.min(
+    extendCapUsd(body.effort),
+    creditsToBudgetUsd(reservationResult.reservation.reservedCredits)
+  );
 
   const existing = row.jsonPayload as Report;
 
@@ -224,15 +242,16 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
           .update(researches)
           .set({
             interviewType: [...rounds].join(","),
-            costCentsLlm: row.costCentsLlm + costCents(entries, "llm"),
-            costCentsSearch: row.costCentsSearch + costCents(entries, "search"),
+            costMicrosLlm: row.costMicrosLlm + costMicros(entries, "llm"),
+            costMicrosSearch: row.costMicrosSearch + costMicros(entries, "search"),
             creditsCharged: (row.creditsCharged ?? 0) + creditsCharged,
           })
           .where(eq(researches.id, row.researchId));
 
-        const { balanceAfter } = await chargeCredits({
+        const { balanceAfter } = await settleCreditReservation({
           userId: user.id,
-          credits: creditsCharged,
+          reference: reservationRef,
+          actualCredits: creditsCharged,
           reason: "research_extend",
           researchId: row.researchId,
         });
@@ -255,6 +274,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
         );
       } catch (err) {
         // The stored report is untouched on failure, and nothing is charged.
+        await releaseCreditReservation({
+          userId: user.id,
+          reference: reservationRef,
+          reason: "research_extend_failed:release",
+          researchId: row.researchId,
+        });
         controller.enqueue(
           sse({ kind: "error", message: err instanceof Error ? err.message : String(err) })
         );

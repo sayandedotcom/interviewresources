@@ -247,6 +247,7 @@ describe("startResearchRun", () => {
   const input = (userId: string) => ({
     userId,
     minimumCredits: 50,
+    maximumCredits: 100,
     companyName: "Stripe",
     interviewers: [],
     interviewType: "dsa",

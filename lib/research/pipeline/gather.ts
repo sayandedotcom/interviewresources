@@ -68,9 +68,14 @@ export async function gatherStage(
     async (q) => {
       emit(onProgress, stage, `Searching: ${q.query}`);
       const depth = budget.shouldDegrade() ? "basic" : q.depth;
+      const credits = tavilySearchCredits(depth);
+      const reservation = budget.reserveTavilyCredits(stage, credits, q.query);
+      if (!reservation) {
+        return { query: q.query, purpose: q.purpose, category: q.category, results: [] };
+      }
       try {
         const result = await tavilySearch(q.query, { depth, maxResults: preset.searchResults });
-        budget.recordTavilyCredits(stage, tavilySearchCredits(depth), q.query);
+        budget.commitTavilyCredits(reservation, credits, q.query);
         return {
           query: q.query,
           purpose: q.purpose,
@@ -78,6 +83,7 @@ export async function gatherStage(
           results: result.results,
         };
       } catch {
+        budget.cancelReservation(reservation);
         emit(onProgress, stage, `Search failed, skipping: ${q.query}`);
         return { query: q.query, purpose: q.purpose, category: q.category, results: [] };
       }
@@ -138,12 +144,21 @@ export async function gatherStage(
 
   if (!budget.shouldStop() && topUrlsForExtract.length > 0) {
     emit(onProgress, stage, `Reading ${topUrlsForExtract.length} full pages...`);
+    const maximumCredits = tavilyExtractCredits(topUrlsForExtract.length);
+    const reservation = budget.reserveTavilyCredits(
+      stage,
+      maximumCredits,
+      `extract up to ${topUrlsForExtract.length} urls`
+    );
+    if (!reservation)
+      return { evidenceSources: sources, resourceCandidates: [...candidates.values()] };
     try {
       const extracted = await tavilyExtract(topUrlsForExtract);
-      budget.recordTavilyCredits(
-        stage,
-        tavilyExtractCredits(topUrlsForExtract.length),
-        `extract ${topUrlsForExtract.length} urls`
+      const successfulCredits = tavilyExtractCredits(extracted.length);
+      budget.commitTavilyCredits(
+        reservation,
+        successfulCredits,
+        `extract ${extracted.length}/${topUrlsForExtract.length} urls`
       );
       const returned = new Set<string>();
       for (const e of extracted) {
@@ -179,6 +194,7 @@ export async function gatherStage(
         }
       }
     } catch {
+      budget.cancelReservation(reservation);
       // Sources keep their search snippets, which compress passes through verbatim.
       for (const url of topUrlsForExtract) {
         const candidate = candidates.get(url);

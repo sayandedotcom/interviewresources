@@ -50,10 +50,11 @@ specific rather than searching for the process itself.`;
   ].join(" / ");
 
   return generateStructured({
-    model: "gemini-3.1-flash-lite-preview",
+    model: "gemini-3.1-flash-lite",
     stage: "plan",
     schema: researchPlanSchema,
     budget,
+    maxOutputTokens: 2_048,
     system: `You are a research planner for an interview-prep tool. Given a company and the
 rounds the candidate wants gathered, produce a compact search plan: ${preset.queriesHint} targeted web-search
 queries. ${loopRule} Always include one or
@@ -96,10 +97,11 @@ export async function proxyPlanStage(
     .slice(0, 3000);
 
   return generateStructured({
-    model: "gemini-3.1-flash-lite-preview",
+    model: "gemini-3.1-flash-lite",
     stage: "plan_proxy",
     schema: proxyPlanSchema,
     budget,
+    maxOutputTokens: 1_536,
     system: `The direct interview evidence for this company is thin — it is likely early-stage
 or low-profile. Plan ${preset.proxyQueriesHint} proxy web-search queries that surface how it
 probably interviews, by analogy: (a) category "founder_background" — the founders'/leaders'

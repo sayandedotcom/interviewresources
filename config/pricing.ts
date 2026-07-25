@@ -1,11 +1,8 @@
+import { CREDIT_PACK_CATALOG, type PackSlug } from "@/lib/economics";
+
 /**
- * Presentational only — imported by client pages. The Dodo product ids and the
- * credit amounts that actually get granted live in lib/packs.ts (server-only).
- * Keep `credits` here in sync with CREDIT_PACKS.
- *
- * Both packs unlock the same product; they differ only in how many credits you
- * get. A report is metered at its real cost, so counts are approximate: a
- * typical run is ~46 credits and the pipeline hard-caps at 130.
+ * Presentational details for the shared, client-safe pack catalog. Dodo product
+ * ids remain server-only in lib/packs.ts.
  *
  * Prices are USD only. Dodo's Adaptive Currency converts them at the checkout
  * page from the customer's billing address, so an Indian buyer is charged in
@@ -16,52 +13,56 @@
 export const pricingConfig = {
   /** Shown under the pack cards. See the note on Adaptive Currency above. */
   currencyNote: "Prices in USD. You'll be charged in your local currency at checkout.",
-  plans: [
-    {
-      slug: "starter" as const,
-      name: "Starter",
-      badge: "Try it",
-      featured: false,
-      price: 1,
-      credits: 100,
-      description: "Try it for $1 — about two reports",
-      features: [
-        "100 credits",
-        "About 2 research reports",
-        "Pinpointed questions with evidence",
-        "Interviewer research",
-        "PDF and JSON export",
-      ],
-    },
-    {
-      slug: "bundle" as const,
-      name: "Bundle",
-      badge: "Most popular",
-      featured: true,
-      price: 5,
-      credits: 550,
-      description: "Stock up, stop topping up",
-      features: [
-        "550 credits",
-        "About 11 research reports",
-        "Everything in Starter",
-        "10% bonus credits — 500 paid, 550 granted",
-      ],
-    },
-    {
-      slug: "max" as const,
-      name: "Max",
-      badge: "Best value",
-      featured: false,
-      price: 10,
-      credits: 1200,
-      description: "For a full interview season",
-      features: [
-        "1200 credits",
-        "About 26 research reports",
-        "Everything in Bundle",
-        "20% bonus credits — 1000 paid, 1200 granted",
-      ],
-    },
-  ],
+  plans: CREDIT_PACK_CATALOG.map((pack) => {
+    const presentation: Record<
+      PackSlug,
+      {
+        badge: string;
+        featured: boolean;
+        description: string;
+        features: string[];
+      }
+    > = {
+      starter: {
+        badge: "Try it",
+        featured: false,
+        description: "A low-risk first look",
+        features: [
+          "100 credits",
+          "About 5 research reports",
+          "Pinpointed questions with evidence",
+          "Interviewer research",
+          "PDF and JSON export",
+        ],
+      },
+      bundle: {
+        badge: "Most popular",
+        featured: true,
+        description: "Stock up, stop topping up",
+        features: [
+          "550 credits",
+          "About 25 research reports",
+          "Everything in Starter",
+          "50 bonus credits",
+        ],
+      },
+      max: {
+        badge: "Best value",
+        featured: false,
+        description: "For a full interview season",
+        features: [
+          "1200 credits",
+          "About 50 research reports",
+          "Everything in Bundle",
+          "200 bonus credits",
+        ],
+      },
+    };
+
+    return {
+      ...pack,
+      price: pack.priceUsdMinor / 100,
+      ...presentation[pack.slug],
+    };
+  }),
 };

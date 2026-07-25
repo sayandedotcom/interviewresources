@@ -23,8 +23,8 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
       .select({
         companyName: researches.companyName,
         roleContext: researches.roleContext,
-        costCentsLlm: researches.costCentsLlm,
-        costCentsSearch: researches.costCentsSearch,
+        costMicrosLlm: researches.costMicrosLlm,
+        costMicrosSearch: researches.costMicrosSearch,
         creditsCharged: researches.creditsCharged,
         jsonPayload: reports.jsonPayload,
       })
@@ -37,7 +37,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 
   if (!row) notFound();
 
-  const costUsd = (row.costCentsLlm + row.costCentsSearch) / 100;
+  const costUsd = (row.costMicrosLlm + row.costMicrosSearch) / 1_000_000;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-1 pb-24">

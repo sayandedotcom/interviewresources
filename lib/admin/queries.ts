@@ -1,47 +1,251 @@
 import { and, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 
-import { USD_PER_CREDIT } from "@/lib/credits";
 import { db } from "@/lib/db/index";
-import { creditsLedger, payments, researches, users } from "@/lib/db/schema";
+import {
+  creditsLedger,
+  paymentDisputes,
+  paymentRefunds,
+  payments,
+  researches,
+  users,
+} from "@/lib/db/schema";
+import {
+  CREDIT_PACK_CATALOG,
+  ECONOMICS,
+  creditLiabilityMicros,
+  getPackEconomics,
+  microsToUsd,
+  providerPricesAreStale,
+} from "@/lib/economics";
 
-/** Runs wedged in "running" longer than this have almost certainly lost their route handler. */
 const STUCK_RUN_MINUTES = 15;
 
-/**
- * Built from drizzle expressions rather than a raw `sql` template: interpolating
- * a bare Date into the template binds it as an untyped parameter, and postgres.js
- * then fails to serialize it. Wrapping it in `lt()` attaches the column's
- * timestamp encoder.
- */
 function isStuck() {
-  const cutoff = new Date(Date.now() - STUCK_RUN_MINUTES * 60 * 1000);
+  const cutoff = new Date(Date.now() - STUCK_RUN_MINUTES * 60 * 1_000);
   return and(eq(researches.status, "running"), lt(researches.createdAt, cutoff));
 }
 
 function daysAgo(days: number): Date {
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1_000);
+}
+
+function dayKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function proportionalCatalogMicros(
+  catalogPriceUsdMinor: number,
+  providerPartMinor: number,
+  providerTotalMinor: number
+): number {
+  if (providerTotalMinor <= 0) return 0;
+  return Math.round(
+    catalogPriceUsdMinor * 10_000 * Math.min(1, Math.max(0, providerPartMinor) / providerTotalMinor)
+  );
+}
+
+const disputeLossStatuses = new Set([
+  "dispute_opened",
+  "dispute_expired",
+  "dispute_accepted",
+  "dispute_challenged",
+  "dispute_lost",
+]);
+
+async function getEconomicsRows(days: number) {
+  const cutoff = daysAgo(days);
+  const paymentRows = await db
+    .select({
+      id: payments.id,
+      createdAt: payments.createdAt,
+      amountMinor: payments.amountMinor,
+      catalogPriceUsdMinor: payments.catalogPriceUsdMinor,
+      estimatedDodoFeeMicros: payments.estimatedDodoFeeMicros,
+      refundedAmountMinor: payments.refundedAmountMinor,
+    })
+    .from(payments)
+    .where(gte(payments.createdAt, cutoff));
+  const paymentIds = new Set(paymentRows.map((payment) => payment.id));
+
+  const refundRows = (
+    await db
+      .select({
+        paymentId: paymentRefunds.paymentId,
+        estimatedFeeMicros: paymentRefunds.estimatedFeeMicros,
+      })
+      .from(paymentRefunds)
+  ).filter((refund) => paymentIds.has(refund.paymentId));
+
+  const disputeRows = (
+    await db
+      .select({
+        paymentId: paymentDisputes.paymentId,
+        amountMinor: paymentDisputes.amountMinor,
+        status: paymentDisputes.status,
+        estimatedFeeMicros: paymentDisputes.estimatedFeeMicros,
+      })
+      .from(paymentDisputes)
+  ).filter((dispute) => paymentIds.has(dispute.paymentId));
+
+  const researchRows = await db
+    .select({
+      createdAt: researches.createdAt,
+      costMicros: sql<number>`${researches.costMicrosLlm} + ${researches.costMicrosSearch}`,
+      creditsCharged: researches.creditsCharged,
+    })
+    .from(researches)
+    .where(gte(researches.createdAt, cutoff));
+
+  return { paymentRows, refundRows, disputeRows, researchRows };
+}
+
+export interface ContributionEconomics {
+  grossSalesUsd: number;
+  estimatedDodoTransactionFeesUsd: number;
+  refundAmountsUsd: number;
+  refundFeesUsd: number;
+  disputeAmountsUsd: number;
+  disputeFeesUsd: number;
+  netReceiptsUsd: number;
+  apiCogsUsd: number;
+  unpaidFailedRunCogsUsd: number;
+  contributionUsd: number;
+  contributionMargin: number;
+}
+
+function summarizeEconomics(
+  rows: Awaited<ReturnType<typeof getEconomicsRows>>
+): ContributionEconomics {
+  const paymentById = new Map(rows.paymentRows.map((payment) => [payment.id, payment]));
+  const grossSalesMicros = rows.paymentRows.reduce(
+    (sum, payment) => sum + payment.catalogPriceUsdMinor * 10_000,
+    0
+  );
+  const transactionFeeMicros = rows.paymentRows.reduce(
+    (sum, payment) => sum + payment.estimatedDodoFeeMicros,
+    0
+  );
+  const refundAmountMicros = rows.paymentRows.reduce(
+    (sum, payment) =>
+      sum +
+      proportionalCatalogMicros(
+        payment.catalogPriceUsdMinor,
+        payment.refundedAmountMinor,
+        payment.amountMinor
+      ),
+    0
+  );
+  const refundFeeMicros = rows.refundRows.reduce(
+    (sum, refund) => sum + refund.estimatedFeeMicros,
+    0
+  );
+  const disputeAmountMicros = rows.disputeRows.reduce((sum, dispute) => {
+    if (!disputeLossStatuses.has(dispute.status)) return sum;
+    const payment = paymentById.get(dispute.paymentId);
+    if (!payment) return sum;
+    return (
+      sum +
+      proportionalCatalogMicros(
+        payment.catalogPriceUsdMinor,
+        dispute.amountMinor,
+        payment.amountMinor
+      )
+    );
+  }, 0);
+  const disputeFeeMicros = rows.disputeRows.reduce(
+    (sum, dispute) => sum + dispute.estimatedFeeMicros,
+    0
+  );
+  const paidCogsMicros = rows.researchRows
+    .filter((run) => run.creditsCharged !== null)
+    .reduce((sum, run) => sum + run.costMicros, 0);
+  const unpaidCogsMicros = rows.researchRows
+    .filter((run) => run.creditsCharged === null)
+    .reduce((sum, run) => sum + run.costMicros, 0);
+  const netReceiptsMicros =
+    grossSalesMicros -
+    transactionFeeMicros -
+    refundAmountMicros -
+    refundFeeMicros -
+    disputeAmountMicros -
+    disputeFeeMicros;
+  const contributionMicros = netReceiptsMicros - paidCogsMicros - unpaidCogsMicros;
+
+  return {
+    grossSalesUsd: microsToUsd(grossSalesMicros),
+    estimatedDodoTransactionFeesUsd: microsToUsd(transactionFeeMicros),
+    refundAmountsUsd: microsToUsd(refundAmountMicros),
+    refundFeesUsd: microsToUsd(refundFeeMicros),
+    disputeAmountsUsd: microsToUsd(disputeAmountMicros),
+    disputeFeesUsd: microsToUsd(disputeFeeMicros),
+    netReceiptsUsd: microsToUsd(netReceiptsMicros),
+    apiCogsUsd: microsToUsd(paidCogsMicros),
+    unpaidFailedRunCogsUsd: microsToUsd(unpaidCogsMicros),
+    contributionUsd: microsToUsd(contributionMicros),
+    contributionMargin: netReceiptsMicros > 0 ? contributionMicros / netReceiptsMicros : 0,
+  };
+}
+
+export async function getContributionEconomics(days: number): Promise<ContributionEconomics> {
+  return summarizeEconomics(await getEconomicsRows(days));
 }
 
 export interface DayEconomics {
   day: string;
-  revenueUsd: number;
-  costUsd: number;
+  grossSalesUsd: number;
+  netReceiptsUsd: number;
+  apiCogsUsd: number;
+  contributionUsd: number;
 }
 
-/** Revenue (what we billed) vs COGS (what the run actually cost), per day. */
+/** Actual sales receipts and provider COGS, grouped independently by day. */
 export async function getUnitEconomics(days: number): Promise<DayEconomics[]> {
-  const rows = await db
-    .select({
-      day: sql<string>`to_char(date_trunc('day', ${researches.createdAt}), 'YYYY-MM-DD')`,
-      revenueUsd: sql<number>`coalesce(sum(${researches.creditsCharged}), 0)::float * ${USD_PER_CREDIT}`,
-      costUsd: sql<number>`coalesce(sum(${researches.costCentsLlm} + ${researches.costCentsSearch}), 0)::float / 100`,
-    })
-    .from(researches)
-    .where(gte(researches.createdAt, daysAgo(days)))
-    .groupBy(sql`date_trunc('day', ${researches.createdAt})`)
-    .orderBy(sql`date_trunc('day', ${researches.createdAt})`);
+  const rows = await getEconomicsRows(days);
+  type DayRows = typeof rows;
+  const daysByKey = new Map<string, DayRows>();
+  const ensure = (day: string): DayRows => {
+    const existing = daysByKey.get(day);
+    if (existing) return existing;
+    const created: DayRows = {
+      paymentRows: [],
+      refundRows: [],
+      disputeRows: [],
+      researchRows: [],
+    };
+    daysByKey.set(day, created);
+    return created;
+  };
 
-  return rows;
+  for (const payment of rows.paymentRows)
+    ensure(dayKey(payment.createdAt)).paymentRows.push(payment);
+  for (const run of rows.researchRows) ensure(dayKey(run.createdAt)).researchRows.push(run);
+
+  // Refund/dispute events are attributed to the purchase day in this compact
+  // chart; the 30-day total remains exact.
+  const paymentDay = new Map(
+    rows.paymentRows.map((payment) => [payment.id, dayKey(payment.createdAt)])
+  );
+  for (const refund of rows.refundRows) {
+    const day = paymentDay.get(refund.paymentId);
+    if (day) ensure(day).refundRows.push(refund);
+  }
+  for (const dispute of rows.disputeRows) {
+    const day = paymentDay.get(dispute.paymentId);
+    if (day) ensure(day).disputeRows.push(dispute);
+  }
+
+  return [...daysByKey.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, dayRows]) => {
+      const summary = summarizeEconomics(dayRows);
+      return {
+        day,
+        grossSalesUsd: summary.grossSalesUsd,
+        netReceiptsUsd: summary.netReceiptsUsd,
+        apiCogsUsd: summary.apiCogsUsd + summary.unpaidFailedRunCogsUsd,
+        contributionUsd: summary.contributionUsd,
+      };
+    });
 }
 
 export interface UnpaidCost {
@@ -49,18 +253,16 @@ export interface UnpaidCost {
   costUsd: number;
 }
 
-/** Cost burned on runs we never billed — unfinished, degraded, or failed. */
 export async function getUnpaidCost(days: number): Promise<UnpaidCost> {
   const [row] = await db
     .select({
       runs: sql<number>`count(*)::int`,
-      costUsd: sql<number>`coalesce(sum(${researches.costCentsLlm} + ${researches.costCentsSearch}), 0)::float / 100`,
+      costUsd: sql<number>`coalesce(sum(${researches.costMicrosLlm} + ${researches.costMicrosSearch}), 0)::float / 1000000`,
     })
     .from(researches)
     .where(
       sql`${isNull(researches.creditsCharged)} and ${gte(researches.createdAt, daysAgo(days))}`
     );
-
   return row ?? { runs: 0, costUsd: 0 };
 }
 
@@ -70,9 +272,8 @@ export interface RunsByDay {
   runs: number;
 }
 
-/** Run volume per day, split by status, so a failure-rate spike shows up. */
 export async function getRunsByDay(days: number): Promise<RunsByDay[]> {
-  const rows = await db
+  return db
     .select({
       day: sql<string>`to_char(date_trunc('day', ${researches.createdAt}), 'YYYY-MM-DD')`,
       status: researches.status,
@@ -82,8 +283,6 @@ export async function getRunsByDay(days: number): Promise<RunsByDay[]> {
     .where(gte(researches.createdAt, daysAgo(days)))
     .groupBy(sql`date_trunc('day', ${researches.createdAt})`, researches.status)
     .orderBy(sql`date_trunc('day', ${researches.createdAt})`);
-
-  return rows;
 }
 
 export interface StuckRun {
@@ -92,11 +291,6 @@ export interface StuckRun {
   createdAt: Date;
 }
 
-/**
- * The pipeline runs inline inside the streaming route handler, with no job
- * queue — if the process dies mid-run, the row stays "running" until
- * reapStuckRuns sweeps it. This surfaces the ones not yet swept.
- */
 export async function getStuckRuns(): Promise<StuckRun[]> {
   return db
     .select({
@@ -109,25 +303,13 @@ export async function getStuckRuns(): Promise<StuckRun[]> {
     .orderBy(researches.createdAt);
 }
 
-/**
- * Fails runs whose handler died mid-pipeline. Serverless makes this routine
- * rather than rare: every function timeout kills the process partway through
- * an SSE stream, stranding the row in "running".
- *
- * Deliberately does NOT touch the ledger. The research route charges only
- * after the pipeline returns (see chargeCredits in app/api/research/route.ts),
- * so a stranded run was never billed — refunding here would mint free credits.
- *
- * Returns the ids it failed, so the caller can log them.
- */
 export async function reapStuckRuns(): Promise<string[]> {
   const reaped = await db
     .update(researches)
     .set({ status: "failed" })
     .where(isStuck())
     .returning({ id: researches.id });
-
-  return reaped.map((r) => r.id);
+  return reaped.map((run) => run.id);
 }
 
 export interface TopCompany {
@@ -142,7 +324,7 @@ export async function getTopCompanies(limit: number): Promise<TopCompany[]> {
     .select({
       companyName: researches.companyName,
       runs: sql<number>`count(*)::int`,
-      avgCostUsd: sql<number>`avg(${researches.costCentsLlm} + ${researches.costCentsSearch})::float / 100`,
+      avgCostUsd: sql<number>`avg(${researches.costMicrosLlm} + ${researches.costMicrosSearch})::float / 1000000`,
       avgCreditsCharged: sql<number>`coalesce(avg(${researches.creditsCharged}), 0)::float`,
     })
     .from(researches)
@@ -157,9 +339,8 @@ export interface DayPurchases {
   amountMinor: number;
 }
 
-/** Real provider-reported cash in, by day and currency. */
 export async function getPurchases(days: number): Promise<DayPurchases[]> {
-  const rows = await db
+  return db
     .select({
       day: sql<string>`to_char(date_trunc('day', ${payments.createdAt}), 'YYYY-MM-DD')`,
       currency: payments.currency,
@@ -169,8 +350,6 @@ export async function getPurchases(days: number): Promise<DayPurchases[]> {
     .where(gte(payments.createdAt, daysAgo(days)))
     .groupBy(sql`date_trunc('day', ${payments.createdAt})`, payments.currency)
     .orderBy(sql`date_trunc('day', ${payments.createdAt})`, payments.currency);
-
-  return rows;
 }
 
 export interface CostPercentiles {
@@ -179,19 +358,18 @@ export interface CostPercentiles {
   samples: number;
 }
 
-/** p50/p90 report COGS, calculated in JS for portability to the PGlite test DB. */
 export async function getCostPercentiles(days: number): Promise<CostPercentiles> {
   const rows = await db
     .select({
-      cents: sql<number>`${researches.costCentsLlm} + ${researches.costCentsSearch}`,
+      micros: sql<number>`${researches.costMicrosLlm} + ${researches.costMicrosSearch}`,
     })
     .from(researches)
     .where(and(eq(researches.status, "done"), gte(researches.createdAt, daysAgo(days))));
-  const costs = rows.map((row) => row.cents).sort((a, b) => a - b);
+  const costs = rows.map((row) => row.micros).sort((a, b) => a - b);
   const percentile = (p: number) =>
     costs.length === 0
       ? 0
-      : costs[Math.min(costs.length - 1, Math.ceil(costs.length * p) - 1)] / 100;
+      : costs[Math.min(costs.length - 1, Math.ceil(costs.length * p) - 1)] / 1_000_000;
   return { p50Usd: percentile(0.5), p90Usd: percentile(0.9), samples: costs.length };
 }
 
@@ -201,7 +379,7 @@ export interface DaySignups {
 }
 
 export async function getUserGrowth(days: number): Promise<DaySignups[]> {
-  const rows = await db
+  return db
     .select({
       day: sql<string>`to_char(date_trunc('day', ${users.createdAt}), 'YYYY-MM-DD')`,
       signups: sql<number>`count(*)::int`,
@@ -210,8 +388,6 @@ export async function getUserGrowth(days: number): Promise<DaySignups[]> {
     .where(gte(users.createdAt, daysAgo(days)))
     .groupBy(sql`date_trunc('day', ${users.createdAt})`)
     .orderBy(sql`date_trunc('day', ${users.createdAt})`);
-
-  return rows;
 }
 
 export interface RecentRun {
@@ -223,14 +399,13 @@ export interface RecentRun {
   createdAt: Date;
 }
 
-/** Drill-down list for the /admin/runs table — most recent first. */
 export async function getRecentRuns(limit: number): Promise<RecentRun[]> {
   return db
     .select({
       id: researches.id,
       companyName: researches.companyName,
       status: researches.status,
-      costUsd: sql<number>`(${researches.costCentsLlm} + ${researches.costCentsSearch})::float / 100`,
+      costUsd: sql<number>`(${researches.costMicrosLlm} + ${researches.costMicrosSearch})::float / 1000000`,
       creditsCharged: researches.creditsCharged,
       createdAt: researches.createdAt,
     })
@@ -245,12 +420,8 @@ export interface NegativeBalance {
   balance: number;
 }
 
-/**
- * chargeCredits (lib/credits.ts) charges unconditionally, so a user racing two
- * concurrent runs can end up below zero. Nothing else in the app detects it.
- */
 export async function getNegativeBalances(): Promise<NegativeBalance[]> {
-  const rows = await db
+  return db
     .select({
       userId: creditsLedger.userId,
       email: users.email,
@@ -260,6 +431,81 @@ export async function getNegativeBalances(): Promise<NegativeBalance[]> {
     .innerJoin(users, eq(users.id, creditsLedger.userId))
     .groupBy(creditsLedger.userId, users.email)
     .having(sql`sum(${creditsLedger.delta}) < 0`);
+}
 
-  return rows;
+export interface OutstandingCreditLiability {
+  credits: number;
+  apiLiabilityUsd: number;
+}
+
+export async function getOutstandingCreditLiability(): Promise<OutstandingCreditLiability> {
+  const balances = await db
+    .select({ balance: sql<number>`sum(${creditsLedger.delta})::int` })
+    .from(creditsLedger)
+    .groupBy(creditsLedger.userId);
+  const credits = balances.reduce((sum, row) => sum + Math.max(0, row.balance), 0);
+  return { credits, apiLiabilityUsd: microsToUsd(creditLiabilityMicros(credits)) };
+}
+
+export interface PackMargin {
+  slug: string;
+  name: string;
+  baseContributionUsd: number;
+  baseMargin: number;
+  referredContributionUsd: number | null;
+  referredMargin: number | null;
+}
+
+export function getPackMargins(): PackMargin[] {
+  return CREDIT_PACK_CATALOG.map((pack) => {
+    const base = getPackEconomics(pack.slug);
+    const referralEligible = ECONOMICS.referrals.eligiblePacks.some(
+      (eligible) => eligible === pack.slug
+    );
+    const referred = referralEligible ? getPackEconomics(pack.slug, true) : null;
+    return {
+      slug: pack.slug,
+      name: pack.name,
+      baseContributionUsd: microsToUsd(base.contributionMicros),
+      baseMargin: base.contributionMargin,
+      referredContributionUsd: referred ? microsToUsd(referred.contributionMicros) : null,
+      referredMargin: referred?.contributionMargin ?? null,
+    };
+  });
+}
+
+export function getEconomicsAlerts(
+  summary: ContributionEconomics,
+  now: Date = new Date()
+): string[] {
+  const alerts: string[] = [];
+  for (const margin of getPackMargins()) {
+    if (margin.baseContributionUsd <= 0 || margin.baseMargin < ECONOMICS.margins.baseFloor) {
+      alerts.push(`${margin.name} base worst-case margin is below the 20% floor.`);
+    }
+    if (
+      margin.referredMargin !== null &&
+      (margin.referredContributionUsd! <= 0 ||
+        margin.referredMargin < ECONOMICS.margins.referredFloor)
+    ) {
+      alerts.push(`${margin.name} referred worst-case margin is below the 5% floor.`);
+    }
+  }
+  if (
+    summary.netReceiptsUsd > 0 &&
+    summary.contributionMargin < ECONOMICS.margins.blendedAlertFloor
+  ) {
+    alerts.push("Blended contribution margin is below 10%.");
+  }
+  if (
+    summary.unpaidFailedRunCogsUsd > 0 &&
+    (summary.apiCogsUsd === 0 ||
+      summary.unpaidFailedRunCogsUsd / summary.apiCogsUsd > ECONOMICS.alerts.failedRunSpendRatio)
+  ) {
+    alerts.push("Unpaid failed-run spend exceeds 10% of paid-run API COGS.");
+  }
+  if (providerPricesAreStale(now)) {
+    alerts.push("Provider pricing verification is stale; review Gemini, Tavily, and Dodo rates.");
+  }
+  return alerts;
 }

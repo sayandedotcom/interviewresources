@@ -5,21 +5,11 @@
  * optional work (extra advanced searches, a second synthesis pass) once the
  * degrade threshold is crossed.
  */
+import { ECONOMICS, type GeminiModel, USD_MICROS, microsToUsd, usdToMicros } from "../economics";
 
-// $/1M tokens. Model IDs match the @ai-sdk/google GoogleModelId union.
-// Keep in sync with PRD §7 — verify against current pricing before relying
-// on this for real budgeting decisions.
-export const GEMINI_PRICES = {
-  "gemini-3.1-pro-preview": { input: 2.0, output: 12.0 },
-  "gemini-3.5-flash": { input: 1.5, output: 9.0 },
-  "gemini-3-flash-preview": { input: 0.5, output: 3.0 },
-  "gemini-3.1-flash-lite-preview": { input: 0.25, output: 1.5 },
-} as const;
-
-export type GeminiModel = keyof typeof GEMINI_PRICES;
-
-// Tavily credits: basic search = 1 credit, advanced = 2, extract = 1 per 5 URLs.
-export const TAVILY_CREDIT_COST_USD = 0.008;
+export const GEMINI_PRICES = ECONOMICS.providers.gemini.models;
+export type { GeminiModel };
+export const TAVILY_CREDIT_COST_USD = ECONOMICS.providers.tavily.payAsYouGoUsdPerCredit;
 
 export const BUDGET_CAP_USD = 1.0;
 /** Degrade once 85% of the run's cap is spent. */
@@ -52,6 +42,8 @@ export interface EffortPreset {
   resourcesMax: number;
   /** Maximum metadata-only candidates exposed to synthesis. */
   resourceCatalogMax: number;
+  /** Hard provider ceiling; the budget can lower it further at runtime. */
+  synthesisMaxOutputTokens: number;
   label: string;
   blurb: string;
 }
@@ -76,6 +68,7 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     resourcesMin: 8,
     resourcesMax: 12,
     resourceCatalogMax: 30,
+    synthesisMaxOutputTokens: 6_000,
     label: "Low",
     blurb: "Quick scan — fewer searches, the essentials only",
   },
@@ -92,6 +85,7 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     resourcesMin: 12,
     resourcesMax: 16,
     resourceCatalogMax: 35,
+    synthesisMaxOutputTokens: 9_000,
     label: "Medium",
     blurb: "Balanced — the default depth",
   },
@@ -108,6 +102,7 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     resourcesMin: 16,
     resourcesMax: 20,
     resourceCatalogMax: 40,
+    synthesisMaxOutputTokens: 14_000,
     label: "High",
     blurb: "Exhaustive — widest search, most questions",
   },
@@ -130,18 +125,159 @@ export interface CostEntry {
   stage: string;
   kind: "llm" | "search";
   detail: string;
+  costMicros: number;
   costUsd: number;
+}
+
+export interface BudgetReservation {
+  id: number;
+  stage: string;
+  kind: CostEntry["kind"];
+  detail: string;
+  maximumMicros: number;
+}
+
+export class BudgetExceededError extends Error {
+  constructor(message = "The run has no provider budget left for this call.") {
+    super(message);
+    this.name = "BudgetExceededError";
+  }
 }
 
 export class BudgetTracker {
   private entries: CostEntry[] = [];
+  private reservations = new Map<number, BudgetReservation>();
+  private nextReservationId = 1;
+  private readonly capMicros: number;
+  private readonly synthesisReserveMicros: number;
 
   /**
    * `capUsd` defaults to the PRD's $1 ceiling, but a run is also capped by what
    * the user's credit balance can actually pay for — the route passes the
    * smaller of the two so a run can never cost more than the user can afford.
    */
-  constructor(readonly capUsd: number = BUDGET_CAP_USD) {}
+  constructor(readonly capUsd: number = BUDGET_CAP_USD) {
+    this.capMicros = usdToMicros(capUsd);
+    // Keep enough room for the expensive final call while allowing a small
+    // balance to spend proportionally on evidence gathering.
+    this.synthesisReserveMicros = Math.min(180_000, Math.floor(this.capMicros * 0.45));
+  }
+
+  private get committedMicros(): number {
+    return this.entries.reduce((sum, entry) => sum + entry.costMicros, 0);
+  }
+
+  private get reservedMicros(): number {
+    return [...this.reservations.values()].reduce(
+      (sum, reservation) => sum + reservation.maximumMicros,
+      0
+    );
+  }
+
+  private reservableMicros(stage: string): number {
+    const protectedMicros = stage === "synthesize" ? 0 : this.synthesisReserveMicros;
+    return Math.max(
+      0,
+      this.capMicros - protectedMicros - this.committedMicros - this.reservedMicros
+    );
+  }
+
+  private reserve(
+    stage: string,
+    kind: CostEntry["kind"],
+    detail: string,
+    maximumMicros: number
+  ): BudgetReservation | null {
+    if (maximumMicros <= 0 || maximumMicros > this.reservableMicros(stage)) return null;
+    const reservation = {
+      id: this.nextReservationId++,
+      stage,
+      kind,
+      detail,
+      maximumMicros,
+    };
+    this.reservations.set(reservation.id, reservation);
+    return reservation;
+  }
+
+  private commit(reservation: BudgetReservation, costMicros: number, detail: string): number {
+    const active = this.reservations.get(reservation.id);
+    if (!active) throw new Error("Provider budget reservation is no longer active.");
+    if (costMicros > active.maximumMicros) {
+      this.reservations.delete(reservation.id);
+      throw new BudgetExceededError(
+        `Provider charge exceeded its reservation (${costMicros} > ${active.maximumMicros} micro-USD).`
+      );
+    }
+    this.reservations.delete(reservation.id);
+    this.entries.push({
+      stage: active.stage,
+      kind: active.kind,
+      detail,
+      costMicros,
+      costUsd: microsToUsd(costMicros),
+    });
+    return microsToUsd(costMicros);
+  }
+
+  cancelReservation(reservation: BudgetReservation): void {
+    this.reservations.delete(reservation.id);
+  }
+
+  /**
+   * Reserves a worst-case token charge before a call is dispatched. The byte
+   * count is a conservative input-token ceiling and includes headroom for the
+   * structured-output schema added by the AI SDK.
+   */
+  reserveLlmCall(opts: {
+    stage: string;
+    model: GeminiModel;
+    promptBytes: number;
+    requestedMaxOutputTokens: number;
+  }): { reservation: BudgetReservation; maxOutputTokens: number } {
+    const price = GEMINI_PRICES[opts.model];
+    const maxInputTokens = opts.promptBytes + 16_000;
+    const inputMicros = Math.ceil((maxInputTokens * price.input * USD_MICROS) / 1_000_000);
+    const availableMicros = this.reservableMicros(opts.stage);
+    const outputBudgetMicros = availableMicros - inputMicros;
+    const affordableOutputTokens = Math.floor(
+      (outputBudgetMicros * 1_000_000) / (price.output * USD_MICROS)
+    );
+    const maxOutputTokens = Math.min(opts.requestedMaxOutputTokens, affordableOutputTokens);
+    if (maxOutputTokens < 256) throw new BudgetExceededError();
+
+    const maximumMicros =
+      inputMicros + Math.ceil((maxOutputTokens * price.output * USD_MICROS) / 1_000_000);
+    const reservation = this.reserve(
+      opts.stage,
+      "llm",
+      `${opts.model} (reserved ${maxInputTokens}in/${maxOutputTokens}out)`,
+      maximumMicros
+    );
+    if (!reservation) throw new BudgetExceededError();
+    return { reservation, maxOutputTokens };
+  }
+
+  commitLlmCall(
+    reservation: BudgetReservation,
+    model: GeminiModel,
+    inputTokens: number,
+    outputTokens: number
+  ): number {
+    const price = GEMINI_PRICES[model];
+    const costMicros = Math.ceil(
+      ((inputTokens * price.input + outputTokens * price.output) / 1_000_000) * USD_MICROS
+    );
+    return this.commit(reservation, costMicros, `${model} (${inputTokens}in/${outputTokens}out)`);
+  }
+
+  reserveTavilyCredits(stage: string, credits: number, detail: string): BudgetReservation | null {
+    return this.reserve(stage, "search", detail, usdToMicros(credits * TAVILY_CREDIT_COST_USD));
+  }
+
+  commitTavilyCredits(reservation: BudgetReservation, credits: number, detail: string): number {
+    return this.commit(reservation, usdToMicros(credits * TAVILY_CREDIT_COST_USD), detail);
+  }
 
   recordLlmCall(
     stage: string,
@@ -150,33 +286,41 @@ export class BudgetTracker {
     outputTokens: number
   ): number {
     const price = GEMINI_PRICES[model];
-    const costUsd =
-      (inputTokens / 1_000_000) * price.input + (outputTokens / 1_000_000) * price.output;
+    const costMicros = Math.ceil(
+      ((inputTokens * price.input + outputTokens * price.output) / 1_000_000) * USD_MICROS
+    );
+    const costUsd = microsToUsd(costMicros);
     this.entries.push({
       stage,
       kind: "llm",
       detail: `${model} (${inputTokens}in/${outputTokens}out)`,
+      costMicros,
       costUsd,
     });
     return costUsd;
   }
 
   recordTavilyCredits(stage: string, credits: number, detail: string): number {
-    const costUsd = credits * TAVILY_CREDIT_COST_USD;
-    this.entries.push({ stage, kind: "search", detail, costUsd });
+    const costMicros = usdToMicros(credits * TAVILY_CREDIT_COST_USD);
+    const costUsd = microsToUsd(costMicros);
+    this.entries.push({ stage, kind: "search", detail, costMicros, costUsd });
     return costUsd;
   }
 
   get totalUsd(): number {
-    return this.entries.reduce((sum, e) => sum + e.costUsd, 0);
+    return microsToUsd(this.totalMicros);
+  }
+
+  get totalMicros(): number {
+    return this.committedMicros;
   }
 
   shouldDegrade(): boolean {
-    return this.totalUsd >= this.capUsd * BUDGET_DEGRADE_RATIO;
+    return this.committedMicros + this.reservedMicros >= this.capMicros * BUDGET_DEGRADE_RATIO;
   }
 
   shouldStop(): boolean {
-    return this.totalUsd >= this.capUsd;
+    return this.reservableMicros("non_synthesis") <= 0;
   }
 
   breakdown(): CostEntry[] {

@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { Webhooks } from "@dodopayments/nextjs";
 import { eq } from "drizzle-orm";
 
-import { reverseRefund, settlePayment } from "@/lib/credits";
+import { recordPaymentDispute, reverseRefund, settlePayment } from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { users } from "@/lib/db/schema";
 import { getPackByProductId } from "@/lib/packs";
@@ -79,6 +79,7 @@ function buildHandler(webhookKey: string) {
         amountMinor: typeof data.total_amount === "number" ? data.total_amount : fallbackAmount,
         currency: typeof data.currency === "string" ? data.currency : "USD",
         pack: reasons,
+        catalogPriceUsdMinor: fallbackAmount,
       });
 
       // Only pay out a referral on the first delivery of a purchase, and never
@@ -104,6 +105,77 @@ function buildHandler(webhookKey: string) {
       if (!applied) {
         console.warn("dodo webhook: refund not applied", data.refund_id);
       }
+    },
+    onDisputeOpened: async (payload) => {
+      const data = payload.data;
+      const applied = await recordPaymentDispute({
+        paymentRef: data.payment_id,
+        disputeRef: data.dispute_id,
+        amountMinor: Number(data.amount),
+        currency: data.currency,
+        status: data.dispute_status,
+      });
+      if (!applied) console.warn("dodo webhook: dispute not applied", data.dispute_id);
+    },
+    onDisputeExpired: async (payload) => {
+      const data = payload.data;
+      await recordPaymentDispute({
+        paymentRef: data.payment_id,
+        disputeRef: data.dispute_id,
+        amountMinor: Number(data.amount),
+        currency: data.currency,
+        status: data.dispute_status,
+      });
+    },
+    onDisputeAccepted: async (payload) => {
+      const data = payload.data;
+      await recordPaymentDispute({
+        paymentRef: data.payment_id,
+        disputeRef: data.dispute_id,
+        amountMinor: Number(data.amount),
+        currency: data.currency,
+        status: data.dispute_status,
+      });
+    },
+    onDisputeCancelled: async (payload) => {
+      const data = payload.data;
+      await recordPaymentDispute({
+        paymentRef: data.payment_id,
+        disputeRef: data.dispute_id,
+        amountMinor: Number(data.amount),
+        currency: data.currency,
+        status: data.dispute_status,
+      });
+    },
+    onDisputeChallenged: async (payload) => {
+      const data = payload.data;
+      await recordPaymentDispute({
+        paymentRef: data.payment_id,
+        disputeRef: data.dispute_id,
+        amountMinor: Number(data.amount),
+        currency: data.currency,
+        status: data.dispute_status,
+      });
+    },
+    onDisputeWon: async (payload) => {
+      const data = payload.data;
+      await recordPaymentDispute({
+        paymentRef: data.payment_id,
+        disputeRef: data.dispute_id,
+        amountMinor: Number(data.amount),
+        currency: data.currency,
+        status: data.dispute_status,
+      });
+    },
+    onDisputeLost: async (payload) => {
+      const data = payload.data;
+      await recordPaymentDispute({
+        paymentRef: data.payment_id,
+        disputeRef: data.dispute_id,
+        amountMinor: Number(data.amount),
+        currency: data.currency,
+        status: data.dispute_status,
+      });
     },
   });
 }

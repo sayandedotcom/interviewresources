@@ -42,6 +42,10 @@ export const env = createEnv({
     DODO_PRODUCT_ID_STARTER: req(z.string().min(1)),
     DODO_PRODUCT_ID_BUNDLE: req(z.string().min(1)),
     DODO_PRODUCT_ID_MAX: req(z.string().min(1)),
+    /** Comma-separated old ids accepted by webhooks but never used at checkout. */
+    DODO_LEGACY_PRODUCT_IDS_STARTER: z.string().optional(),
+    DODO_LEGACY_PRODUCT_IDS_BUNDLE: z.string().optional(),
+    DODO_LEGACY_PRODUCT_IDS_MAX: z.string().optional(),
     INNGEST_EVENT_KEY: z.string().min(1).optional(),
     INNGEST_SIGNING_KEY: z.string().min(1).optional(),
     /** Injected by Vercel Cron. Guards /api/cron/*, which is otherwise public. */
@@ -67,6 +71,9 @@ export const env = createEnv({
     DODO_PRODUCT_ID_STARTER: process.env.DODO_PRODUCT_ID_STARTER,
     DODO_PRODUCT_ID_BUNDLE: process.env.DODO_PRODUCT_ID_BUNDLE,
     DODO_PRODUCT_ID_MAX: process.env.DODO_PRODUCT_ID_MAX,
+    DODO_LEGACY_PRODUCT_IDS_STARTER: process.env.DODO_LEGACY_PRODUCT_IDS_STARTER,
+    DODO_LEGACY_PRODUCT_IDS_BUNDLE: process.env.DODO_LEGACY_PRODUCT_IDS_BUNDLE,
+    DODO_LEGACY_PRODUCT_IDS_MAX: process.env.DODO_LEGACY_PRODUCT_IDS_MAX,
     INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
     INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
     CRON_SECRET: process.env.CRON_SECRET,

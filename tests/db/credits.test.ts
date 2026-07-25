@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { creditsLedger, paymentRefunds, payments, researches, users } from "@/lib/db/schema";
@@ -14,8 +15,18 @@ import { type TestDb, createTestDb, resetDb, seedUser } from "./harness";
 const dbPromise = createTestDb();
 vi.mock("@/lib/db/index", async () => ({ db: await dbPromise }));
 
-const { chargeCredits, getBalance, grantCredits, isPaymentCredited, reverseRefund, settlePayment } =
-  await import("@/lib/credits");
+const {
+  chargeCredits,
+  getBalance,
+  grantCredits,
+  isPaymentCredited,
+  reapStaleCreditReservations,
+  releaseCreditReservation,
+  reserveCredits,
+  reverseRefund,
+  settleCreditReservation,
+  settlePayment,
+} = await import("@/lib/credits");
 
 let db: TestDb;
 
@@ -189,13 +200,14 @@ describe("chargeCredits", () => {
     await expect(getBalance(userId)).resolves.toBe(470);
   });
 
-  it("charges unconditionally — the API spend is already sunk, so the balance may go negative", async () => {
+  it("refuses to create a negative balance", async () => {
     const userId = await seedUser(db);
     await grantCredits({ userId, credits: 50, reason: "p", paymentRef: "pay_1" });
 
-    await expect(chargeCredits({ userId, credits: 130, reason: "research" })).resolves.toEqual({
-      balanceAfter: -80,
-    });
+    await expect(chargeCredits({ userId, credits: 130, reason: "research" })).rejects.toThrow(
+      "insufficient credits"
+    );
+    await expect(getBalance(userId)).resolves.toBe(50);
   });
 
   it("charges nothing for a zero-cost run without corrupting the balance", async () => {
@@ -243,6 +255,125 @@ describe("chargeCredits", () => {
     ).rejects.toThrow();
 
     await expect(getBalance(userId)).resolves.toBe(500);
+  });
+});
+
+describe("credit reservations", () => {
+  it("authorizes at most the available balance across concurrent work", async () => {
+    const userId = await seedUser(db);
+    await grantCredits({ userId, credits: 100, reason: "p", paymentRef: "pay_1" });
+
+    const results = await Promise.all([
+      reserveCredits({
+        userId,
+        minimumCredits: 50,
+        maximumCredits: 80,
+        reference: "run_a",
+        reason: "research",
+      }),
+      reserveCredits({
+        userId,
+        minimumCredits: 50,
+        maximumCredits: 80,
+        reference: "run_b",
+        reason: "research",
+      }),
+    ]);
+
+    expect(results.filter((result) => result.status === "reserved")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "insufficient_credits")).toHaveLength(1);
+    await expect(getBalance(userId)).resolves.toBe(20);
+  });
+
+  it("returns unused credits when the metered charge settles", async () => {
+    const userId = await seedUser(db);
+    await grantCredits({ userId, credits: 100, reason: "p", paymentRef: "pay_1" });
+    await reserveCredits({
+      userId,
+      minimumCredits: 50,
+      maximumCredits: 80,
+      reference: "run_1",
+      reason: "research",
+    });
+
+    await expect(
+      settleCreditReservation({
+        userId,
+        reference: "run_1",
+        actualCredits: 30,
+        reason: "research",
+      })
+    ).resolves.toEqual({ balanceAfter: 70, reservedCredits: 80 });
+    await expect(getBalance(userId)).resolves.toBe(70);
+  });
+
+  it("releases the full reservation after failed provider work", async () => {
+    const userId = await seedUser(db);
+    await grantCredits({ userId, credits: 100, reason: "p", paymentRef: "pay_1" });
+    await reserveCredits({
+      userId,
+      minimumCredits: 50,
+      maximumCredits: 80,
+      reference: "run_1",
+      reason: "research",
+    });
+
+    await releaseCreditReservation({
+      userId,
+      reference: "run_1",
+      reason: "research_failed:release",
+    });
+
+    await expect(getBalance(userId)).resolves.toBe(100);
+  });
+
+  it("never settles more credits than were reserved", async () => {
+    const userId = await seedUser(db);
+    await grantCredits({ userId, credits: 100, reason: "p", paymentRef: "pay_1" });
+    await reserveCredits({
+      userId,
+      minimumCredits: 50,
+      maximumCredits: 80,
+      reference: "run_1",
+      reason: "research",
+    });
+
+    await expect(
+      settleCreditReservation({
+        userId,
+        reference: "run_1",
+        actualCredits: 81,
+        reason: "research",
+      })
+    ).rejects.toThrow("exceeds reserved credits");
+    await expect(getBalance(userId)).resolves.toBe(20);
+  });
+
+  it("releases stale reservations once without touching fresh ones", async () => {
+    const userId = await seedUser(db);
+    await grantCredits({ userId, credits: 200, reason: "p", paymentRef: "pay_1" });
+    await reserveCredits({
+      userId,
+      minimumCredits: 50,
+      maximumCredits: 80,
+      reference: "stale",
+      reason: "research",
+    });
+    await reserveCredits({
+      userId,
+      minimumCredits: 50,
+      maximumCredits: 80,
+      reference: "fresh",
+      reason: "research",
+    });
+    await db
+      .update(creditsLedger)
+      .set({ createdAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(creditsLedger.paymentRef, "reservation:stale"));
+
+    await expect(reapStaleCreditReservations(new Date("2026-01-02T00:00:00Z"))).resolves.toBe(1);
+    await expect(reapStaleCreditReservations(new Date("2026-01-02T00:00:00Z"))).resolves.toBe(0);
+    await expect(getBalance(userId)).resolves.toBe(120);
   });
 });
 
@@ -312,7 +443,7 @@ describe("provider payment accounting", () => {
       credits: 550,
       reason: "purchase:bundle",
       paymentRef: "pay_bundle",
-      amountMinor: 500,
+      amountMinor: 649,
       currency: "usd",
       pack: "bundle",
     };
@@ -324,10 +455,13 @@ describe("provider payment accounting", () => {
     await expect(db.select().from(payments)).resolves.toMatchObject([
       {
         providerPaymentId: "pay_bundle",
-        amountMinor: 500,
+        amountMinor: 649,
         currency: "USD",
         pack: "bundle",
+        catalogPriceUsdMinor: 649,
         creditsGranted: 550,
+        estimatedDodoFeeMicros: 659_600,
+        economicsVersion: "2026-07-26.v1",
       },
     ]);
   });
@@ -339,7 +473,7 @@ describe("provider payment accounting", () => {
       credits: 100,
       reason: "purchase:starter",
       paymentRef: "pay_1",
-      amountMinor: 100,
+      amountMinor: 149,
       currency: "USD",
       pack: "starter",
     });
@@ -348,7 +482,7 @@ describe("provider payment accounting", () => {
       reverseRefund({
         paymentRef: "pay_1",
         refundRef: "refund_25",
-        amountMinor: 25,
+        amountMinor: 37,
         currency: "USD",
       })
     ).resolves.toBe(true);
@@ -356,7 +490,7 @@ describe("provider payment accounting", () => {
       reverseRefund({
         paymentRef: "pay_1",
         refundRef: "refund_25",
-        amountMinor: 25,
+        amountMinor: 37,
         currency: "USD",
       })
     ).resolves.toBe(false);
@@ -366,7 +500,7 @@ describe("provider payment accounting", () => {
       reverseRefund({
         paymentRef: "pay_1",
         refundRef: "refund_rest",
-        amountMinor: 75,
+        amountMinor: 112,
         currency: "USD",
       })
     ).resolves.toBe(true);
@@ -375,7 +509,7 @@ describe("provider payment accounting", () => {
     const [payment] = await db.select().from(payments);
     expect(payment).toMatchObject({
       status: "refunded",
-      refundedAmountMinor: 100,
+      refundedAmountMinor: 149,
       creditsReversed: 100,
     });
     expect(await db.select().from(paymentRefunds)).toHaveLength(2);

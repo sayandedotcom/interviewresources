@@ -76,8 +76,8 @@ if (!user) {
 }
 
 const [research] = await sql`
-  insert into researches (user_id, company_name, interview_type, status, cost_cents_llm, cost_cents_search, credits_charged)
-  values (${user.id}, 'Stripe (fake preview)', 'dsa,system_design,behavioral', 'done', 12, 4, 46)
+  insert into researches (user_id, company_name, interview_type, status, cost_micros_llm, cost_micros_search, credits_charged)
+  values (${user.id}, 'Stripe (fake preview)', 'dsa,system_design,behavioral', 'done', 120000, 40000, 46)
   returning id
 `;
 

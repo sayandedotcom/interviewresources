@@ -10,19 +10,26 @@ vi.mock("@/lib/events", () => ({ recordProductEvent: vi.fn() }));
 vi.mock("@/lib/db/index", () => ({ db: { select: vi.fn(), update: vi.fn() } }));
 vi.mock("@/lib/credits", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/credits")>();
-  return { ...actual, getBalance: vi.fn(), chargeCredits: vi.fn() };
+  return {
+    ...actual,
+    reserveCredits: vi.fn(),
+    settleCreditReservation: vi.fn(),
+    releaseCreditReservation: vi.fn(),
+  };
 });
 
 const { getSessionUser } = await import("@/lib/session");
 const { runResearchPipeline } = await import("@/lib/research/pipeline");
-const { chargeCredits, getBalance } = await import("@/lib/credits");
+const { releaseCreditReservation, reserveCredits, settleCreditReservation } =
+  await import("@/lib/credits");
 const { db } = await import("@/lib/db/index");
 const { POST } = await import("./route");
 
 const sessionMock = vi.mocked(getSessionUser);
 const pipelineMock = vi.mocked(runResearchPipeline);
-const balanceMock = vi.mocked(getBalance);
-const chargeMock = vi.mocked(chargeCredits);
+const reserveMock = vi.mocked(reserveCredits);
+const settleMock = vi.mocked(settleCreditReservation);
+const releaseMock = vi.mocked(releaseCreditReservation);
 const selectMock = vi.mocked(db.select);
 const updateMock = vi.mocked(db.update);
 
@@ -126,18 +133,34 @@ const row = {
   roleContext: "Senior BE",
   interviewType: "dsa",
   status: "done",
-  costCentsLlm: 20,
-  costCentsSearch: 10,
+  costMicrosLlm: 200_000,
+  costMicrosSearch: 100_000,
   creditsCharged: 46,
   reportId: "report-1",
   jsonPayload: existingReport,
 };
 
+let availableBalance = 500;
+
 beforeEach(() => {
   vi.clearAllMocks();
   sessionMock.mockResolvedValue(user);
-  balanceMock.mockResolvedValue(500);
-  chargeMock.mockResolvedValue({ balanceAfter: 480 });
+  availableBalance = 500;
+  reserveMock.mockImplementation(async (opts) => {
+    if (availableBalance < opts.minimumCredits) {
+      return { status: "insufficient_credits", balance: availableBalance };
+    }
+    return {
+      status: "reserved",
+      reservation: {
+        reference: opts.reference,
+        reservedCredits: Math.min(availableBalance, opts.maximumCredits),
+        balanceBefore: availableBalance,
+      },
+    };
+  });
+  settleMock.mockResolvedValue({ balanceAfter: 480, reservedCredits: 65 });
+  releaseMock.mockResolvedValue({ balanceAfter: 500, reservedCredits: 65 });
   pipelineMock.mockResolvedValue({ report: additionReport, budget: budgetCosting(0.15) });
   stubSelect(row);
   stubUpdate();
@@ -194,7 +217,7 @@ describe("input validation", () => {
 
 describe("the credit pre-flight check", () => {
   it("rejects a balance below the extend floor with 402", async () => {
-    balanceMock.mockResolvedValue(24);
+    availableBalance = 24;
 
     const res = await POST(post({ interviewTypes: ["dsa"] }), ctx);
 
@@ -208,7 +231,7 @@ describe("the credit pre-flight check", () => {
   });
 
   it("admits a balance exactly at the extend floor, which a full run would reject", async () => {
-    balanceMock.mockResolvedValue(25);
+    availableBalance = 25;
 
     const res = await POST(post({ interviewTypes: ["dsa"] }), ctx);
 
@@ -217,7 +240,7 @@ describe("the credit pre-flight check", () => {
   });
 
   it("caps the pipeline budget at what a small balance can pay for", async () => {
-    balanceMock.mockResolvedValue(25);
+    availableBalance = 25;
 
     await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
 
@@ -226,7 +249,7 @@ describe("the credit pre-flight check", () => {
   });
 
   it("clamps a large balance to the extend cap, not the full-run cap", async () => {
-    balanceMock.mockResolvedValue(100_000);
+    availableBalance = 100_000;
 
     await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
 
@@ -234,7 +257,7 @@ describe("the credit pre-flight check", () => {
   });
 
   it("scales the extend cap with the chosen effort — half the full-run cap", async () => {
-    balanceMock.mockResolvedValue(100_000);
+    availableBalance = 100_000;
 
     await readSse(await POST(post({ interviewTypes: ["dsa"], effort: "high" }), ctx));
     expect(pipelineMock.mock.calls[0][2]).toBe(1.0);
@@ -474,9 +497,9 @@ describe("the extension run", () => {
     await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
 
     const researchUpdate = updates.find((u) => "interviewType" in u)!;
-    // $0.15 all-LLM run → 15 cents, 20 credits; added to the stored 20c / 46 credits.
-    expect(researchUpdate.costCentsLlm).toBe(35);
-    expect(researchUpdate.costCentsSearch).toBe(10);
+    // $0.15 all-LLM run → 150,000 micro-dollars and 20 credits.
+    expect(researchUpdate.costMicrosLlm).toBe(350_000);
+    expect(researchUpdate.costMicrosSearch).toBe(100_000);
     expect(researchUpdate.creditsCharged).toBe(66);
   });
 
@@ -492,9 +515,10 @@ describe("the extension run", () => {
   it("charges the extension against the ledger with its own reason", async () => {
     await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
 
-    expect(chargeMock).toHaveBeenCalledWith({
+    expect(settleMock).toHaveBeenCalledWith({
       userId: "user-1",
-      credits: 20,
+      reference: expect.stringMatching(/^extend:/),
+      actualCredits: 20,
       reason: "research_extend",
       researchId: "research-1",
     });
@@ -515,14 +539,20 @@ describe("the extension run", () => {
 });
 
 describe("failure handling", () => {
-  it("emits an error event and charges nothing when the pipeline throws", async () => {
+  it("emits an error event and releases the reservation when the pipeline throws", async () => {
     pipelineMock.mockRejectedValue(new Error("gemini 503"));
     const updates = stubUpdate();
 
     const events = await readSse(await POST(post({ interviewTypes: ["dsa"] }), ctx));
 
     expect(events.at(-1)).toMatchObject({ kind: "error", message: "gemini 503" });
-    expect(chargeMock).not.toHaveBeenCalled();
+    expect(settleMock).not.toHaveBeenCalled();
+    expect(releaseMock).toHaveBeenCalledWith({
+      userId: "user-1",
+      reference: expect.stringMatching(/^extend:/),
+      reason: "research_extend_failed:release",
+      researchId: "research-1",
+    });
     // The stored report must survive a failed extension untouched.
     expect(updates).toHaveLength(0);
   });

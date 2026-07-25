@@ -67,19 +67,17 @@ describe("CREDIT_PACKS", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("grants the advertised bonus over the flat 100-credits-per-dollar rate", () => {
-    // The bonuses are the reason to buy a bigger pack, so a change to any of
-    // these numbers is a change to the offer the pricing page makes.
-    expect(CREDIT_PACKS.starter.credits).toBe(100); // $1, flat
-    expect(CREDIT_PACKS.bundle.credits).toBe(550); // $5 → 500 flat + 10%
-    expect(CREDIT_PACKS.max.credits).toBe(1200); // $10 → 1000 flat + 20%
+  it("uses the launch prices and unchanged credit grants", () => {
+    expect(CREDIT_PACKS.starter).toMatchObject({ credits: 100, priceUsdMinor: 149 });
+    expect(CREDIT_PACKS.bundle).toMatchObject({ credits: 550, priceUsdMinor: 649 });
+    expect(CREDIT_PACKS.max).toMatchObject({ credits: 1200, priceUsdMinor: 1249 });
   });
 
   it("makes each larger pack a strictly better rate, so the ladder never inverts", () => {
     const perDollar = [
-      CREDIT_PACKS.starter.credits / 1,
-      CREDIT_PACKS.bundle.credits / 5,
-      CREDIT_PACKS.max.credits / 10,
+      CREDIT_PACKS.starter.credits / (CREDIT_PACKS.starter.priceUsdMinor / 100),
+      CREDIT_PACKS.bundle.credits / (CREDIT_PACKS.bundle.priceUsdMinor / 100),
+      CREDIT_PACKS.max.credits / (CREDIT_PACKS.max.priceUsdMinor / 100),
     ];
     expect(perDollar[0]).toBeLessThan(perDollar[1]);
     expect(perDollar[1]).toBeLessThan(perDollar[2]);
@@ -87,9 +85,8 @@ describe("CREDIT_PACKS", () => {
 });
 
 /**
- * config/pricing.ts advertises the credits; CREDIT_PACKS grants them. Only a
- * comment keeps the two in step, so a drift would quietly sell 500 credits and
- * hand over 100. Pin it.
+ * Both surfaces derive from the same catalog; pin the public contract so a
+ * future refactor cannot reintroduce independent pack definitions.
  */
 describe("the pricing page agrees with what the webhook grants", () => {
   it("advertises exactly the packs that checkout sells", () => {
@@ -100,6 +97,7 @@ describe("the pricing page agrees with what the webhook grants", () => {
     for (const plan of pricingConfig.plans) {
       expect(CREDIT_PACKS[plan.slug].credits).toBe(plan.credits);
       expect(CREDIT_PACKS[plan.slug].name).toBe(plan.name);
+      expect(CREDIT_PACKS[plan.slug].priceUsdMinor / 100).toBe(plan.price);
     }
   });
 });

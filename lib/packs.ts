@@ -1,55 +1,75 @@
-/**
- * Server-only mapping from a pack slug to its Dodo product and what it grants.
- * Kept out of config/pricing.ts because that file is imported by client pages
- * and these product ids come from the environment.
- */
 import { env } from "@/env";
 
-export interface CreditPack {
-  slug: "starter" | "bundle" | "max";
-  name: string;
-  credits: number;
-  priceUsdMinor: number;
+import {
+  CREDIT_PACKS_BY_SLUG,
+  CREDIT_PACK_CATALOG,
+  type CreditPackCatalogItem,
+  type PackSlug,
+  getCatalogPack,
+} from "./economics";
+
+export interface CreditPack extends CreditPackCatalogItem {
   productId: string | undefined;
+  isLegacyProduct?: boolean;
+}
+
+const ACTIVE_PRODUCT_IDS: Record<PackSlug, string | undefined> = {
+  starter: env.DODO_PRODUCT_ID_STARTER,
+  bundle: env.DODO_PRODUCT_ID_BUNDLE,
+  max: env.DODO_PRODUCT_ID_MAX,
+};
+
+const LEGACY_PRODUCT_IDS: Record<PackSlug, string[]> = {
+  starter:
+    env.DODO_LEGACY_PRODUCT_IDS_STARTER?.split(",")
+      .map((id) => id.trim())
+      .filter(Boolean) ?? [],
+  bundle:
+    env.DODO_LEGACY_PRODUCT_IDS_BUNDLE?.split(",")
+      .map((id) => id.trim())
+      .filter(Boolean) ?? [],
+  max:
+    env.DODO_LEGACY_PRODUCT_IDS_MAX?.split(",")
+      .map((id) => id.trim())
+      .filter(Boolean) ?? [],
+};
+
+const LEGACY_PRICE_USD_MINOR: Record<PackSlug, number> = {
+  starter: 100,
+  bundle: 500,
+  max: 1_000,
+};
+
+export const CREDIT_PACKS = Object.fromEntries(
+  CREDIT_PACK_CATALOG.map((pack) => [
+    pack.slug,
+    { ...pack, productId: ACTIVE_PRODUCT_IDS[pack.slug] },
+  ])
+) as Record<PackSlug, CreditPack>;
+
+export function getPack(slug: string): CreditPack | null {
+  const pack = getCatalogPack(slug);
+  return pack ? CREDIT_PACKS[pack.slug] : null;
 }
 
 /**
- * Starter grants a flat 100 credits per dollar. The bigger packs add a bonus on
- * top of that rate: Bundle 10%, Max 20%.
+ * Reverse lookup for the webhook. Checkout only uses active ids; legacy ids
+ * remain accepted so delayed provider deliveries keep their original USD price
+ * snapshot while granting the unchanged credits.
  */
-export const CREDIT_PACKS: Record<CreditPack["slug"], CreditPack> = {
-  starter: {
-    slug: "starter",
-    name: "Starter",
-    credits: 100,
-    priceUsdMinor: 100,
-    productId: env.DODO_PRODUCT_ID_STARTER,
-  },
-  bundle: {
-    slug: "bundle",
-    name: "Bundle",
-    credits: 550,
-    priceUsdMinor: 500,
-    productId: env.DODO_PRODUCT_ID_BUNDLE,
-  },
-  max: {
-    slug: "max",
-    name: "Max",
-    credits: 1200,
-    priceUsdMinor: 1000,
-    productId: env.DODO_PRODUCT_ID_MAX,
-  },
-};
-
-export function getPack(slug: string): CreditPack | null {
-  // hasOwn, not a bare index: the checkout route passes `String(body.plan)`
-  // straight in, and `CREDIT_PACKS["constructor"]` resolves off the prototype
-  // to a truthy value that would sail past the caller's `if (!pack)` guard.
-  if (!Object.hasOwn(CREDIT_PACKS, slug)) return null;
-  return CREDIT_PACKS[slug as CreditPack["slug"]];
-}
-
-/** Reverse lookup for the webhook, which only sees Dodo product ids. */
 export function getPackByProductId(productId: string): CreditPack | null {
-  return Object.values(CREDIT_PACKS).find((p) => p.productId === productId) ?? null;
+  const active = Object.values(CREDIT_PACKS).find((pack) => pack.productId === productId);
+  if (active) return active;
+
+  for (const slug of Object.keys(CREDIT_PACKS_BY_SLUG) as PackSlug[]) {
+    if (LEGACY_PRODUCT_IDS[slug].includes(productId)) {
+      return {
+        ...CREDIT_PACKS_BY_SLUG[slug],
+        priceUsdMinor: LEGACY_PRICE_USD_MINOR[slug],
+        productId,
+        isLegacyProduct: true,
+      };
+    }
+  }
+  return null;
 }

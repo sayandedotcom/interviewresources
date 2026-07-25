@@ -1,3 +1,7 @@
+import { CREDIT_PACKS_BY_SLUG } from "@/lib/economics";
+
+const STARTER_PRICE = `$${(CREDIT_PACKS_BY_SLUG.starter.priceUsdMinor / 100).toFixed(2)}`;
+
 /**
  * Single source of truth for all marketing prose on the site: landing page,
  * how-it-works section, CTA section, FAQs, stats strip, footer, and SEO/OG
@@ -35,18 +39,18 @@ export const copyConfig = {
     /**
      * `ariaLabel` disambiguates this from the bottom CTA button, which carries
      * the same visible text but points at /signin. Screen-reader users hitting
-     * a link list would otherwise see "Try it for $1" twice with no way to tell
+     * a link list would otherwise see the same CTA twice with no way to tell
      * which goes where. Keep the visible label as a prefix of the aria-label —
      * WCAG 2.5.3 requires the accessible name to contain the visible text, so
-     * voice-control users can still say "click Try it for $1".
+     * voice-control users can still speak the visible label.
      */
     heroCtaPrimary: {
-      label: "Try it for $1",
-      ariaLabel: "Try it for $1 — see pricing",
+      label: `Try it for ${STARTER_PRICE}`,
+      ariaLabel: `Try it for ${STARTER_PRICE} — see pricing`,
       href: "/#pricing",
     },
     heroCtaSecondary: { label: "See how it works", href: "/#how-it-works" },
-    heroFomo: "$1 in credits, enough for about two typical reports.",
+    heroFomo: `${STARTER_PRICE} gets 100 credits, enough for about two typical reports.`,
     /**
      * Plain-prose statement of what the product is, sitting directly below the
      * hero. Google's OAuth branding review reads the homepage looking for the
@@ -351,12 +355,11 @@ export const copyConfig = {
   cta: {
     title: "Know the questions before you walk in.",
     subtitle: "AI-researched, evidence-backed reports for under $0.50 each. No subscription.",
-    signedOutLabel: "Try it for $1",
+    signedOutLabel: `Try it for ${STARTER_PRICE}`,
     /** See landing.heroCtaPrimary.ariaLabel — same visible text, /signin instead. */
-    signedOutAriaLabel: "Try it for $1 — sign in to get started",
+    signedOutAriaLabel: `Try it for ${STARTER_PRICE} — sign in to get started`,
     signedInLabel: "Get started",
-    closer:
-      "$1 gets you enough credits to see whether the research is useful for your next interview.",
+    closer: `${STARTER_PRICE} gets you enough credits to see whether the research is useful for your next interview.`,
   },
 
   // ── FAQs ──────────────────────────────────────────────────────────
@@ -368,8 +371,7 @@ export const copyConfig = {
     },
     {
       question: "How much does it cost?",
-      answer:
-        "A typical report is under $0.50. You buy credits once (the $1 Starter pack covers about two reports) and spend them only when you run a report. No subscription, no monthly fee.",
+      answer: `A typical report is under $0.50. You buy credits once (the ${STARTER_PRICE} Starter pack covers about two reports) and spend them only when you run a report. No subscription, no monthly fee.`,
     },
     {
       question: "How long does a report take?",

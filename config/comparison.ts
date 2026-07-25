@@ -1,3 +1,7 @@
+import { CREDIT_PACKS_BY_SLUG } from "@/lib/economics";
+
+const STARTER_PRICE = `$${(CREDIT_PACKS_BY_SLUG.starter.priceUsdMinor / 100).toFixed(2)}`;
+
 export const comparisonConfig = [
   {
     feature: "Company-specific questions",
@@ -31,7 +35,7 @@ export const comparisonConfig = [
   },
   {
     feature: "Starting price",
-    us: "$1 (≈2 reports)",
+    us: `${STARTER_PRICE} (≈2 reports)`,
     genericPrep: "Free",
     coaching: "$200+",
   },

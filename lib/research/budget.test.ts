@@ -11,7 +11,7 @@ const PRO_OUT = 12.0;
 describe("BudgetTracker.recordLlmCall", () => {
   it("prices input and output tokens separately", () => {
     const b = new BudgetTracker();
-    const cost = b.recordLlmCall("plan", "gemini-3.1-flash-lite-preview", 1_000_000, 1_000_000);
+    const cost = b.recordLlmCall("plan", "gemini-3.1-flash-lite", 1_000_000, 1_000_000);
 
     expect(cost).toBeCloseTo(FLASH_LITE_IN + FLASH_LITE_OUT, 10);
     expect(b.totalUsd).toBeCloseTo(1.75, 10);
@@ -33,8 +33,8 @@ describe("BudgetTracker.recordLlmCall", () => {
 
   it("accumulates across stages", () => {
     const b = new BudgetTracker();
-    b.recordLlmCall("plan", "gemini-3.1-flash-lite-preview", 1_000_000, 0);
-    b.recordLlmCall("compress", "gemini-3.1-flash-lite-preview", 1_000_000, 0);
+    b.recordLlmCall("plan", "gemini-3.1-flash-lite", 1_000_000, 0);
+    b.recordLlmCall("compress", "gemini-3.1-flash-lite", 1_000_000, 0);
 
     expect(b.totalUsd).toBeCloseTo(FLASH_LITE_IN * 2, 10);
   });
@@ -63,7 +63,7 @@ describe("BudgetTracker.recordTavilyCredits", () => {
   it("files search spend under the search kind so the route can split cost by column", () => {
     const b = new BudgetTracker();
     b.recordTavilyCredits("gather", 1, "stripe interview");
-    b.recordLlmCall("plan", "gemini-3.1-flash-lite-preview", 100, 100);
+    b.recordLlmCall("plan", "gemini-3.1-flash-lite", 100, 100);
 
     expect(b.breakdown().filter((e) => e.kind === "search")).toHaveLength(1);
     expect(b.breakdown().filter((e) => e.kind === "llm")).toHaveLength(1);
@@ -84,7 +84,7 @@ describe("degrade and stop thresholds", () => {
 
     expect(b.totalUsd).toBeCloseTo(BUDGET_DEGRADE_USD, 10);
     expect(b.shouldDegrade()).toBe(true);
-    expect(b.shouldStop()).toBe(false);
+    expect(b.shouldStop()).toBe(true);
   });
 
   it("does not degrade a hair under the threshold", () => {
@@ -118,7 +118,9 @@ describe("degrade and stop thresholds", () => {
 
     b.recordLlmCall("gather", "gemini-3.1-pro-preview", 5_000, 0); // +$0.01 → $0.17 = 85%
     expect(b.shouldDegrade()).toBe(true);
-    expect(b.shouldStop()).toBe(false);
+    // Non-synthesis work stops because the balance that remains is protected
+    // for the final report call.
+    expect(b.shouldStop()).toBe(true);
 
     b.recordLlmCall("gather", "gemini-3.1-pro-preview", 15_000, 0); // +$0.03 → $0.20
     expect(b.shouldStop()).toBe(true);
@@ -138,9 +140,15 @@ describe("degrade and stop thresholds", () => {
 describe("breakdown and summary", () => {
   it("hands out a copy, so a caller cannot mutate the ledger it is billing from", () => {
     const b = new BudgetTracker();
-    b.recordLlmCall("plan", "gemini-3.1-flash-lite-preview", 100, 100);
+    b.recordLlmCall("plan", "gemini-3.1-flash-lite", 100, 100);
 
-    b.breakdown().push({ stage: "evil", kind: "llm", detail: "x", costUsd: 999 });
+    b.breakdown().push({
+      stage: "evil",
+      kind: "llm",
+      detail: "x",
+      costMicros: 999_000_000,
+      costUsd: 999,
+    });
 
     expect(b.breakdown()).toHaveLength(1);
     expect(b.totalUsd).toBeLessThan(1);
@@ -160,20 +168,30 @@ describe("breakdown and summary", () => {
   });
 });
 
-describe("what the tracker does NOT do", () => {
-  /**
-   * shouldStop() is a pre-flight check, not a spend limiter. A single call
-   * recorded after the check can overshoot the cap without bound. Callers must
-   * therefore check *before* every optional call — and `synthesizeStage`
-   * currently does not. See pipeline.test.ts.
-   */
-  it("cannot prevent a single call from blowing past the cap", () => {
-    const b = new BudgetTracker(1.0);
-    expect(b.shouldStop()).toBe(false);
+describe("provider spend reservations", () => {
+  it("bounds concurrent Tavily calls before any request starts", () => {
+    const b = new BudgetTracker(0.2);
+    const reservations = Array.from({ length: 20 }, (_, i) =>
+      b.reserveTavilyCredits("gather", 1, `query ${i}`)
+    ).filter((reservation) => reservation !== null);
 
-    b.recordLlmCall("synthesize", "gemini-3.1-pro-preview", 1_000_000, 1_000_000); // $14
+    // 45% remains protected for synthesis, so no more than $0.11 can be
+    // concurrently authorized for gathering.
+    expect(reservations).toHaveLength(13);
+    expect(reservations.length * 0.008).toBeLessThanOrEqual(0.11);
+  });
 
-    expect(b.totalUsd).toBeCloseTo(PRO_IN + PRO_OUT, 10);
-    expect(b.totalUsd).toBeGreaterThan(b.capUsd);
+  it("caps model output to the remaining reserved budget", () => {
+    const b = new BudgetTracker(0.2);
+    const { reservation, maxOutputTokens } = b.reserveLlmCall({
+      stage: "synthesize",
+      model: "gemini-3.1-pro-preview",
+      promptBytes: 1_000,
+      requestedMaxOutputTokens: 100_000,
+    });
+
+    expect(maxOutputTokens).toBeLessThan(100_000);
+    b.commitLlmCall(reservation, "gemini-3.1-pro-preview", 1_000, maxOutputTokens);
+    expect(b.totalUsd).toBeLessThanOrEqual(b.capUsd);
   });
 });

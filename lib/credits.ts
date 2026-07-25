@@ -3,7 +3,21 @@ import { cache } from "react";
 import { and, eq, sql } from "drizzle-orm";
 
 import { db } from "./db/index";
-import { creditsLedger, paymentRefunds, payments, productEvents, users } from "./db/schema";
+import {
+  creditsLedger,
+  paymentDisputes,
+  paymentRefunds,
+  payments,
+  productEvents,
+  users,
+} from "./db/schema";
+import {
+  ECONOMICS,
+  ECONOMICS_VERSION,
+  estimateDodoTransactionFeeMicros,
+  getCatalogPack,
+  usdToMicros,
+} from "./economics";
 
 /**
  * The pure credit math lives in lib/pricing.ts so the browser can price a run
@@ -52,14 +66,8 @@ export async function isPaymentCredited(userId: string, paymentRef: string): Pro
 }
 
 /**
- * Charges a completed run. Takes a row lock on the user so two concurrent runs
- * can't both read the same balance and each spend it.
- *
- * The charge is unconditional: by the time we get here the money is already
- * spent with Gemini and Tavily. The pre-flight check in the research route is
- * what stops a user starting a run they can't afford, so the worst case is a
- * user who raced two runs ending slightly negative — which just blocks their
- * next run until they top up.
+ * Direct ledger charge for non-reserved work. New provider-backed work should
+ * reserve first and settle below; this guard refuses a negative balance.
  */
 export async function chargeCredits(opts: {
   userId: string;
@@ -69,6 +77,14 @@ export async function chargeCredits(opts: {
 }): Promise<{ balanceAfter: number }> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select id from ${users} where ${users.id} = ${opts.userId} for update`);
+
+    const [before] = await tx
+      .select({ balance: sql<number>`coalesce(sum(${creditsLedger.delta}), 0)::int` })
+      .from(creditsLedger)
+      .where(eq(creditsLedger.userId, opts.userId));
+    if (opts.credits > (before?.balance ?? 0)) {
+      throw new Error("insufficient credits for charge");
+    }
 
     await tx.insert(creditsLedger).values({
       userId: opts.userId,
@@ -84,6 +100,146 @@ export async function chargeCredits(opts: {
 
     return { balanceAfter: row?.balance ?? 0 };
   });
+}
+
+export interface CreditReservation {
+  reference: string;
+  reservedCredits: number;
+  balanceBefore: number;
+}
+
+export type ReserveCreditsResult =
+  | { status: "reserved"; reservation: CreditReservation }
+  | { status: "insufficient_credits"; balance: number };
+
+/** Atomically removes a bounded provider budget from the spendable balance. */
+export async function reserveCredits(opts: {
+  userId: string;
+  minimumCredits: number;
+  maximumCredits: number;
+  reference: string;
+  reason: string;
+  researchId?: string;
+}): Promise<ReserveCreditsResult> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${users} where ${users.id} = ${opts.userId} for update`);
+    const [row] = await tx
+      .select({ balance: sql<number>`coalesce(sum(${creditsLedger.delta}), 0)::int` })
+      .from(creditsLedger)
+      .where(eq(creditsLedger.userId, opts.userId));
+    const balance = row?.balance ?? 0;
+    if (balance < opts.minimumCredits) {
+      return { status: "insufficient_credits" as const, balance };
+    }
+
+    const reservedCredits = Math.min(balance, opts.maximumCredits);
+    await tx.insert(creditsLedger).values({
+      userId: opts.userId,
+      delta: -reservedCredits,
+      reason: `${opts.reason}:reservation`,
+      paymentRef: `reservation:${opts.reference}`,
+      researchId: opts.researchId,
+    });
+    return {
+      status: "reserved" as const,
+      reservation: { reference: opts.reference, reservedCredits, balanceBefore: balance },
+    };
+  });
+}
+
+/**
+ * Finalizes a reservation by returning the unused portion. The reservation and
+ * settlement rows leave an append-only audit trail and make retries idempotent.
+ */
+export async function settleCreditReservation(opts: {
+  userId: string;
+  reference: string;
+  actualCredits: number;
+  reason: string;
+  researchId?: string;
+}): Promise<{ balanceAfter: number; reservedCredits: number }> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${users} where ${users.id} = ${opts.userId} for update`);
+    const [reservation] = await tx
+      .select({ delta: creditsLedger.delta })
+      .from(creditsLedger)
+      .where(
+        and(
+          eq(creditsLedger.userId, opts.userId),
+          eq(creditsLedger.paymentRef, `reservation:${opts.reference}`)
+        )
+      )
+      .for("update")
+      .limit(1);
+    if (!reservation || reservation.delta >= 0) {
+      throw new Error("credit reservation not found");
+    }
+
+    const reservedCredits = -reservation.delta;
+    if (opts.actualCredits < 0 || opts.actualCredits > reservedCredits) {
+      throw new Error("actual charge exceeds reserved credits");
+    }
+
+    await tx
+      .insert(creditsLedger)
+      .values({
+        userId: opts.userId,
+        delta: reservedCredits - opts.actualCredits,
+        reason: opts.reason,
+        paymentRef: `reservation-settlement:${opts.reference}`,
+        researchId: opts.researchId,
+      })
+      .onConflictDoNothing({ target: creditsLedger.paymentRef });
+
+    const [row] = await tx
+      .select({ balance: sql<number>`coalesce(sum(${creditsLedger.delta}), 0)::int` })
+      .from(creditsLedger)
+      .where(eq(creditsLedger.userId, opts.userId));
+    return { balanceAfter: row?.balance ?? 0, reservedCredits };
+  });
+}
+
+export function releaseCreditReservation(opts: {
+  userId: string;
+  reference: string;
+  reason: string;
+  researchId?: string;
+}) {
+  return settleCreditReservation({ ...opts, actualCredits: 0 });
+}
+
+/**
+ * Returns budgets stranded by a terminated route handler. The settlement ref
+ * is unique, so this is safe to race with a late successful settlement; at
+ * most one of them can finalize a reservation.
+ */
+export async function reapStaleCreditReservations(
+  cutoff: Date = new Date(Date.now() - 15 * 60 * 1_000)
+): Promise<number> {
+  const released = await db.execute(sql`
+    insert into "credits_ledger" (
+      "user_id",
+      "delta",
+      "reason",
+      "payment_ref",
+      "research_id"
+    )
+    select
+      reservation."user_id",
+      -reservation."delta",
+      'stale_reservation_release',
+      replace(reservation."payment_ref", 'reservation:', 'reservation-settlement:'),
+      reservation."research_id"
+    from "credits_ledger" reservation
+    where reservation."payment_ref" like 'reservation:%'
+      and reservation."delta" < 0
+      and reservation."created_at" < ${cutoff}
+    on conflict ("payment_ref") do nothing
+    returning "id"
+  `);
+
+  const result = released as unknown as { rows?: unknown[] } | unknown[];
+  return Array.isArray(result) ? result.length : (result.rows?.length ?? 0);
 }
 
 /**
@@ -124,7 +280,18 @@ export async function settlePayment(opts: {
   amountMinor: number;
   currency: string;
   pack: string;
+  catalogPriceUsdMinor?: number;
+  estimatedDodoFeeMicros?: number;
+  economicsVersion?: string;
 }): Promise<boolean> {
+  const catalogPack = getCatalogPack(opts.pack);
+  const catalogPriceUsdMinor =
+    opts.catalogPriceUsdMinor ??
+    catalogPack?.priceUsdMinor ??
+    (opts.currency.toUpperCase() === "USD" ? opts.amountMinor : 0);
+  const estimatedDodoFeeMicros =
+    opts.estimatedDodoFeeMicros ?? estimateDodoTransactionFeeMicros(catalogPriceUsdMinor);
+
   return db.transaction(async (tx) => {
     const inserted = await tx
       .insert(payments)
@@ -134,7 +301,10 @@ export async function settlePayment(opts: {
         amountMinor: opts.amountMinor,
         currency: opts.currency.toUpperCase(),
         pack: opts.pack,
+        catalogPriceUsdMinor,
         creditsGranted: opts.credits,
+        estimatedDodoFeeMicros,
+        economicsVersion: opts.economicsVersion ?? ECONOMICS_VERSION,
       })
       .onConflictDoNothing({ target: payments.providerPaymentId })
       .returning({ id: payments.id });
@@ -156,6 +326,9 @@ export async function settlePayment(opts: {
         currency: opts.currency.toUpperCase(),
         pack: opts.pack,
         credits: opts.credits,
+        catalogPriceUsdMinor,
+        estimatedDodoFeeMicros,
+        economicsVersion: opts.economicsVersion ?? ECONOMICS_VERSION,
       },
     });
     return true;
@@ -204,6 +377,8 @@ export async function reverseRefund(opts: {
         amountMinor: refundAmount,
         currency: opts.currency.toUpperCase(),
         creditsReversed: creditsToReverse,
+        estimatedFeeMicros: usdToMicros(ECONOMICS.providers.dodo.refundFeeUsd),
+        economicsVersion: ECONOMICS_VERSION,
       })
       .onConflictDoNothing({ target: paymentRefunds.providerRefundId })
       .returning({ id: paymentRefunds.id });
@@ -240,4 +415,37 @@ export async function reverseRefund(opts: {
     });
     return true;
   });
+}
+
+/** Upserts the latest lifecycle state for one provider dispute. */
+export async function recordPaymentDispute(opts: {
+  paymentRef: string;
+  disputeRef: string;
+  amountMinor: number;
+  currency: string;
+  status: (typeof paymentDisputes.status.enumValues)[number];
+}): Promise<boolean> {
+  const [payment] = await db
+    .select({ id: payments.id })
+    .from(payments)
+    .where(eq(payments.providerPaymentId, opts.paymentRef))
+    .limit(1);
+  if (!payment) return false;
+
+  await db
+    .insert(paymentDisputes)
+    .values({
+      paymentId: payment.id,
+      providerDisputeId: opts.disputeRef,
+      amountMinor: Math.max(0, Math.round(opts.amountMinor)),
+      currency: opts.currency.toUpperCase(),
+      status: opts.status,
+      estimatedFeeMicros: usdToMicros(ECONOMICS.providers.dodo.disputeFeeUsd),
+      economicsVersion: ECONOMICS_VERSION,
+    })
+    .onConflictDoUpdate({
+      target: paymentDisputes.providerDisputeId,
+      set: { status: opts.status, updatedAt: new Date() },
+    });
+  return true;
 }

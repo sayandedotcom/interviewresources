@@ -49,10 +49,11 @@ export async function compressStage(
       emit(onProgress, "compress", `Summarizing: ${source.title || source.url}`);
       try {
         const { summary } = await generateStructured({
-          model: "gemini-3.1-flash-lite-preview",
+          model: "gemini-3.1-flash-lite",
           stage: "compress",
           schema: compressedNoteSchema,
           budget,
+          maxOutputTokens: 768,
           system: `Summarize the given web page content into a dense note for an interview-prep
 researcher. Keep concrete, checkable facts: specific questions mentioned, technologies
 named, round structure, difficulty signals, dates. Drop filler. Do not editorialize.`,

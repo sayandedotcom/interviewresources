@@ -115,8 +115,8 @@ export const researches = pgTable(
     interviewType: text("interview_type").notNull(), // comma-joined categories, or "full_loop"
     roleContext: text("role_context"),
     status: text("status", { enum: researchStatus }).notNull().default("pending"),
-    costCentsLlm: integer("cost_cents_llm").notNull().default(0),
-    costCentsSearch: integer("cost_cents_search").notNull().default(0),
+    costMicrosLlm: integer("cost_micros_llm").notNull().default(0),
+    costMicrosSearch: integer("cost_micros_search").notNull().default(0),
     /** Null until the run settles. Only successful runs are charged. */
     creditsCharged: integer("credits_charged"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -189,7 +189,11 @@ export const payments = pgTable(
     amountMinor: integer("amount_minor").notNull(),
     currency: text("currency").notNull(),
     pack: text("pack").notNull(),
+    /** Immutable USD catalog facts used for internal unit economics. */
+    catalogPriceUsdMinor: integer("catalog_price_usd_minor").notNull(),
     creditsGranted: integer("credits_granted").notNull(),
+    estimatedDodoFeeMicros: integer("estimated_dodo_fee_micros").notNull(),
+    economicsVersion: text("economics_version").notNull(),
     creditsReversed: integer("credits_reversed").notNull().default(0),
     refundedAmountMinor: integer("refunded_amount_minor").notNull().default(0),
     status: text("status", { enum: paymentStatus }).notNull().default("succeeded"),
@@ -209,7 +213,35 @@ export const paymentRefunds = pgTable("payment_refunds", {
   amountMinor: integer("amount_minor").notNull(),
   currency: text("currency").notNull(),
   creditsReversed: integer("credits_reversed").notNull(),
+  estimatedFeeMicros: integer("estimated_fee_micros").notNull(),
+  economicsVersion: text("economics_version").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const paymentDisputeStatus = [
+  "dispute_opened",
+  "dispute_expired",
+  "dispute_accepted",
+  "dispute_cancelled",
+  "dispute_challenged",
+  "dispute_won",
+  "dispute_lost",
+] as const;
+
+/** Provider dispute lifecycle plus immutable fee assumptions. */
+export const paymentDisputes = pgTable("payment_disputes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  paymentId: uuid("payment_id")
+    .notNull()
+    .references(() => payments.id, { onDelete: "cascade" }),
+  providerDisputeId: text("provider_dispute_id").notNull().unique(),
+  amountMinor: integer("amount_minor").notNull(),
+  currency: text("currency").notNull(),
+  status: text("status", { enum: paymentDisputeStatus }).notNull(),
+  estimatedFeeMicros: integer("estimated_fee_micros").notNull(),
+  economicsVersion: text("economics_version").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const productEvents = pgTable(
@@ -264,8 +296,13 @@ export const questionFeedbackRelations = relations(questionFeedback, ({ one }) =
 export const paymentsRelations = relations(payments, ({ one, many }) => ({
   user: one(users, { fields: [payments.userId], references: [users.id] }),
   refunds: many(paymentRefunds),
+  disputes: many(paymentDisputes),
 }));
 
 export const paymentRefundsRelations = relations(paymentRefunds, ({ one }) => ({
   payment: one(payments, { fields: [paymentRefunds.paymentId], references: [payments.id] }),
+}));
+
+export const paymentDisputesRelations = relations(paymentDisputes, ({ one }) => ({
+  payment: one(payments, { fields: [paymentDisputes.paymentId], references: [payments.id] }),
 }));

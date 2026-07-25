@@ -46,10 +46,8 @@ describe("tavilyExtractCredits", () => {
     expect(tavilyExtractCredits(11)).toBe(3);
   });
 
-  it("bills a credit for zero urls, so callers must not call it on an empty list", () => {
-    // `Math.max(1, ...)` floors at one. The pipeline guards with `length > 0`;
-    // this test pins the trap so nobody removes that guard.
-    expect(tavilyExtractCredits(0)).toBe(1);
+  it("bills no credits when there are no successful extractions", () => {
+    expect(tavilyExtractCredits(0)).toBe(0);
   });
 });
 

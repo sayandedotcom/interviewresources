@@ -1,6 +1,7 @@
 import { env } from "@/env";
 
 import { reapStuckRuns } from "@/lib/admin/queries";
+import { reapStaleCreditReservations } from "@/lib/credits";
 
 // Touches the database, so it cannot run on edge.
 export const runtime = "nodejs";
@@ -21,10 +22,11 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   const reaped = await reapStuckRuns();
+  const reservationsReleased = await reapStaleCreditReservations();
 
   if (reaped.length > 0) {
     console.warn(`[cron/reap] failed ${reaped.length} stuck run(s): ${reaped.join(", ")}`);
   }
 
-  return Response.json({ reaped: reaped.length });
+  return Response.json({ reaped: reaped.length, reservationsReleased });
 }

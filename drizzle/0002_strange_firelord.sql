@@ -49,7 +49,7 @@ ALTER TABLE "users" DROP CONSTRAINT "users_referred_by_users_id_fk";
 ALTER TABLE "question_feedback" ADD COLUMN "category" text DEFAULT 'unknown' NOT NULL;--> statement-breakpoint
 ALTER TABLE "question_feedback" ADD COLUMN "confidence" text DEFAULT 'unknown' NOT NULL;--> statement-breakpoint
 ALTER TABLE "question_feedback" ADD COLUMN "updated_at" timestamp DEFAULT now() NOT NULL;--> statement-breakpoint
-ALTER TABLE "users" ADD COLUMN "marketing_email_opt_in" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "marketing_email_opt_in" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "payment_refunds" ADD CONSTRAINT "payment_refunds_payment_id_payments_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."payments"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product_events" ADD CONSTRAINT "product_events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

@@ -25,7 +25,7 @@ describe("header auth fallback", () => {
     useSessionMock.mockReturnValue({ data: null, isPending: true });
     render(<Header />);
 
-    expect(screen.getAllByRole("link", { name: /try it for \$1/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: /try it for \$1\.49/i }).length).toBeGreaterThan(0);
     expect(screen.queryByText(/open app/i)).not.toBeInTheDocument();
   });
 

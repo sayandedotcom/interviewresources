@@ -28,14 +28,20 @@ vi.mock("@/lib/research/sessions", async (importOriginal) => {
   };
 });
 vi.mock("@/lib/credits", async (importOriginal) => {
-  // Keep the real conversion maths; stub only the two functions that touch the DB.
+  // Keep the real conversion maths; stub only the functions that touch the DB.
   const actual = await importOriginal<typeof import("@/lib/credits")>();
-  return { ...actual, getBalance: vi.fn(), chargeCredits: vi.fn() };
+  return {
+    ...actual,
+    getBalance: vi.fn(),
+    settleCreditReservation: vi.fn(),
+    releaseCreditReservation: vi.fn(),
+  };
 });
 
 const { getSessionUser } = await import("@/lib/session");
 const { runResearchPipeline } = await import("@/lib/research/pipeline");
-const { chargeCredits, getBalance } = await import("@/lib/credits");
+const { getBalance, releaseCreditReservation, settleCreditReservation } =
+  await import("@/lib/credits");
 const { MAX_SESSIONS_PER_USER, hasRunInFlight, pruneToLimit, startResearchRun } =
   await import("@/lib/research/sessions");
 const { db } = await import("@/lib/db/index");
@@ -44,7 +50,8 @@ const { POST } = await import("./route");
 const sessionMock = vi.mocked(getSessionUser);
 const pipelineMock = vi.mocked(runResearchPipeline);
 const balanceMock = vi.mocked(getBalance);
-const chargeMock = vi.mocked(chargeCredits);
+const settleMock = vi.mocked(settleCreditReservation);
+const releaseMock = vi.mocked(releaseCreditReservation);
 const pruneMock = vi.mocked(pruneToLimit);
 const inFlightMock = vi.mocked(hasRunInFlight);
 const startMock = vi.mocked(startResearchRun);
@@ -134,7 +141,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   sessionMock.mockResolvedValue(user);
   balanceMock.mockResolvedValue(500);
-  chargeMock.mockResolvedValue({ balanceAfter: 454 });
+  settleMock.mockResolvedValue({ balanceAfter: 454, reservedCredits: 130 });
+  releaseMock.mockResolvedValue({ balanceAfter: 500, reservedCredits: 130 });
   pipelineMock.mockResolvedValue({ report, budget: budgetCosting(0.35) });
   pruneMock.mockResolvedValue(0);
   inFlightMock.mockResolvedValue(false);
@@ -155,7 +163,13 @@ beforeEach(() => {
         status: "running",
       })
       .returning({ id: researches.id });
-    return { status: "started", researchId: row.id, balance };
+    return {
+      status: "started",
+      researchId: row.id,
+      balance,
+      reservationRef: row.id,
+      reservedCredits: Math.min(balance, opts.maximumCredits),
+    };
   });
 });
 
@@ -465,7 +479,7 @@ describe("persistence and billing on success", () => {
     expect(insertMock).toHaveBeenCalled();
   });
 
-  it("marks the run done and splits cost into llm and search cents", async () => {
+  it("marks the run done and stores exact llm and search micro-dollars", async () => {
     const b = new BudgetTracker();
     b.recordLlmCall("synthesize", "gemini-3.1-pro-preview", 100_000, 0); // $0.20
     b.recordTavilyCredits("gather", 5, "searches"); // $0.04
@@ -474,7 +488,11 @@ describe("persistence and billing on success", () => {
     const { updates } = stubDb();
     await readSse(await POST(post(validBody)));
 
-    expect(updates[0]).toMatchObject({ status: "done", costCentsLlm: 20, costCentsSearch: 4 });
+    expect(updates[0]).toMatchObject({
+      status: "done",
+      costMicrosLlm: 200_000,
+      costMicrosSearch: 40_000,
+    });
   });
 
   it("charges the real metered cost, not the budgeted cap", async () => {
@@ -482,9 +500,10 @@ describe("persistence and billing on success", () => {
 
     await readSse(await POST(post(validBody)));
 
-    expect(chargeMock).toHaveBeenCalledWith({
+    expect(settleMock).toHaveBeenCalledWith({
       userId: "user-1",
-      credits: 13, // 0.10 * 1.3 / 0.01
+      reference: "research-1",
+      actualCredits: 13, // 0.10 * 1.3 / 0.01
       reason: "research",
       researchId: "research-1",
     });
@@ -503,12 +522,10 @@ describe("persistence and billing on success", () => {
 
     await readSse(await POST(post(validBody)));
 
-    expect(chargeMock.mock.calls[0][0].credits).toBe(0);
+    expect(settleMock.mock.calls[0][0].actualCredits).toBe(0);
   });
 
-  it("rounds each cost kind independently, so stored cents can drift from the charge", async () => {
-    // $0.004 llm + $0.004 search rounds to 0c + 0c stored, yet bills 2 credits.
-    // Pinned as known, benign drift: creditsCharged is the billing truth.
+  it("stores sub-cent costs without losing them to independent rounding", async () => {
     const b = new BudgetTracker();
     b.recordLlmCall("plan", "gemini-3.1-pro-preview", 2_000, 0); // $0.004
     b.recordTavilyCredits("gather", 0.5, "half"); // $0.004
@@ -517,8 +534,11 @@ describe("persistence and billing on success", () => {
     const { updates } = stubDb();
     await readSse(await POST(post(validBody)));
 
-    expect(updates[0]).toMatchObject({ costCentsLlm: 0, costCentsSearch: 0 });
-    expect(chargeMock.mock.calls[0][0].credits).toBe(2);
+    expect(updates[0]).toMatchObject({
+      costMicrosLlm: 4_000,
+      costMicrosSearch: 4_000,
+    });
+    expect(settleMock.mock.calls[0][0].actualCredits).toBe(2);
   });
 });
 
@@ -530,7 +550,11 @@ describe("failure handling", () => {
     const frames = await readSse(await POST(post(validBody)));
 
     expect(frames.at(-1)).toEqual({ kind: "error", message: "gemini 503" });
-    expect(updates.at(-1)).toEqual({ status: "failed", costCentsLlm: 0, costCentsSearch: 0 });
+    expect(updates.at(-1)).toEqual({
+      status: "failed",
+      costMicrosLlm: 0,
+      costMicrosSearch: 0,
+    });
   });
 
   it("records whatever cost the tracker captured before the pipeline threw", async () => {
@@ -543,15 +567,25 @@ describe("failure handling", () => {
     const { updates } = stubDb();
     await readSse(await POST(post(validBody)));
 
-    expect(updates.at(-1)).toEqual({ status: "failed", costCentsLlm: 20, costCentsSearch: 4 });
+    expect(updates.at(-1)).toEqual({
+      status: "failed",
+      costMicrosLlm: 200_000,
+      costMicrosSearch: 40_000,
+    });
   });
 
-  it("does not charge the user for a failed run", async () => {
+  it("releases the full reservation for a failed run", async () => {
     pipelineMock.mockRejectedValue(new Error("boom"));
 
     await readSse(await POST(post(validBody)));
 
-    expect(chargeMock).not.toHaveBeenCalled();
+    expect(settleMock).not.toHaveBeenCalled();
+    expect(releaseMock).toHaveBeenCalledWith({
+      userId: "user-1",
+      reference: "research-1",
+      reason: "research_failed:release",
+      researchId: "research-1",
+    });
   });
 
   it("still returns HTTP 200 — the failure is carried in the stream, not the status", async () => {
@@ -584,16 +618,19 @@ describe("failure handling", () => {
     await expect(res.text()).resolves.toBeTypeOf("string");
   });
 
-  it("leaves the run marked done and unbilled if charging fails after the report was saved", async () => {
-    // Known gap: reports insert and researches update both commit before
-    // chargeCredits runs, and none of the three share a transaction.
-    chargeMock.mockRejectedValue(new Error("ledger down"));
+  it("marks the run failed and releases the reservation if settlement fails", async () => {
+    settleMock.mockRejectedValue(new Error("ledger down"));
 
     const { updates } = stubDb();
     const frames = await readSse(await POST(post(validBody)));
 
     expect(updates[0]).toMatchObject({ status: "done" });
-    expect(updates.at(-1)).toEqual({ status: "failed", costCentsLlm: 0, costCentsSearch: 0 });
+    expect(updates.at(-1)).toEqual({
+      status: "failed",
+      costMicrosLlm: 0,
+      costMicrosSearch: 0,
+    });
+    expect(releaseMock).toHaveBeenCalled();
     expect(frames.at(-1)).toMatchObject({ kind: "error" });
   });
 });

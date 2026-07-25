@@ -1,6 +1,12 @@
 import { eq } from "drizzle-orm";
 
-import { MIN_RUN_CREDITS, chargeCredits, creditsToBudgetUsd, usdToCredits } from "@/lib/credits";
+import {
+  MIN_RUN_CREDITS,
+  creditsToBudgetUsd,
+  releaseCreditReservation,
+  settleCreditReservation,
+  usdToCredits,
+} from "@/lib/credits";
 import { db } from "@/lib/db/index";
 import { reports, researches } from "@/lib/db/schema";
 import { recordProductEvent } from "@/lib/events";
@@ -23,9 +29,10 @@ function sse(data: unknown): Uint8Array {
 }
 
 /** BudgetTracker reports dollars; the researches table stores cents per kind. */
-function costCents(entries: CostEntry[], kind: CostEntry["kind"]): number {
-  const usd = entries.filter((e) => e.kind === kind).reduce((sum, e) => sum + e.costUsd, 0);
-  return Math.round(usd * 100);
+function costMicros(entries: CostEntry[], kind: CostEntry["kind"]): number {
+  return entries
+    .filter((entry) => entry.kind === kind)
+    .reduce((sum, entry) => sum + entry.costMicros, 0);
 }
 
 export async function POST(request: Request) {
@@ -47,6 +54,7 @@ export async function POST(request: Request) {
   const start = await startResearchRun({
     userId: user.id,
     minimumCredits: MIN_RUN_CREDITS,
+    maximumCredits: usdToCredits(EFFORT_PRESETS[input.effort].capUsd),
     companyName: input.companyName,
     interviewers: input.interviewers,
     interviewType: input.fullLoop ? "full_loop" : input.interviewTypes.join(","),
@@ -66,7 +74,10 @@ export async function POST(request: Request) {
       { status: 402 }
     );
   }
-  const capUsd = Math.min(EFFORT_PRESETS[input.effort].capUsd, creditsToBudgetUsd(start.balance));
+  const capUsd = Math.min(
+    EFFORT_PRESETS[input.effort].capUsd,
+    creditsToBudgetUsd(start.reservedCredits)
+  );
   const researchId = start.researchId;
 
   const tracker = new BudgetTracker(capUsd);
@@ -88,17 +99,18 @@ export async function POST(request: Request) {
           .update(researches)
           .set({
             status: "done",
-            costCentsLlm: costCents(entries, "llm"),
-            costCentsSearch: costCents(entries, "search"),
+            costMicrosLlm: costMicros(entries, "llm"),
+            costMicrosSearch: costMicros(entries, "search"),
             creditsCharged,
           })
           .where(eq(researches.id, researchId));
 
         await db.insert(reports).values({ researchId, jsonPayload: report });
 
-        const { balanceAfter } = await chargeCredits({
+        const { balanceAfter } = await settleCreditReservation({
           userId: user.id,
-          credits: creditsCharged,
+          reference: start.reservationRef,
+          actualCredits: creditsCharged,
           reason: "research",
           researchId,
         });
@@ -127,13 +139,19 @@ export async function POST(request: Request) {
           .update(researches)
           .set({
             status: "failed",
-            costCentsLlm: costCents(entries, "llm"),
-            costCentsSearch: costCents(entries, "search"),
+            costMicrosLlm: costMicros(entries, "llm"),
+            costMicrosSearch: costMicros(entries, "search"),
           })
           .where(eq(researches.id, researchId));
         await recordProductEvent("research_failed", user.id, {
           researchId,
           companyName: input.companyName,
+        });
+        await releaseCreditReservation({
+          userId: user.id,
+          reference: start.reservationRef,
+          reason: "research_failed:release",
+          researchId,
         });
 
         controller.enqueue(

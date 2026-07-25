@@ -39,9 +39,9 @@ export const DEFAULT_SECTIONS = [
 
 /**
  * Ceilings on caller-supplied free text. Every field below is interpolated into
- * the synthesize prompt, which is billed per input token on the priciest model,
- * and the BudgetTracker cannot help: it prices a call only after that call has
- * returned. So the bound has to live here, at the edge, not in the pipeline.
+ * the synthesize prompt, which is billed per input token on the priciest model.
+ * The BudgetTracker reserves against a conservative token estimate, while these
+ * edge bounds also prevent crafted inputs from consuming the whole run budget.
  *
  * They are set well above what the form can realistically produce — they exist
  * to stop a crafted request, not to discipline a real one.
