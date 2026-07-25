@@ -9,7 +9,7 @@ export function CookiePreferencesLink() {
     <button
       type="button"
       onClick={() => setConsent(null)}
-      className="font-display text-muted-foreground hover:text-foreground cursor-pointer text-base transition-colors">
+      className="font-display text-muted-foreground hover:text-foreground flex min-h-11 cursor-pointer items-center text-base transition-colors">
       Cookie Preferences
     </button>
   );

@@ -1,11 +1,14 @@
 import { siteConfig } from "@/site";
 
+import { BreadcrumbJsonLd } from "@/components/json-ld";
+
 import { buildMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildMetadata({
   path: "/changelog",
   title: "Changelog",
-  description: `${siteConfig.name} changelog - new features and improvements`,
+  description:
+    "What's shipped in Interview Resources: research pipeline changes, confidence-scoring updates, and pricing changes, dated by release.",
 });
 
 const changelog = [
@@ -33,6 +36,7 @@ const changelog = [
 export default function ChangelogPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
+      <BreadcrumbJsonLd path="/changelog" />
       <h1 className="font-display text-3xl font-bold tracking-tight">Changelog</h1>
       <p className="text-muted-foreground mt-4">
         Stay updated with the latest features and improvements to {siteConfig.name}.

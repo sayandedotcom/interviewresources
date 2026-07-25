@@ -6,7 +6,7 @@ import { siteConfig } from "@/site";
 import { Analytics } from "@/components/analytics";
 import { CookieConsentBanner } from "@/components/cookie-consent";
 
-import { organizationJsonLd, webApplicationJsonLd } from "@/lib/seo/json-ld";
+import { founderJsonLd, organizationJsonLd, webApplicationJsonLd } from "@/lib/seo/json-ld";
 import { siteTitle } from "@/lib/seo/metadata";
 
 import { ToastProvider } from "@/hooks/use-toast";
@@ -79,7 +79,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([webApplicationJsonLd, organizationJsonLd]),
+            /* `founderJsonLd` ships site-wide because `organizationJsonLd`
+               references it by `@id` — a dangling reference is worse than no
+               reference at all. */
+            __html: JSON.stringify([webApplicationJsonLd, organizationJsonLd, founderJsonLd]),
           }}
         />
         <ToastProvider>

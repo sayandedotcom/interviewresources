@@ -1,16 +1,23 @@
 import { siteConfig } from "@/site";
 
+import { BreadcrumbJsonLd, JsonLd } from "@/components/json-ld";
+
+import { contactPageJsonLd } from "@/lib/seo/json-ld";
 import { buildMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildMetadata({
   path: "/contact",
   title: "Contact Us",
-  description: `Contact ${siteConfig.name}`,
+  description:
+    "Reach Interview Resources for support, billing, or security reports. Real inboxes, no ticket queue — most replies land within 24-48 hours.",
 });
 
 export default function ContactPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
+      <BreadcrumbJsonLd path="/contact" />
+      <JsonLd data={contactPageJsonLd} />
+
       <h1 className="font-display text-3xl font-bold tracking-tight">Contact Us</h1>
       <p className="text-muted-foreground mt-4">
         Have questions or feedback? We would love to hear from you.

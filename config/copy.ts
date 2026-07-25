@@ -407,4 +407,114 @@ export const copyConfig = {
         "Yes. We cover DSA, system design, behavioral, domain quizzes, take-home projects, pair programming, and HR/culture rounds.",
     },
   ],
+
+  // ── Pricing page (/pricing) ──────────────────────────────────────
+  /**
+   * The landing page and /pricing used to render character-identical headings
+   * and the same body copy, which leaves Google to pick a winner between two
+   * URLs competing on the same text. The landing block stays a summary aimed at
+   * a first-time visitor; this page owns the mechanics — what a credit is, what
+   * a run actually costs, and what happens at the cap.
+   */
+  pricingPage: {
+    fomo: "No subscription to cancel, and nothing is charged until you run a report.",
+    title: "Credits, not subscriptions",
+    sub: "You buy credits once and spend them only when the agent actually researches something. Here is exactly how that is metered.",
+    details: {
+      title: "How a report is metered",
+      items: [
+        {
+          title: "A credit is a unit of research spend",
+          body: "Credits map to what a run costs to execute — the searches it makes and the pages it reads. They are not a per-question or per-report allowance, which is why two reports on different companies can cost different amounts.",
+        },
+        {
+          title: "A typical run is about 46 credits",
+          body: "Under $0.50. A company with a thin public footprint costs more, because the agent broadens its search rather than shipping you a thin report.",
+        },
+        {
+          title: "Every run has a hard ceiling",
+          body: "A single run can never spend past its effort ceiling or your remaining balance, whichever comes first. There is no overage and no way to end up owing anything.",
+        },
+        {
+          title: "You choose what gets researched",
+          body: "Pick your interview rounds and report sections up front. The agent skips everything you switched off — enforced in code — so you are not paying for research you did not ask for.",
+        },
+      ],
+    },
+  },
+
+  // ── Help centre (/help) ──────────────────────────────────────────
+  /**
+   * Deliberately operational — "how do I do X" — where `faqs` above is
+   * pre-purchase. Kept apart so the two pages don't answer the same question
+   * twice and compete with each other. The page renders from this and so does
+   * its FAQPage markup, so the two can't drift.
+   */
+  helpFaqs: [
+    {
+      section: "Getting started",
+      items: [
+        {
+          question: "How do I create an account?",
+          answer:
+            "Click Sign in in the header and continue with Google. That's the whole signup — there's no separate account creation step, and you can run your first report straight after.",
+        },
+        {
+          question: "How does credit-based pricing work?",
+          answer:
+            "You buy credits once and spend them only when you run a report. A report is metered at what it actually cost to research, so the price varies: a typical run is about 46 credits — under $0.50 — and a single run can never exceed its effort ceiling or your remaining balance.",
+        },
+        {
+          question: "What payment methods do you accept?",
+          answer:
+            "All major credit cards, through our payment provider. Prices are shown in USD and converted to your local currency at checkout, so the amount your bank charges may be in your own currency.",
+        },
+      ],
+    },
+    {
+      section: "Running a report",
+      items: [
+        {
+          question: "What information should I include?",
+          answer:
+            "The company name is the only requirement. Adding the job description, your years of experience, your tech stack, and any interview format you already know about narrows the research and produces sharper questions.",
+        },
+        {
+          question: "Can I choose which rounds get researched?",
+          answer:
+            "Yes. You pick the interview rounds and report sections you want. The agent skips everything you switched off — enforced in code, not just in the prompt — so you never pay for research you didn't ask for.",
+        },
+        {
+          question: "How long does research take?",
+          answer:
+            "Most reports finish in about three minutes. Requests that need several rounds of searching take longer.",
+        },
+      ],
+    },
+    {
+      section: "Reading your report",
+      items: [
+        {
+          question: "What's in a report?",
+          answer:
+            "The questions you're most likely to hear, grouped by round. Every question carries a confidence level, the evidence it came from so you can verify it yourself, and prep notes on what a strong answer covers.",
+        },
+        {
+          question: "What do the confidence levels mean?",
+          answer:
+            "They tell you how much evidence sits behind a question. High confidence means multiple substantial sources said the same thing. Lower confidence means the evidence was real but thinner. Questions the agent inferred rather than found are tagged Inferred and capped below High, so you can always tell them apart.",
+        },
+        {
+          question: "Why do some sources say “open manually”?",
+          answer:
+            "Because we found the link but never read the page. We don't bypass logins, paywalls, robots controls, or CAPTCHAs. When a result is behind one of those, we keep the link so you can open it yourself, but it is never counted as evidence.",
+        },
+        {
+          question: "Can I save my reports?",
+          answer:
+            "Yes. Reports are saved to your account, so you can come back to them from any device.",
+        },
+      ],
+    },
+  ],
 };

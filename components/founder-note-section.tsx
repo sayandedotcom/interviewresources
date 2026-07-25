@@ -70,7 +70,7 @@ export function FounderNoteSection() {
                   href={siteConfig.links.twitter}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-display hover:text-tertiary text-base font-semibold transition-colors">
+                  className="font-display hover:text-tertiary inline-flex min-h-11 items-center text-base font-semibold transition-colors">
                   {founderNote.name}
                 </a>
                 <p className="text-muted-foreground font-display text-sm">{founderNote.role}</p>

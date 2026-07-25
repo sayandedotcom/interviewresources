@@ -14,21 +14,36 @@ const ICONS = [Coins, ShieldCheck, InfinityIcon];
  * by the landing page, where the hero already owns the `h1` and a second one
  * would leave the document with two competing titles. The caller picks; the
  * default is the safe one, since only a page *about* pricing can claim `h1`.
+ *
+ * `copy` exists because the two pages must not share heading text: identical
+ * headings on two URLs is a cannibalisation signal, and Google picks which one
+ * ranks. The landing page keeps the summary pitch; `/pricing` passes its own.
  */
-export function PricingSection({ as: Heading = "h2" }: { as?: "h1" | "h2" }) {
+export function PricingSection({
+  as: Heading = "h2",
+  copy,
+}: {
+  as?: "h1" | "h2";
+  copy?: { fomo: string; title: string; sub: string };
+}) {
   const { landing } = siteConfig.copy;
+  const heading = copy ?? {
+    fomo: landing.pricing.fomo,
+    title: landing.pricing.title,
+    sub: `${landing.pricing.subBeforeCap} ${MAX_RUN_CREDITS}.`,
+  };
 
   return (
     <Section id="pricing" tone="plain">
       <div className="text-center">
         <p className="font-display text-muted-foreground mb-4 text-lg font-medium italic">
-          {landing.pricing.fomo}
+          {heading.fomo}
         </p>
         <Heading className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-          {landing.pricing.title}
+          {heading.title}
         </Heading>
         <p className="font-display text-muted-foreground mx-auto mt-4 max-w-2xl text-lg leading-relaxed">
-          {landing.pricing.subBeforeCap} {MAX_RUN_CREDITS}.
+          {heading.sub}
         </p>
       </div>
 

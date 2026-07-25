@@ -3,6 +3,12 @@ import type { MetadataRoute } from "next";
 type SitemapEntry = {
   priority: number;
   changeFrequency: NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;
+  /**
+   * Breadcrumb name for the route (see components/breadcrumb-json-ld.tsx).
+   * Kept here rather than in the component so a new page can't be added with a
+   * sitemap entry but no crumb. `app/sitemap.ts` strips it before emitting.
+   */
+  label: string;
 };
 
 /**
@@ -16,18 +22,18 @@ type SitemapEntry = {
  * Gated routes are absent for the same reason they carry `noIndexMetadata`.
  */
 export const publicRoutes = {
-  "/": { priority: 1.0, changeFrequency: "weekly" },
-  "/pricing": { priority: 0.9, changeFrequency: "monthly" },
-  "/about": { priority: 0.6, changeFrequency: "monthly" },
-  "/blog": { priority: 0.6, changeFrequency: "weekly" },
-  "/help": { priority: 0.6, changeFrequency: "monthly" },
-  "/changelog": { priority: 0.5, changeFrequency: "weekly" },
-  "/contact": { priority: 0.5, changeFrequency: "yearly" },
-  "/privacy-policy": { priority: 0.3, changeFrequency: "yearly" },
-  "/terms-of-service": { priority: 0.3, changeFrequency: "yearly" },
-  "/cookies": { priority: 0.3, changeFrequency: "yearly" },
-  "/security": { priority: 0.3, changeFrequency: "yearly" },
-  "/licenses": { priority: 0.3, changeFrequency: "yearly" },
+  "/": { priority: 1.0, changeFrequency: "weekly", label: "Home" },
+  "/pricing": { priority: 0.9, changeFrequency: "monthly", label: "Pricing" },
+  "/about": { priority: 0.6, changeFrequency: "monthly", label: "About" },
+  "/blog": { priority: 0.6, changeFrequency: "weekly", label: "Blog" },
+  "/help": { priority: 0.6, changeFrequency: "monthly", label: "Help" },
+  "/changelog": { priority: 0.5, changeFrequency: "weekly", label: "Changelog" },
+  "/contact": { priority: 0.5, changeFrequency: "yearly", label: "Contact" },
+  "/privacy-policy": { priority: 0.3, changeFrequency: "yearly", label: "Privacy Policy" },
+  "/terms-of-service": { priority: 0.3, changeFrequency: "yearly", label: "Terms of Service" },
+  "/cookies": { priority: 0.3, changeFrequency: "yearly", label: "Cookie Policy" },
+  "/security": { priority: 0.3, changeFrequency: "yearly", label: "Security" },
+  "/licenses": { priority: 0.3, changeFrequency: "yearly", label: "Licenses" },
 } as const satisfies Record<string, SitemapEntry>;
 
 export type PublicRoute = keyof typeof publicRoutes;

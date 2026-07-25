@@ -10,13 +10,16 @@ function Column({ title, children }: { title: string; children: React.ReactNode 
   return (
     <div>
       <h3 className="font-display text-base font-semibold">{title}</h3>
-      <ul className="mt-4 space-y-2.5">{children}</ul>
+      {/* Tight `space-y` because each link now carries its own 44px tap
+          target — stacking both would leave the columns absurdly tall. */}
+      <ul className="mt-3 space-y-0.5">{children}</ul>
     </div>
   );
 }
 
+/** `min-h-11` = the 44px minimum touch target; footer links were ~21-24px. */
 const linkClass =
-  "font-display text-muted-foreground hover:text-foreground text-base transition-colors";
+  "font-display text-muted-foreground hover:text-foreground flex min-h-11 items-center text-base transition-colors";
 
 export function Footer() {
   return (
@@ -25,7 +28,7 @@ export function Footer() {
         {/* Brand block leads, then the four link columns. */}
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
           <div className="sm:col-span-2 lg:col-span-1">
-            <Link href="/" className="group flex items-center gap-2.5">
+            <Link href="/" className="group flex min-h-11 items-center gap-2.5">
               <LogoMark size="xl" glowClassName="bg-primary/40 opacity-0 group-hover:opacity-100" />
               <span className="font-display text-xl font-semibold tracking-tight">
                 {siteConfig.name}

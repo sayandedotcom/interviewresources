@@ -89,14 +89,16 @@ export const StickyScroll = ({
         {/* Right column: tabs + flow progress above the active panel. */}
         <div className="flex min-w-0 flex-col gap-6">
           {/* Tabs: numbered pills joined by a line that fills up to the active stage. */}
-          <div className="silver-edge bg-card flex items-center rounded-full px-5 py-2.5 shadow-[var(--shadow-sm)]">
+          {/* `py-1` on the bar because each tab now carries its own 44px tap
+              target — the pill stays visually 28px, the hit area does not. */}
+          <div className="silver-edge bg-card flex items-center rounded-full px-5 py-1 shadow-[var(--shadow-sm)]">
             {content.map((stage, index) => (
               <React.Fragment key={stage.label}>
                 <button
                   type="button"
                   onClick={() => goToStage(index)}
                   aria-current={index === active ? "step" : undefined}
-                  className="group flex shrink-0 cursor-pointer items-center gap-2.5">
+                  className="group flex min-h-11 shrink-0 cursor-pointer items-center gap-2.5">
                   <span
                     className={cn(
                       "font-display flex h-7 w-7 items-center justify-center rounded-full border text-xs font-semibold transition-colors duration-300",

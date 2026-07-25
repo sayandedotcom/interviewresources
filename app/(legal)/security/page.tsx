@@ -1,5 +1,7 @@
 import { siteConfig } from "@/site";
 
+import { BreadcrumbJsonLd } from "@/components/json-ld";
+
 import { buildMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildMetadata({
@@ -11,6 +13,7 @@ export const metadata = buildMetadata({
 export default function SecurityPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
+      <BreadcrumbJsonLd path="/security" />
       <h1 className="font-display text-3xl font-bold tracking-tight">Security</h1>
       <p className="text-muted-foreground mt-4">
         Last updated: July 24, 2026. This page describes controls implemented in the product today,
