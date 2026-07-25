@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { siteConfig } from "@/site";
 import { Menu } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 
 import { CreditsBadge } from "@/components/credits-badge";
 import { LogoMark } from "@/components/logo";
@@ -28,6 +29,45 @@ const NAV_LINKS = [
   { href: "/#pricing", label: "Pricing" },
 ];
 const STARTER_PRICE = `$${(CREDIT_PACKS_BY_SLUG.starter.priceUsdMinor / 100).toFixed(2)}`;
+
+/** Derived from the hrefs so the observed ids can't drift from what the nav links to. */
+const NAV_SECTION_IDS = NAV_LINKS.map((link) => link.href.split("#")[1]).filter(Boolean);
+
+/**
+ * Which nav target currently sits under the middle of the viewport, or null when
+ * none does — including on /pricing and /signin, where these sections don't
+ * exist at all and `getElementById` simply finds nothing. That makes the
+ * indicator correct off the landing page by construction, with no route check.
+ *
+ * The rootMargin band is the whole trick: these sections are a screen tall each,
+ * so a plain "is it visible" test leaves two intersecting at once and the
+ * indicator flickers between neighbours. Collapsing the root to a thin strip
+ * across the middle makes "active" mean "the one you're actually reading".
+ */
+function useActiveSection(ids: string[]) {
+  const [active, setActive] = useState<string | null>(null);
+
+  useEffect(() => {
+    const elements = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+    if (elements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActive(entry.target.id);
+        }
+      },
+      { rootMargin: "-45% 0px -50% 0px" }
+    );
+
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [ids]);
+
+  return active;
+}
 
 function Brand() {
   return (
@@ -53,7 +93,7 @@ function SignedOutCta({ compact = false }: { compact?: boolean }) {
           ? `Start for ${STARTER_PRICE} — sign in to get started`
           : `Try it for ${STARTER_PRICE} — sign in to get started`
       }
-      className={`text-brand-700 font-display inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-glossy-white)] text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-all hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:shadow-[var(--shadow-glossy-white-active)] ${
+      className={`text-brand-700 font-display ease-out-strong inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-glossy-white)] text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-[box-shadow,translate,scale] duration-150 hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:scale-[0.98] active:shadow-[var(--shadow-glossy-white-active)] ${
         compact ? "px-4" : "px-5"
       }`}>
       {compact ? "Start preparing" : `Try it for ${STARTER_PRICE}`}
@@ -65,6 +105,8 @@ export function Header() {
   const { data: session, isPending } = useSession();
   const [balance, setBalance] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const activeSection = useActiveSection(NAV_SECTION_IDS);
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     if (!session?.user) return;
@@ -91,15 +133,36 @@ export function Header() {
           <Brand />
         </div>
 
+        {/* Desktop only. The mobile sheet closes on tap, so an indicator there
+            would never be on screen long enough to read. */}
         <nav className="hidden items-center justify-center gap-6 lg:flex">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="font-display flex min-h-11 items-center text-sm font-medium text-white/80 transition-colors hover:text-white">
-              {link.label}
-            </Link>
-          ))}
+          {NAV_LINKS.map((link) => {
+            const isActive = activeSection === link.href.split("#")[1];
+
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={isActive ? "location" : undefined}
+                className={`font-display relative flex min-h-11 items-center text-sm font-medium transition-colors ${
+                  isActive ? "text-white" : "text-white/80 hover:text-white"
+                }`}>
+                {link.label}
+                {isActive && (
+                  // A shared layoutId is what makes this slide between links
+                  // instead of cutting — one element, FLIPped from its old box to
+                  // its new one. Without the slide this is just a class toggle.
+                  <motion.span
+                    layoutId="nav-active"
+                    className="absolute inset-x-0 bottom-2 h-px bg-white"
+                    transition={
+                      reduce ? { duration: 0 } : { type: "spring", duration: 0.5, bounce: 0.2 }
+                    }
+                  />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="hidden items-center justify-end gap-3 lg:flex">
@@ -110,7 +173,7 @@ export function Header() {
               </Link>
               <Link
                 href="/prepare"
-                className="font-display inline-flex min-h-11 items-center rounded-full bg-[image:var(--gradient-glossy-ghost)] px-5 text-sm font-semibold text-white shadow-[var(--shadow-glossy-ghost)] transition-all hover:bg-[image:var(--gradient-glossy-ghost-hover)] hover:shadow-[var(--shadow-glossy-ghost-hover)]">
+                className="font-display ease-out-strong inline-flex min-h-11 items-center rounded-full bg-[image:var(--gradient-glossy-ghost)] px-5 text-sm font-semibold text-white shadow-[var(--shadow-glossy-ghost)] transition-[box-shadow,translate,scale] duration-150 hover:bg-[image:var(--gradient-glossy-ghost-hover)] hover:shadow-[var(--shadow-glossy-ghost-hover)] active:translate-y-px active:scale-[0.98]">
                 Open app
               </Link>
               <button

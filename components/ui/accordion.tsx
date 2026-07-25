@@ -34,7 +34,7 @@ function AccordionTrigger({ className, children, ...props }: AccordionPrimitive.
         {children}
         <ChevronDown
           aria-hidden
-          className="text-muted-foreground size-5 shrink-0 transition-transform duration-200 group-data-panel-open/accordion:rotate-180"
+          className="text-muted-foreground ease-out-strong size-5 shrink-0 transition-transform duration-200 group-data-panel-open/accordion:rotate-180"
         />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
@@ -45,7 +45,7 @@ function AccordionPanel({ className, children, ...props }: AccordionPrimitive.Pa
   return (
     <AccordionPrimitive.Panel
       data-slot="accordion-panel"
-      className="h-[var(--accordion-panel-height)] overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0"
+      className="ease-out-strong h-[var(--accordion-panel-height)] overflow-hidden transition-[height] duration-200 data-ending-style:h-0 data-starting-style:h-0"
       {...props}>
       <div
         className={cn("text-muted-foreground max-w-2xl pb-7 text-base leading-relaxed", className)}>

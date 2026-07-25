@@ -120,10 +120,12 @@ export const StickyScroll = ({
                 </button>
                 {index < cardLength - 1 && (
                   <div className="bg-border relative mx-3 h-px flex-1">
+                    {/* scaleX rather than width — composite-only, and this fires
+                        mid-scroll alongside the panel crossfade. */}
                     <motion.div
-                      className="bg-tertiary absolute inset-y-0 left-0"
-                      animate={{ width: index < active ? "100%" : "0%" }}
-                      transition={{ duration: 0.3 }}
+                      className="bg-tertiary absolute inset-0 origin-left"
+                      animate={{ scaleX: index < active ? 1 : 0 }}
+                      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                     />
                   </div>
                 )}
@@ -133,19 +135,25 @@ export const StickyScroll = ({
 
           {/* The active stage's panel, in a brand cradle to match the other sections. */}
           <div className="silver-edge from-brand-100/90 to-brand-50/30 rounded-3xl bg-gradient-to-b p-3 shadow-[var(--shadow-sm)] sm:p-4">
+            {/* `relative` + absolutely-positioned panels are load-bearing: without
+                `mode="wait"` the outgoing and incoming panels coexist for a beat,
+                and as flex siblings they would sit side by side instead of
+                crossfading in place. */}
             <div
               className={cn(
-                "border-border/50 bg-background flex h-[34rem] overflow-hidden rounded-2xl border shadow-[var(--shadow-md)]",
+                "border-border/50 bg-background relative h-[34rem] overflow-hidden rounded-2xl border shadow-[var(--shadow-md)]",
                 contentClassName
               )}>
-              <AnimatePresence mode="wait">
+              {/* No `mode="wait"`: serialising exit-then-enter left the panel a
+                  full 500ms behind the tab pill on a scroll-driven stepper. */}
+              <AnimatePresence>
                 <motion.div
                   key={active}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="h-full w-full">
+                  transition={{ duration: 0.18 }}
+                  className="absolute inset-0">
                   {content[active].content ?? null}
                 </motion.div>
               </AnimatePresence>

@@ -5,12 +5,14 @@ import { Section, SectionHeader } from "@/components/sections/section";
 /**
  * One marquee row. The list is rendered twice so the track can translate by
  * exactly half its width and loop seamlessly; the duplicate is hidden from
- * assistive tech. Pauses on hover, and holds still under reduced motion.
+ * assistive tech. Pauses on hover — gated to real pointers, since on a touch
+ * screen a tap would latch :hover and the marquee would never resume — and
+ * holds still under reduced motion.
  */
 function MarqueeRow({ items, reverse = false }: { items: string[]; reverse?: boolean }) {
   return (
     <div
-      className={`flex w-max gap-3 hover:[animation-play-state:paused] motion-reduce:animate-none ${
+      className={`hoverable:hover:[animation-play-state:paused] flex w-max gap-3 motion-reduce:animate-none ${
         reverse
           ? "animate-[marquee-reverse_46s_linear_infinite]"
           : "animate-[marquee_40s_linear_infinite]"

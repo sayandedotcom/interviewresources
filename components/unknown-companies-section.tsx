@@ -38,10 +38,10 @@ function ThinEvidencePanel() {
           {panel.rows.map((row, i) => (
             <motion.div
               key={row.source}
-              initial={reduce ? false : { opacity: 0, x: -8 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={reduce ? false : { opacity: 0, transform: "translateX(-8px)" }}
+              whileInView={{ opacity: 1, transform: "translateX(0px)" }}
               viewport={{ once: true }}
-              transition={{ delay: 0.12 * i, duration: 0.4 }}
+              transition={{ delay: 0.06 * i, duration: 0.4 }}
               className="flex items-center gap-2.5 py-2.5">
               <X className="text-muted-foreground/50 h-3.5 w-3.5 shrink-0" />
               <span className="font-display text-foreground/70 text-sm">{row.source}</span>
@@ -54,7 +54,7 @@ function ThinEvidencePanel() {
           initial={reduce ? false : { opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.12 * panel.rows.length, duration: 0.4 }}
+          transition={{ delay: 0.06 * panel.rows.length, duration: 0.4 }}
           className="border-border/60 mt-3 flex items-baseline gap-2.5 border-t pt-3">
           <span className="font-display shrink-0 text-2xl font-semibold tracking-tight tabular-nums">
             {panel.threshold}
@@ -68,10 +68,10 @@ function ThinEvidencePanel() {
         </motion.div>
 
         <motion.div
-          initial={reduce ? false : { opacity: 0, y: 6 }}
-          whileInView={{ opacity: 1, y: 0 }}
+          initial={reduce ? false : { opacity: 0, transform: "translateY(6px)" }}
+          whileInView={{ opacity: 1, transform: "translateY(0px)" }}
           viewport={{ once: true }}
-          transition={{ delay: 0.12 * panel.rows.length + 0.25, duration: 0.4 }}
+          transition={{ delay: 0.06 * panel.rows.length + 0.12, duration: 0.4 }}
           className="mt-3 flex items-start gap-2.5 rounded-lg bg-amber-50/70 px-3 py-2.5">
           <Sparkles className="mt-px h-3.5 w-3.5 shrink-0 text-amber-600" />
           <span className="text-[11px] leading-relaxed text-amber-800">{panel.broaden}</span>
@@ -102,8 +102,8 @@ function SignalCard({
 
   return (
     <motion.div
-      initial={reduce ? false : { opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={reduce ? false : { opacity: 0, transform: "translateY(12px)" }}
+      whileInView={{ opacity: 1, transform: "translateY(0px)" }}
       viewport={{ once: true }}
       transition={{ delay, duration: 0.45 }}
       className="silver-edge from-brand-100/90 to-brand-50/30 rounded-3xl bg-gradient-to-b p-5 shadow-[var(--shadow-sm)] sm:p-6">
@@ -130,7 +130,9 @@ function SignalCard({
 export function UnknownCompaniesSection() {
   const { unknownCompanies } = siteConfig.copy;
   // Picks up where the panel's reveal ends, so the cards read as its consequence.
-  const cardsStart = 0.12 * unknownCompanies.panel.rows.length + 0.45;
+  // Flat rather than derived from the row count: chaining off it pushed the last
+  // card past 1.2s, by which point a normal scroll has already left the section.
+  const cardsStart = 0.3;
 
   return (
     <Section tone="wash">
@@ -156,7 +158,7 @@ export function UnknownCompaniesSection() {
                 index={i}
                 name={signal.name}
                 body={signal.body}
-                delay={cardsStart + 0.1 * i}
+                delay={cardsStart + 0.06 * i}
               />
             ))}
           </div>

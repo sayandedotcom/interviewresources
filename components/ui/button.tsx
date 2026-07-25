@@ -3,8 +3,17 @@ import { type VariantProps, cva } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Note the two different press treatments. `translate-y-px` stays gated behind
+ * `not-aria-[haspopup]` because it moves the anchor a popup is positioned
+ * against; `scale` is deliberately not gated, because otherwise every dropdown
+ * and dialog trigger — which on this app means "Run reconnaissance", "Gather
+ * these rounds", "Copy as prompt" and "Download", the four buttons that spend
+ * credits or produce a file — would be the only buttons with no press feedback
+ * at all. A scale is anchored at the element's centre, so the popup still lands.
+ */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 font-display",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,translate,scale] duration-150 ease-out-strong outline-none select-none cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 font-display",
   {
     variants: {
       variant: {
@@ -18,7 +27,9 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         tertiary: "bg-tertiary text-tertiary-foreground hover:bg-tertiary/80",
-        link: "text-primary underline-offset-4 hover:underline",
+        /** Opts out of the base press scale: this variant renders as running text,
+         * and text that shrinks under the cursor reads as a rendering glitch. */
+        link: "text-primary underline-offset-4 hover:underline active:scale-100",
         /** Glossy 3D pill for the primary marketing CTAs — not for app/form buttons.
          * The text shadow is load-bearing: white on the mid-gradient blue is only
          * ~3.4:1, and the shadow buys back edge definition at CTA sizes. */

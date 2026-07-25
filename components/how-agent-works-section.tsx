@@ -81,8 +81,8 @@ function PlanMock() {
       {queries.map((item, i) => (
         <motion.div
           key={item.q}
-          initial={reduce ? false : { opacity: 0, x: -8 }}
-          whileInView={{ opacity: 1, x: 0 }}
+          initial={reduce ? false : { opacity: 0, transform: "translateX(-8px)" }}
+          whileInView={{ opacity: 1, transform: "translateX(0px)" }}
           viewport={{ once: true }}
           transition={{ delay: 0.15 * i, duration: 0.4 }}
           className="border-border/60 bg-muted/30 rounded-lg border px-3 py-2">
@@ -96,7 +96,6 @@ function PlanMock() {
 
 /** 02 · Read: source chips with a scanning shimmer sweeping across. */
 function ReadMock() {
-  const reduce = useReducedMotion();
   const sources = ["Engineering blog", "Job posting", "Candidate review", "Conference talk"];
   return (
     <div className="relative overflow-hidden p-4">
@@ -110,13 +109,12 @@ function ReadMock() {
           </span>
         ))}
       </div>
-      {!reduce && (
-        <motion.div
-          className="via-primary/20 absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent to-transparent"
-          animate={{ x: ["-40%", "340%"] }}
-          transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
-        />
-      )}
+      {/* CSS, not Motion: an infinite rAF loop would run on the main thread
+          forever, on or off screen. Keyframes run off it and pause when hidden. */}
+      <div
+        aria-hidden
+        className="via-primary/20 absolute inset-y-0 w-1/3 animate-[shimmer-sweep_2.6s_linear_infinite] bg-gradient-to-r from-transparent to-transparent motion-reduce:hidden"
+      />
     </div>
   );
 }
@@ -165,13 +163,15 @@ function EffortMock() {
             <span className="text-muted-foreground">{r.meta}</span>
           </div>
           <div className="bg-brand-100 h-2 overflow-hidden rounded-full">
+            {/* scaleX, not width: width relayouts every frame, scaleX is composite-only.
+                The bar's real width is static; only the reveal animates. */}
             <motion.div
-              className="bg-primary h-full rounded-full"
-              initial={reduce ? false : { width: 0 }}
-              whileInView={{ width: r.width }}
+              className="bg-primary h-full origin-left rounded-full"
+              style={{ width: r.width }}
+              initial={reduce ? false : { scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.1 * i, duration: 0.6, ease: "easeOut" }}
-              style={reduce ? { width: r.width } : undefined}
+              transition={{ delay: 0.1 * i, duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
             />
           </div>
         </div>

@@ -7,6 +7,10 @@
    restore the .dark{} block below and wrap the app in a theme provider again. */
 @custom-variant dark (&:is(.dark *));
 
+/* Gates hover styles to devices that actually hover. Without it, a tap on a
+   touch screen latches :hover and the style never comes back off. */
+@custom-variant hoverable (@media (hover: hover) and (pointer: fine));
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -70,6 +74,14 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Custom easing. The built-in CSS curves are too weak to read as intentional.
+     Deliberately not named --ease-out/--ease-in-out: those would override
+     Tailwind's own utilities and silently restyle every transition in the app.
+     These names mean a call site has to opt in. */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
   /* Soft, blue-tinted, layered shadows (replace hairline borders between sections). */
   --shadow-xs: 0 1px 2px oklch(0.45 0.1 252 / 0.05);
@@ -291,6 +303,18 @@
   }
   to {
     transform: translateX(0);
+  }
+}
+
+/* Scanning shimmer for the "Read" tile in how-agent-works. Linear, not eased:
+   the sweep loops without pause, and easing at both ends of a hard-restarting
+   loop reads as a stutter. */
+@keyframes shimmer-sweep {
+  from {
+    transform: translateX(-40%);
+  }
+  to {
+    transform: translateX(340%);
   }
 }
 

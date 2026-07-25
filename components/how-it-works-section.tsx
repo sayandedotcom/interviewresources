@@ -25,55 +25,35 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
 
 import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
 
-function Stagger({
-  index,
-  children,
-  className,
-}: {
-  index: number;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div
-      initial={reduce ? false : { opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.08 * index, duration: 0.3 }}
-      className={className}>
-      {children}
-    </motion.div>
-  );
-}
+/* These panels used to stagger their contents in on mount. StickyScroll keys the
+   active panel on the stage index, so every stage change remounted them and
+   replayed the whole cascade — up to ~0.9s in ResearchPanel, on top of the
+   crossfade. The crossfade already covers the swap; the stagger only ever
+   delayed content the reader had already scrolled to. */
 
 function FormCard({
   icon: Icon,
   title,
   sub,
-  index,
   children,
 }: {
   icon: LucideIcon;
   title: string;
   sub: string;
-  index: number;
   children: React.ReactNode;
 }) {
   return (
-    <Stagger index={index}>
-      <div className="bg-card ring-foreground/10 rounded-xl p-4 ring-1">
-        <h3 className="text-muted-foreground font-display flex items-center text-lg font-medium capitalize">
-          <Icon className="text-primary mr-2.5 h-5 w-5 shrink-0" aria-hidden="true" />
-          {title}
-        </h3>
-        <p className="text-muted-foreground font-display mt-1 text-xs">{sub}</p>
-        <div className="mt-4">{children}</div>
-      </div>
-    </Stagger>
+    <div className="bg-card ring-foreground/10 rounded-xl p-4 ring-1">
+      <h3 className="text-muted-foreground font-display flex items-center text-lg font-medium capitalize">
+        <Icon className="text-primary mr-2.5 h-5 w-5 shrink-0" aria-hidden="true" />
+        {title}
+      </h3>
+      <p className="text-muted-foreground font-display mt-1 text-xs">{sub}</p>
+      <div className="mt-4">{children}</div>
+    </div>
   );
 }
 
@@ -129,7 +109,9 @@ function Field({
         ) : (
           <p className="font-display text-muted-foreground text-sm">{placeholder}</p>
         )}
-        {caret && <span className="bg-foreground ml-0.5 inline-block h-4 w-px animate-pulse" />}
+        {caret && (
+          <span className="bg-foreground ml-0.5 inline-block h-4 w-px animate-pulse motion-reduce:animate-none" />
+        )}
       </div>
     </div>
   );
@@ -167,8 +149,7 @@ function TargetPanel() {
       <FormCard
         icon={Target}
         title="Target"
-        sub="The company and role you are interviewing for, helps find relevant questions."
-        index={0}>
+        sub="The company and role you are interviewing for, helps find relevant questions.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Company" hint="*" value="Stripe" caret />
           <Field label="Company URL" hint="· preferred" info value="https://stripe.com" />
@@ -223,8 +204,7 @@ function TargetPanel() {
       <FormCard
         icon={Swords}
         title="Rounds to Gather"
-        sub="You can add more rounds later, from the finished report."
-        index={1}>
+        sub="You can add more rounds later, from the finished report.">
         <div className="flex flex-wrap gap-2">
           {rounds.map((r) => (
             <Chip key={r.label} icon={r.icon} label={r.label} on={r.on} />
@@ -236,8 +216,7 @@ function TargetPanel() {
       <FormCard
         icon={LayoutList}
         title="Report Sections"
-        sub="Drop what you already know, you are only charged for what the run researches."
-        index={2}>
+        sub="Drop what you already know, you are only charged for what the run researches.">
         <div className="flex flex-wrap gap-2">
           {sections.map((s) => (
             <Chip key={s.label} icon={s.icon} label={s.label} on={s.on} />
@@ -245,11 +224,7 @@ function TargetPanel() {
         </div>
       </FormCard>
 
-      <FormCard
-        icon={Zap}
-        title="Effort"
-        sub="How wide the agent searches, and its spend ceiling."
-        index={3}>
+      <FormCard icon={Zap} title="Effort" sub="How wide the agent searches, and its spend ceiling.">
         <div className="grid gap-2 sm:grid-cols-3">
           {efforts.map((e) => (
             <div
@@ -299,7 +274,7 @@ function ResearchPanel() {
       <div className="border-border/60 border-b px-5 py-4">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2 shrink-0">
-            <span className="bg-tertiary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+            <span className="bg-tertiary absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 motion-reduce:animate-none" />
             <span className="bg-tertiary relative inline-flex h-2 w-2 rounded-full" />
           </span>
           <span className="font-display text-sm font-semibold">Researching…</span>
@@ -314,8 +289,8 @@ function ResearchPanel() {
       </div>
 
       <div className="flex-1 space-y-2.5 overflow-y-auto p-5">
-        {lines.map((l, i) => (
-          <Stagger key={l.text} index={i} className="flex items-center gap-3">
+        {lines.map((l) => (
+          <div key={l.text} className="flex items-center gap-3">
             {l.status === "done" && (
               <span className="bg-tertiary/15 flex h-4 w-4 shrink-0 items-center justify-center rounded-full">
                 <Check className="text-tertiary h-2.5 w-2.5" strokeWidth={3} />
@@ -323,7 +298,7 @@ function ResearchPanel() {
             )}
             {l.status === "active" && (
               <span className="relative flex h-4 w-4 shrink-0 items-center justify-center">
-                <span className="bg-tertiary absolute h-2 w-2 animate-ping rounded-full opacity-75" />
+                <span className="bg-tertiary absolute h-2 w-2 animate-ping rounded-full opacity-75 motion-reduce:animate-none" />
                 <span className="bg-tertiary relative h-2 w-2 rounded-full" />
               </span>
             )}
@@ -348,17 +323,15 @@ function ResearchPanel() {
                 {l.note}
               </span>
             )}
-          </Stagger>
+          </div>
         ))}
 
-        <Stagger index={lines.length}>
-          <div className="bg-tertiary/10 mt-4 flex items-center justify-between gap-3 rounded-lg px-3 py-2.5">
-            <span className="text-tertiary font-display text-sm font-medium">
-              stripe.com/careers · Senior Engineer
-            </span>
-            <span className="text-tertiary shrink-0 text-xs font-semibold">MATCH 92%</span>
-          </div>
-        </Stagger>
+        <div className="bg-tertiary/10 mt-4 flex items-center justify-between gap-3 rounded-lg px-3 py-2.5">
+          <span className="text-tertiary font-display text-sm font-medium">
+            stripe.com/careers · Senior Engineer
+          </span>
+          <span className="text-tertiary shrink-0 text-xs font-semibold">MATCH 92%</span>
+        </div>
       </div>
 
       <div className="border-border/60 text-muted-foreground flex items-center justify-between border-t px-5 py-3 text-xs">
@@ -411,7 +384,19 @@ function SampleQuestion({
   );
 }
 
-export function SampleReportPanel() {
+/**
+ * `revealRows` staggers the three category groups in, and is opt-in for a
+ * reason: this panel is also PANELS[2] in the sticky-scroll stepper, where it is
+ * keyed on the active stage and remounts on every stage change. Defaulting it on
+ * would re-deal the cards each time the reader moved between stages — the exact
+ * bug the Stagger removal above fixed. Only the hero, which mounts once, passes
+ * it. Kept in CSS rather than Motion so a remount stays cheap regardless.
+ */
+export function SampleReportPanel({ revealRows = false }: { revealRows?: boolean }) {
+  const group = revealRows
+    ? "animate-in fade-in slide-in-from-bottom-1 fill-mode-both ease-out-strong duration-400 motion-reduce:slide-in-from-bottom-0"
+    : "";
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-border flex items-center gap-2 border-b px-4 py-2.5">
@@ -438,7 +423,7 @@ export function SampleReportPanel() {
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        <Stagger index={0}>
+        <div className={`${group} delay-500`}>
           <p className="text-muted-foreground mb-2 text-[10px] tracking-widest uppercase">
             System Design · 3 questions
           </p>
@@ -456,9 +441,9 @@ export function SampleReportPanel() {
               note="Discuss double-entry accounting, idempotency, and eventual consistency trade-offs."
             />
           </div>
-        </Stagger>
+        </div>
 
-        <Stagger index={1}>
+        <div className={`${group} delay-[560ms]`}>
           <p className="text-muted-foreground mb-2 text-[10px] tracking-widest uppercase">
             Algorithmic Coding · 2 questions
           </p>
@@ -470,9 +455,9 @@ export function SampleReportPanel() {
               note="Hash map plus deque; talk through the memory trade-off at Stripe's volume."
             />
           </div>
-        </Stagger>
+        </div>
 
-        <Stagger index={2}>
+        <div className={`${group} delay-[620ms]`}>
           <p className="text-muted-foreground mb-2 text-[10px] tracking-widest uppercase">
             Behavioral · 2 questions
           </p>
@@ -490,7 +475,7 @@ export function SampleReportPanel() {
               note="Show you argued from user impact, not preference, and committed after the call."
             />
           </div>
-        </Stagger>
+        </div>
       </div>
     </div>
   );
@@ -509,7 +494,7 @@ function PrepPanel() {
 
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-5">
-      <Stagger index={0}>
+      <div>
         <div className="flex items-center gap-2">
           <FileSearch className="text-tertiary h-4 w-4" />
           <span className="font-display text-sm font-semibold">Prep order · most likely first</span>
@@ -523,33 +508,33 @@ function PrepPanel() {
             style={{ width: `${(doneCount / items.length) * 100}%` }}
           />
         </div>
-      </Stagger>
+      </div>
       <ul className="space-y-2">
-        {items.map((it, i) => (
-          <Stagger key={it.q} index={i + 1}>
-            <li className="border-border flex items-center gap-3 rounded-lg border px-3 py-2.5">
-              <span
-                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                  it.done ? "border-tertiary bg-tertiary" : "border-muted-foreground/40"
-                }`}>
-                {it.done && <Check className="text-tertiary-foreground h-3 w-3" />}
-              </span>
-              <span
-                className={`font-display text-sm ${
-                  it.done ? "text-muted-foreground line-through" : "text-foreground"
-                }`}>
-                {it.q}
-              </span>
-              <span
-                className={`ml-auto shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] tracking-wide uppercase ${
-                  it.tag === "High"
-                    ? "text-status-good border-status-good/30 bg-status-good/10"
-                    : "text-status-warning border-status-warning/30 bg-status-warning/10"
-                }`}>
-                {it.tag}
-              </span>
-            </li>
-          </Stagger>
+        {items.map((it) => (
+          <li
+            key={it.q}
+            className="border-border flex items-center gap-3 rounded-lg border px-3 py-2.5">
+            <span
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                it.done ? "border-tertiary bg-tertiary" : "border-muted-foreground/40"
+              }`}>
+              {it.done && <Check className="text-tertiary-foreground h-3 w-3" />}
+            </span>
+            <span
+              className={`font-display text-sm ${
+                it.done ? "text-muted-foreground line-through" : "text-foreground"
+              }`}>
+              {it.q}
+            </span>
+            <span
+              className={`ml-auto shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] tracking-wide uppercase ${
+                it.tag === "High"
+                  ? "text-status-good border-status-good/30 bg-status-good/10"
+                  : "text-status-warning border-status-warning/30 bg-status-warning/10"
+              }`}>
+              {it.tag}
+            </span>
+          </li>
         ))}
       </ul>
       <p className="text-muted-foreground font-display mt-auto text-xs">

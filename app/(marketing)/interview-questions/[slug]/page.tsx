@@ -188,7 +188,7 @@ export default async function CompanyQuestionsPage({
           </p>
           <Link
             href="/signin"
-            className="font-display text-brand-700 mt-5 inline-flex min-h-11 items-center rounded-full bg-[image:var(--gradient-glossy-white)] px-6 text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-all hover:bg-[image:var(--gradient-glossy-white-hover)]">
+            className="font-display text-brand-700 ease-out-strong mt-5 inline-flex min-h-11 items-center rounded-full bg-[image:var(--gradient-glossy-white)] px-6 text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-[box-shadow,translate,scale] duration-150 hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:scale-[0.98] active:shadow-[var(--shadow-glossy-white-active)]">
             {siteConfig.cta.signedOutLabel}
           </Link>
         </div>
