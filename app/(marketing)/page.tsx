@@ -17,14 +17,14 @@ import { UnknownCompaniesSection } from "@/components/unknown-companies-section"
 import { WhyNotChatgptSection } from "@/components/why-not-chatgpt-section";
 
 import { faqJsonLd } from "@/lib/seo/json-ld";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { buildMetadata, siteTitle } from "@/lib/seo/metadata";
 
 // import { ResearchExperience } from "@/features/research/research-experience";
 
 export const metadata = buildMetadata({
   path: "/",
   title: siteConfig.name,
-  absoluteTitle: siteConfig.name,
+  absoluteTitle: siteTitle,
   description: siteConfig.copy.metaDescription,
 });
 
