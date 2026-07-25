@@ -5,6 +5,14 @@ import { siteConfig } from "@/site";
 import { listPublishedPages } from "@/lib/publishing/company-pages";
 import { publicRoutes } from "@/lib/seo/routes";
 
+/**
+ * Matches the company pages' own `revalidate`. Without it the sitemap is built
+ * once at deploy and never sees a report published afterwards — the page would
+ * be live and crawlable within the hour while the sitemap still denied it
+ * existed, until someone happened to deploy.
+ */
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // `label` is breadcrumb copy, not a sitemap field — drop it before emitting.
   // `lastModified` is per-route and declared in the registry: a single

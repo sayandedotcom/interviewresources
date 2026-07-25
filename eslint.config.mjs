@@ -30,11 +30,15 @@ export default defineConfig([
     },
   },
   globalIgnores([
-    ".next/**",
+    // `**/` because a bare `.next/**` only matches the root build. Agent
+    // worktrees under .claude/ carry their own .next, and linting one costs
+    // ~4.5MB of warnings about generated Turbopack chunks on every commit.
+    "**/.next/**",
+    ".claude/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
     "drizzle/**",
-    "node_modules/**",
+    "**/node_modules/**",
   ]),
 ]);

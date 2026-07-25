@@ -13,6 +13,7 @@ import {
   getPublishedPage,
   listPublishedPages,
 } from "@/lib/publishing/company-pages";
+import { categoryLabel } from "@/lib/research/display";
 import { companyBreadcrumbJsonLd, companyPageJsonLd } from "@/lib/seo/json-ld";
 import { buildMetadata } from "@/lib/seo/metadata";
 
@@ -137,8 +138,11 @@ export default async function CompanyQuestionsPage({
           {report.questions.map((q) => (
             <li key={q.question} className="silver-edge bg-background rounded-2xl p-6">
               <div className="flex flex-wrap items-center gap-2">
+                {/* `categoryLabel`, not the raw identifier — the stored value is
+                    an internal code like `system_design`, which reads as
+                    unfinished on a page meant to rank. */}
                 <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-xs font-medium">
-                  {q.category}
+                  {categoryLabel(q.category)}
                 </span>
                 <span className="bg-primary/10 text-primary rounded-full px-2.5 py-1 text-xs font-medium">
                   {confidenceLabel[q.confidence]}
