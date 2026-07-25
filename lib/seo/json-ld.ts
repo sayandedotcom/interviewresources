@@ -157,6 +157,67 @@ export const pricingOffersJsonLd = {
 };
 
 /**
+ * A published company page.
+ *
+ * `Article`, not `FAQPage`: these are questions we predict a company will ask,
+ * each with its evidence — not questions this site answers. `FAQPage` would
+ * also be a claim about content Google stopped rewarding in May 2026, so it
+ * would be inaccurate *and* worthless. `about` names the company as an entity
+ * so the page can be connected to it, while `publisher`/`author` stay pointed
+ * at us — we wrote the analysis, the company did not.
+ */
+export function companyPageJsonLd(input: {
+  slug: string;
+  companyName: string;
+  publishedAt: Date;
+  headline: string;
+  description: string;
+}) {
+  const url = absolute(`/interview-questions/${input.slug}`);
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${url}#article`,
+    url,
+    headline: input.headline,
+    description: input.description,
+    datePublished: input.publishedAt.toISOString(),
+    dateModified: input.publishedAt.toISOString(),
+    author: { "@id": organizationId },
+    publisher: { "@id": organizationId },
+    isAccessibleForFree: true,
+    about: {
+      "@type": "Organization",
+      name: input.companyName,
+    },
+    mainEntityOfPage: url,
+  };
+}
+
+/** Home > Interview Questions > {Company}, for the dynamic company pages. */
+export function companyBreadcrumbJsonLd(slug: string, companyName: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: publicRoutes["/"].label, item: siteConfig.url },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: publicRoutes["/interview-questions"].label,
+        item: absolute("/interview-questions"),
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: companyName,
+        item: absolute(`/interview-questions/${slug}`),
+      },
+    ],
+  };
+}
+
+/**
  * Built from the same `siteConfig.faqs` that `FaqSection` renders, so the
  * markup can never drift from the visible copy — Google requires FAQ
  * structured data to match what's on the page.

@@ -45,6 +45,11 @@ export function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/interview-questions" className={linkClass}>
+                Questions by company
+              </Link>
+            </li>
+            <li>
               <Link href="/changelog" className={linkClass}>
                 Changelog
               </Link>

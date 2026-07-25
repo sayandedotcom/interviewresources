@@ -50,6 +50,12 @@ export const publicRoutes = {
     label: "About",
     lastModified: "2026-07-25",
   },
+  "/interview-questions": {
+    priority: 0.8,
+    changeFrequency: "weekly",
+    label: "Interview Questions",
+    lastModified: "2026-07-25",
+  },
   "/blog": { priority: 0.6, changeFrequency: "weekly", label: "Blog", lastModified: "2026-07-25" },
   "/help": { priority: 0.6, changeFrequency: "monthly", label: "Help", lastModified: "2026-07-25" },
   /** `monthly`, not `weekly`: claim the cadence the page actually keeps. */

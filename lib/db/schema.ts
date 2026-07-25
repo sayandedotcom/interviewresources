@@ -135,6 +135,21 @@ export const reports = pgTable("reports", {
     .references(() => researches.id, { onDelete: "cascade" }),
   jsonPayload: jsonb("json_payload").notNull(),
   shareToken: text("share_token").unique(),
+  /**
+   * Set to publish a redacted version of this report at
+   * `/interview-questions/<slug>` as an indexable marketing page.
+   *
+   * Distinct from `shareToken` in every way that matters: a share link is
+   * unguessable, `noindex`, and shows the whole report to someone the owner
+   * chose. This is a public, indexed, deliberately partial page — see
+   * `lib/publishing/public-report.ts` for what it withholds.
+   *
+   * Only ever set this on reports from an account you control. Publishing a
+   * customer's report would expose research they paid for, and nothing in the
+   * schema can catch that mistake for you.
+   */
+  publishedSlug: text("published_slug").unique(),
+  publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

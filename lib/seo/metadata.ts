@@ -27,9 +27,17 @@ const ogImages = [
   },
 ];
 
+/**
+ * Published company pages are the one indexable route family that cannot live
+ * in `publicRoutes` — the set is data, not code, and changes whenever a report
+ * is published. The template literal keeps the escape hatch narrow: every other
+ * path must still be a registered route.
+ */
+type CompanyPagePath = `/interview-questions/${string}`;
+
 type BuildMetadataOptions = {
   /** Must be a registered public route, so canonicals and the sitemap agree. */
-  path: PublicRoute;
+  path: PublicRoute | CompanyPagePath;
   /** Fed through the root `%s · Interview Resources` title template. */
   title: string;
   description: string;
