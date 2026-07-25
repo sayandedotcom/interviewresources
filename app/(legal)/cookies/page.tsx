@@ -15,7 +15,8 @@ export default function CookiesPage() {
     <div className="mx-auto max-w-3xl px-5 py-12">
       <BreadcrumbJsonLd path="/cookies" />
       <h1 className="font-display text-3xl font-bold tracking-tight">Cookie Policy</h1>
-      <p className="text-muted-foreground mt-4">Last updated: January 2025</p>
+      {/* Must stay in step with `lastModified` for /cookies in lib/seo/routes.ts. */}
+      <p className="text-muted-foreground mt-4">Last updated: July 23, 2026</p>
 
       <div className="mt-8 space-y-6">
         <section>
