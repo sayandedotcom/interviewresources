@@ -59,12 +59,20 @@ describe("EstimatePanel", () => {
 
     const bar = screen.getByTestId("estimate-bar");
     const toggle = within(bar).getByRole("button");
+    // The panel stays mounted so it can grow out of the bar rather than pop into
+    // existence above it, so "collapsed" is a state to assert, not an absence:
+    // clipped to zero height and `inert`, which is what actually keeps its
+    // contents off the tab order and away from a screen reader.
+    const panel = screen.getByTestId("estimate-bar-panel");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(within(bar).queryByText(/Estimate only/)).not.toBeInTheDocument();
+    expect(panel).not.toHaveAttribute("data-open");
+    expect(panel).toHaveAttribute("inert");
 
     await userEvent.click(toggle);
 
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(panel).toHaveAttribute("data-open");
+    expect(panel).not.toHaveAttribute("inert");
     expect(within(bar).getByText(/Estimate only/)).toBeInTheDocument();
   });
 
@@ -76,9 +84,11 @@ describe("EstimatePanel", () => {
     const rail = screen.getByTestId("estimate-rail");
     expect(within(rail).getByText("Effort picker slot")).toBeInTheDocument();
 
+    // Mounted but inert while collapsed — see the note in the test above.
     const bar = screen.getByTestId("estimate-bar");
-    expect(within(bar).queryByText("Effort picker slot")).not.toBeInTheDocument();
+    expect(screen.getByTestId("estimate-bar-panel")).toHaveAttribute("inert");
     await userEvent.click(within(bar).getByRole("button"));
+    expect(screen.getByTestId("estimate-bar-panel")).not.toHaveAttribute("inert");
     expect(within(bar).getByText("Effort picker slot")).toBeInTheDocument();
   });
 });

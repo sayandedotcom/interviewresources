@@ -249,29 +249,52 @@ export function EstimatePanel({
             </span>
             <span className="text-muted-foreground text-xs">· ~{minuteRange(estimate)} min</span>
           </span>
+          {/* Pinned to the panel's own duration and curve. Left on a bare
+              `transition-transform` the chevron ran on Tailwind's 150ms default
+              while the panel took 220ms, so the arrow finished first and the two
+              read as separate events. */}
           <ChevronUp
-            className={`text-muted-foreground h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`text-muted-foreground ease-drawer h-4 w-4 shrink-0 transition-transform duration-[220ms] ${open ? "rotate-180" : ""}`}
             aria-hidden="true"
           />
         </button>
-        {open && (
-          <div className="space-y-3 px-5 pb-3">
-            <Summary estimate={estimate} balance={balance} />
-            {balance !== undefined && (
-              <>
-                <BalanceLine balance={balance} ceiling={ceiling} />
-                <BudgetWarning estimate={estimate} balance={balance} />
-              </>
-            )}
-            <Disclaimer />
-            {controls && (
-              <>
-                <Separator />
-                {controls}
-              </>
-            )}
+        {/*
+         * Stays mounted and grows instead of appearing. This is a bottom sheet —
+         * it belongs to the bar it opens from, and popping into existence above it
+         * severs that connection. The grid-rows 0fr→1fr trick is what lets an
+         * auto-height panel animate at all; the inner `overflow-hidden` is
+         * load-bearing, since the row is what clips, not the content.
+         * `--ease-drawer` rather than the general ease-out: this is the one
+         * surface on the route that behaves like a drawer.
+         */}
+        {/* `inert` is what makes staying mounted safe: collapsed, the panel is
+            clipped to zero height but its controls (the report passes an Effort
+            picker in here) would otherwise still be tabbable and readable by a
+            screen reader. */}
+        <div
+          data-testid="estimate-bar-panel"
+          data-open={open || undefined}
+          inert={!open}
+          className="ease-drawer grid grid-rows-[0fr] opacity-0 transition-[grid-template-rows,opacity] duration-[220ms] data-open:grid-rows-[1fr] data-open:opacity-100 motion-reduce:transition-[opacity]">
+          <div className="overflow-hidden">
+            <div className="space-y-3 px-5 pb-3">
+              <Summary estimate={estimate} balance={balance} />
+              {balance !== undefined && (
+                <>
+                  <BalanceLine balance={balance} ceiling={ceiling} />
+                  <BudgetWarning estimate={estimate} balance={balance} />
+                </>
+              )}
+              <Disclaimer />
+              {controls && (
+                <>
+                  <Separator />
+                  {controls}
+                </>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </>
   );

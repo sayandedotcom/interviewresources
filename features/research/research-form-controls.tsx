@@ -17,7 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { EFFORT_PRESETS, type Effort } from "@/lib/research/budget";
 import { estimateRun } from "@/lib/research/estimate";
@@ -86,25 +86,23 @@ export function ClearFormButton({
 
   return (
     <AlertDialog>
-      <TooltipProvider>
-        <Tooltip>
-          <AlertDialogTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-foreground -mt-1 -mr-2"
-              />
-            }>
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span className="font-display">Clear form</span>
-          </AlertDialogTrigger>
-          <TooltipContent>
-            <span className="font-display">Reset all fields to empty</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <AlertDialogTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground -mt-1 -mr-2"
+            />
+          }>
+          <RotateCcw className="h-3.5 w-3.5" />
+          <span className="font-display">Clear form</span>
+        </AlertDialogTrigger>
+        <TooltipContent>
+          <span className="font-display">Reset all fields to empty</span>
+        </TooltipContent>
+      </Tooltip>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Clear form?</AlertDialogTitle>

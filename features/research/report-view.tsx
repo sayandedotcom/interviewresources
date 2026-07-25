@@ -29,6 +29,7 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 
 import {
   AlertDialog,
@@ -192,12 +193,45 @@ function findNewContent(before: Report, after: Report): NewContent {
   return next;
 }
 
-function NewBadge() {
+/** The repo's `--ease-out-strong`, as the tuple Motion wants. */
+const EASE_OUT_STRONG = [0.23, 1, 0.32, 1] as const;
+
+/**
+ * The `New` badge marks the delta an extension just bought — `findNewContent`
+ * exists solely to compute it, and it used to land with no motion at all, which
+ * left the one piece of feedback for a paid action indistinguishable from
+ * content that had always been there.
+ *
+ * `index` staggers a group; it is capped by the caller, because a 20-question
+ * extension cascading at 40ms a piece would run for most of a second.
+ */
+function NewBadge({ index = 0 }: { index?: number }) {
+  const reduceMotion = useReducedMotion();
+
   return (
-    <Badge className="bg-primary text-primary-foreground h-4 px-1.5 text-[9px] font-semibold tracking-wide uppercase">
-      New
-    </Badge>
+    <motion.span
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "scale(0.95)" }}
+      animate={{ opacity: 1, transform: "scale(1)" }}
+      transition={{
+        duration: 0.2,
+        ease: EASE_OUT_STRONG,
+        delay: reduceMotion ? 0 : index * STAGGER_STEP_S,
+      }}
+      className="inline-flex">
+      <Badge className="bg-primary text-primary-foreground h-4 px-1.5 text-[9px] font-semibold tracking-wide uppercase">
+        New
+      </Badge>
+    </motion.span>
   );
+}
+
+/** 40ms between badges in a group, and never more than this many staggered. */
+const STAGGER_STEP_S = 0.04;
+const STAGGER_CAP = 6;
+
+/** Position in the stagger, flattened once past the cap so nothing waits long. */
+function staggerIndex(position: number): number {
+  return Math.min(position, STAGGER_CAP);
 }
 
 export function ReportView({
@@ -272,6 +306,14 @@ export function ReportView({
   // between the click and the file appearing. Disable the trigger meanwhile.
   const [pdfBusy, setPdfBusy] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const reduceMotion = useReducedMotion();
+  /** Icon and label share one recipe so the two halves can never drift apart. */
+  const copyIn = {
+    initial: reduceMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(2px)" },
+    animate: { opacity: 1, filter: "blur(0px)" },
+    transition: { duration: 0.14, ease: EASE_OUT_STRONG },
+  };
 
   useEffect(
     () => () => {
@@ -453,30 +495,54 @@ export function ReportView({
                         variant={copyState === "failed" ? "outline" : "glossy"}
                         size="sm"
                         aria-label="Copy as prompt"
-                        className={
+                        // min-w reserves the widest label ("Copy as Prompt") so
+                        // the button cannot resize when it swaps to "Copied" —
+                        // it used to change width at the exact moment the user
+                        // is looking straight at it, which also shoved the
+                        // Download button beside it sideways.
+                        className={`min-w-[10.5rem] ${
                           copyState === "failed"
                             ? "border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:text-destructive shadow-[var(--shadow-xs)]"
-                            : undefined
-                        }
+                            : ""
+                        }`}
                       />
                     }
                   />
                 }>
                 {/* Inherits the button's colour rather than going green: the
                     copied state sits on the glossy blue fill, where a
-                    status-good tick would barely register. */}
-                {copyState === "copied" ? (
-                  <Check className="mr-1 h-4 w-4" />
-                ) : (
-                  <ClipboardCopy className="mr-1 h-4 w-4" />
-                )}
-                <span className="font-display">
+                    status-good tick would barely register.
+
+                    Icon and label are keyed on the state so each swap replays a
+                    short blur-in. Blur is what stops the two labels reading as
+                    two separate objects trading places — it bridges them into
+                    one word changing. Only the incoming half animates: the
+                    outgoing one is gone, which keeps a single label in the DOM
+                    and the state genuinely assertable. */}
+                <motion.span
+                  key={`${copyState}-icon`}
+                  initial={copyIn.initial}
+                  animate={copyIn.animate}
+                  transition={copyIn.transition}
+                  className="mr-1 inline-flex">
+                  {copyState === "copied" ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <ClipboardCopy className="h-4 w-4" />
+                  )}
+                </motion.span>
+                <motion.span
+                  key={copyState}
+                  initial={copyIn.initial}
+                  animate={copyIn.animate}
+                  transition={copyIn.transition}
+                  className="font-display">
                   {copyState === "copied"
                     ? "Copied"
                     : copyState === "failed"
                       ? "Copy failed"
                       : "Copy as Prompt"}
-                </span>
+                </motion.span>
                 <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
               </TooltipTrigger>
               <TooltipContent>
@@ -694,6 +760,16 @@ export function ReportView({
         <div className={`space-y-8 ${HEADING_GAP}`}>
           {grouped.map(({ cat, questions }) => {
             const CategoryIcon = categoryIcon(cat);
+            // Where each newly gathered question sits in this round's stagger.
+            // Built up front so the render below stays a pure map, and counted
+            // per round rather than across the whole report — otherwise a round
+            // near the bottom would still be arriving long after the user
+            // scrolled to it.
+            const newOrder = new Map<string, number>();
+            for (const question of questions) {
+              const key = questionKey(question);
+              if (newContent.questions.has(key)) newOrder.set(key, newOrder.size);
+            }
             return (
               <div key={cat}>
                 <div className="flex items-baseline gap-2">
@@ -793,76 +869,106 @@ export function ReportView({
                   </div>
                 </div>
                 <ul className="mt-2 space-y-3">
-                  {questions.map((q, i) => (
-                    <li key={i}>
-                      <Card>
-                        <CardContent>
-                          <div className="flex items-start justify-between gap-3">
-                            <p className="font-display text-foreground text-[15px] leading-snug font-medium">
-                              {q.question}
+                  {questions.map((q, i) => {
+                    // Keyed by identity rather than index: an extension merges new
+                    // questions into the existing list, and an index key would let
+                    // React reuse a settled card for a new one — the entrance would
+                    // then play on the wrong question.
+                    const key = questionKey(q);
+                    const newIndex = newOrder.get(key);
+                    return (
+                      <motion.li
+                        key={key}
+                        // `false` means "no entrance": questions that were already
+                        // on screen must not replay anything when a sibling arrives.
+                        initial={
+                          newIndex === undefined || reduceMotion
+                            ? false
+                            : { opacity: 0, transform: "translateY(6px)" }
+                        }
+                        animate={
+                          newIndex === undefined
+                            ? undefined
+                            : { opacity: 1, transform: "translateY(0px)" }
+                        }
+                        transition={{
+                          duration: 0.24,
+                          ease: EASE_OUT_STRONG,
+                          delay: staggerIndex(newIndex ?? 0) * STAGGER_STEP_S,
+                        }}>
+                        <Card>
+                          <CardContent>
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="font-display text-foreground text-[15px] leading-snug font-medium">
+                                {q.question}
+                              </p>
+                              <div className="flex shrink-0 items-center gap-2">
+                                {newIndex !== undefined && (
+                                  <NewBadge index={staggerIndex(newIndex)} />
+                                )}
+                                {(q.basis === "inferred" || q.basis === "baseline") && (
+                                  <Tooltip>
+                                    <TooltipTrigger
+                                      render={
+                                        <Badge
+                                          variant="outline"
+                                          className="text-muted-foreground cursor-default text-[10px]">
+                                          {q.basis === "baseline"
+                                            ? BASELINE_BASIS_META.label
+                                            : BASIS_META.label}
+                                        </Badge>
+                                      }
+                                    />
+                                    <TooltipContent className="max-w-xs">
+                                      {q.basis === "baseline"
+                                        ? BASELINE_BASIS_META.tooltip
+                                        : BASIS_META.tooltip}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                                <span
+                                  className={`text-[13px] leading-none ${
+                                    q.confidence === "low"
+                                      ? "text-muted-foreground"
+                                      : "text-primary"
+                                  }`}
+                                  title={`Confidence: ${CONFIDENCE_META[q.confidence].label}`}>
+                                  {CONFIDENCE_META[q.confidence].signal}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="font-display text-muted-foreground mt-2 text-[13.5px] leading-relaxed">
+                              {q.rationale}
                             </p>
-                            <div className="flex shrink-0 items-center gap-2">
-                              {newContent.questions.has(questionKey(q)) && <NewBadge />}
-                              {(q.basis === "inferred" || q.basis === "baseline") && (
-                                <Tooltip>
-                                  <TooltipTrigger
+                            <details className="mt-2">
+                              <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-[11px] tracking-widest uppercase">
+                                Prep note
+                              </summary>
+                              <p className="font-display text-foreground mt-1.5 text-[13.5px] leading-relaxed">
+                                {q.prepNote}
+                              </p>
+                            </details>
+                            {q.evidenceUrls.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {q.evidenceUrls.map((url, j) => (
+                                  <Badge
+                                    key={j}
+                                    variant="outline"
+                                    className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-colors"
                                     render={
-                                      <Badge
-                                        variant="outline"
-                                        className="text-muted-foreground cursor-default text-[10px]">
-                                        {q.basis === "baseline"
-                                          ? BASELINE_BASIS_META.label
-                                          : BASIS_META.label}
-                                      </Badge>
-                                    }
-                                  />
-                                  <TooltipContent className="max-w-xs">
-                                    {q.basis === "baseline"
-                                      ? BASELINE_BASIS_META.tooltip
-                                      : BASIS_META.tooltip}
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                              <span
-                                className={`text-[13px] leading-none ${
-                                  q.confidence === "low" ? "text-muted-foreground" : "text-primary"
-                                }`}
-                                title={`Confidence: ${CONFIDENCE_META[q.confidence].label}`}>
-                                {CONFIDENCE_META[q.confidence].signal}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="font-display text-muted-foreground mt-2 text-[13.5px] leading-relaxed">
-                            {q.rationale}
-                          </p>
-                          <details className="mt-2">
-                            <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-[11px] tracking-widest uppercase">
-                              Prep note
-                            </summary>
-                            <p className="font-display text-foreground mt-1.5 text-[13.5px] leading-relaxed">
-                              {q.prepNote}
-                            </p>
-                          </details>
-                          {q.evidenceUrls.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                              {q.evidenceUrls.map((url, j) => (
-                                <Badge
-                                  key={j}
-                                  variant="outline"
-                                  className="hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-colors"
-                                  render={
-                                    <a href={url} target="_blank" rel="noopener noreferrer" />
-                                  }>
-                                  <LinkIcon className="h-3 w-3" aria-hidden="true" />
-                                  <span className="text-[10px]">{hostOf(url)}</span>
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </li>
-                  ))}
+                                      <a href={url} target="_blank" rel="noopener noreferrer" />
+                                    }>
+                                    <LinkIcon className="h-3 w-3" aria-hidden="true" />
+                                    <span className="text-[10px]">{hostOf(url)}</span>
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </motion.li>
+                    );
+                  })}
                 </ul>
               </div>
             );

@@ -364,4 +364,43 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+
+  /* Lets `height: auto` be a transition endpoint. Without it the report's prep
+     notes can only snap, because there is no numeric height to interpolate
+     toward. Scoped to :root because the keyword only resolves where it is
+     inherited from. */
+  :root {
+    interpolate-size: allow-keywords;
+  }
+
+  /* Every <details> on the site is a disclosure inside a reading surface — the
+     report's per-question prep notes (features/research/report-view.tsx). Opening
+     one shoves every card below it down the page; this is the bridge for that.
+     Progressive enhancement: browsers without ::details-content keep the snap,
+     which is exactly today's behaviour, so there is nothing to fall back to.
+     160ms because a reader opens several of these in a row — long enough to
+     follow, short enough never to wait on. */
+  details::details-content {
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition:
+      height 160ms var(--ease-out-strong),
+      content-visibility 160ms var(--ease-out-strong) allow-discrete,
+      opacity 160ms var(--ease-out-strong);
+  }
+
+  details[open]::details-content {
+    height: auto;
+    opacity: 1;
+  }
+
+  /* Reduced motion keeps the fade — it still explains that content arrived —
+     and drops the height travel, which is the part that moves the page. */
+  @media (prefers-reduced-motion: reduce) {
+    details::details-content {
+      transition: opacity 160ms var(--ease-out-strong);
+      height: auto;
+    }
+  }
 }

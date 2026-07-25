@@ -18,7 +18,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { CATEGORY_META, categoryLabel } from "@/lib/research/display";
 import { INTERVIEW_CATEGORIES, type InterviewCategory } from "@/lib/research/types";

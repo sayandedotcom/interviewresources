@@ -1074,7 +1074,11 @@ describe("extend controls", () => {
       />
     );
 
-    expect(screen.getByText(/could cost more than your 5 credits/)).toBeInTheDocument();
+    // Scoped to the rail: the mobile bar renders the same warning and now stays
+    // mounted (clipped and `inert`) so it can grow out of the bar rather than
+    // pop in above it, so an unscoped query matches both copies.
+    const rail = screen.getByTestId("estimate-rail");
+    expect(within(rail).getByText(/could cost more than your 5 credits/)).toBeInTheDocument();
   });
 
   it("prices nothing until the extension ceilings arrive", () => {

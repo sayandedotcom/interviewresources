@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { Info, RefreshCw, Target, Trash2, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { signInWithGoogle, useSession } from "@/lib/auth-client";
 import type { Effort } from "@/lib/research/budget";
@@ -67,6 +68,8 @@ export interface Me {
 }
 
 const DRAFT_SAVE_DEBOUNCE_MS = 300;
+/** Long enough to read "Progress saved", short enough not to become furniture. */
+const SAVED_CHIP_VISIBLE_MS = 2000;
 
 export function ResearchExperience({
   onComplete,
@@ -86,6 +89,7 @@ export function ResearchExperience({
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const progressId = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reduceMotion = useReducedMotion();
 
   const form = useForm<ResearchFormValues>({
     resolver: zodFormResolver(researchFormSchema),
@@ -129,6 +133,18 @@ export function ResearchExperience({
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [watch]);
+
+  // The "Progress saved" chip acknowledges a save and then gets out of the way.
+  // Clearing the timestamp is what makes it transient: without this it animated
+  // in on the very first debounce and then sat there permanently, so every save
+  // after the first one went unacknowledged — the indicator stopped indicating.
+  // A fresh save replaces the timestamp, the cleanup cancels the pending hide,
+  // and the new value re-keys the chip so the entrance plays again.
+  useEffect(() => {
+    if (lastSavedAt === null) return;
+    const timer = setTimeout(() => setLastSavedAt(null), SAVED_CHIP_VISIBLE_MS);
+    return () => clearTimeout(timer);
+  }, [lastSavedAt]);
 
   const { data: session, isPending: sessionPending } = useSession();
   const [me, setMe] = useState<Me | null>(initialMe ?? null);
@@ -270,11 +286,27 @@ export function ResearchExperience({
                         />
                         Target
                       </h2>
-                      {lastSavedAt && (
-                        <span className="text-muted-foreground font-display animate-in fade-in slide-in-from-left-2 text-xs">
-                          Progress saved
-                        </span>
-                      )}
+                      {/* Keyed on the timestamp so each save replays the entrance
+                          rather than reusing the element already on screen. The
+                          exit is slower than the entrance on purpose: arriving is
+                          news, leaving should not pull the eye back. */}
+                      <AnimatePresence>
+                        {lastSavedAt && (
+                          <motion.span
+                            key={lastSavedAt}
+                            initial={
+                              reduceMotion
+                                ? { opacity: 0 }
+                                : { opacity: 0, transform: "translateX(-6px)" }
+                            }
+                            animate={{ opacity: 1, transform: "translateX(0px)" }}
+                            exit={{ opacity: 0, transition: { duration: 0.3, ease: "linear" } }}
+                            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+                            className="text-muted-foreground font-display text-xs">
+                            Progress saved
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
                     </div>
                     <ClearFormButton control={control} onClear={clearForm} />
                   </div>
@@ -306,21 +338,19 @@ export function ResearchExperience({
                             <FormLabel htmlFor="companyUrl">
                               Company URL <span className="text-muted-foreground">· preferred</span>
                             </FormLabel>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  render={
-                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
-                                  }
-                                />
-                                <TooltipContent>
-                                  <span className="font-display">
-                                    Helps find company-specific interview questions from public
-                                    sources
-                                  </span>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
+                                }
+                              />
+                              <TooltipContent>
+                                <span className="font-display">
+                                  Helps find company-specific interview questions from public
+                                  sources
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                           <FormControl>
                             <Input {...field} id="companyUrl" placeholder="https://stripe.com" />
@@ -367,21 +397,19 @@ export function ResearchExperience({
                             <FormLabel htmlFor="teamContext">
                               Team / org <span className="text-muted-foreground">· optional</span>
                             </FormLabel>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  render={
-                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
-                                  }
-                                />
-                                <TooltipContent>
-                                  <span className="font-display">
-                                    The team or organization you'd work on — helps find relevant
-                                    system design questions
-                                  </span>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
+                                }
+                              />
+                              <TooltipContent>
+                                <span className="font-display">
+                                  The team or organization you'd work on — helps find relevant
+                                  system design questions
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                           <FormControl>
                             <Input {...field} id="teamContext" placeholder="R&D, Infra" />
@@ -412,21 +440,19 @@ export function ResearchExperience({
                             <FormLabel htmlFor="techStack">
                               Tech Stack <span className="text-muted-foreground">· optional</span>
                             </FormLabel>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  render={
-                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
-                                  }
-                                />
-                                <TooltipContent>
-                                  <span className="font-display">
-                                    Languages, frameworks, and tools the company uses — helps find
-                                    relevant domain questions
-                                  </span>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
+                                }
+                              />
+                              <TooltipContent>
+                                <span className="font-display">
+                                  Languages, frameworks, and tools the company uses — helps find
+                                  relevant domain questions
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                           <FormControl>
                             <Input
@@ -448,21 +474,19 @@ export function ResearchExperience({
                               Job Description{" "}
                               <span className="text-muted-foreground">· optional</span>
                             </FormLabel>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  render={
-                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
-                                  }
-                                />
-                                <TooltipContent>
-                                  <span className="font-display">
-                                    Paste the job posting to get questions tailored to the specific
-                                    role
-                                  </span>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
+                                }
+                              />
+                              <TooltipContent>
+                                <span className="font-display">
+                                  Paste the job posting to get questions tailored to the specific
+                                  role
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                           <FormControl>
                             <Textarea
@@ -486,21 +510,19 @@ export function ResearchExperience({
                               Recruiter notes{" "}
                               <span className="text-muted-foreground">· optional</span>
                             </FormLabel>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger
-                                  render={
-                                    <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
-                                  }
-                                />
-                                <TooltipContent>
-                                  <span className="font-display">
-                                    What did the recruiter tell you about the process? Which rounds
-                                    to expect?
-                                  </span>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
+                                }
+                              />
+                              <TooltipContent>
+                                <span className="font-display">
+                                  What did the recruiter tell you about the process? Which rounds to
+                                  expect?
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                           <FormControl>
                             <Textarea
@@ -519,21 +541,19 @@ export function ResearchExperience({
                         <Label className="text-foreground text-sm font-medium">
                           Interviewers <span className="text-muted-foreground">· optional</span>
                         </Label>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger
-                              render={
-                                <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
-                              }
-                            />
-                            <TooltipContent>
-                              <span className="font-display">
-                                Names help personalize questions. URLs are used only as
-                                public-search seeds and are never stored.
-                              </span>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Info className="text-muted-foreground h-3.5 w-3.5 shrink-0 cursor-help" />
+                            }
+                          />
+                          <TooltipContent>
+                            <span className="font-display">
+                              Names help personalize questions. URLs are used only as public-search
+                              seeds and are never stored.
+                            </span>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
 
                       {interviewerFields.map((field, index) => (
@@ -560,26 +580,24 @@ export function ResearchExperience({
                               />
                             )}
                           />
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger
-                                render={
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => removeInterviewer(index)}
-                                    disabled={interviewerFields.length === 1}
-                                    className="cursor-pointer text-red-400 hover:text-red-500"
-                                  />
-                                }>
-                                <Trash2 className="h-4 w-4" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <span className="font-display">Remove interviewer</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeInterviewer(index)}
+                                  disabled={interviewerFields.length === 1}
+                                  className="cursor-pointer text-red-400 hover:text-red-500"
+                                />
+                              }>
+                              <Trash2 className="h-4 w-4" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <span className="font-display">Remove interviewer</span>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       ))}
                       {formState.errors.interviewers && (
@@ -587,26 +605,24 @@ export function ResearchExperience({
                           One of the interviewer URLs doesn&rsquo;t look valid.
                         </p>
                       )}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="glossy"
-                                size="sm"
-                                onClick={() => appendInterviewer({ name: "", url: "" })}
-                              />
-                            }>
-                            Add interviewer
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <span className="font-display">
-                              Add another interviewer to personalize your report
-                            </span>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="glossy"
+                              size="sm"
+                              onClick={() => appendInterviewer({ name: "", url: "" })}
+                            />
+                          }>
+                          Add interviewer
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <span className="font-display">
+                            Add another interviewer to personalize your report
+                          </span>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   </div>
                 </CardContent>
@@ -675,44 +691,83 @@ export function ResearchExperience({
         </Form>
       )}
 
-      {(phase === "running" || phase === "error") && (
-        <div className="mt-6 space-y-4">
-          <ResearchTerminal
-            lines={progress}
-            company={getValues("company")}
-            failed={phase === "error"}
-          />
-          {phase === "error" && error && (
-            <Card>
-              <CardContent>
-                <p className="text-destructive text-[11px] tracking-widest uppercase">
-                  Reconnaissance failed
-                </p>
-                <p className="text-foreground font-display mt-1 text-sm">{error}</p>
-                <Button variant="outline" size="sm" onClick={resetRun} className="mt-3">
-                  Start over
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
+      {/*
+       * The one moment on this route that earns real motion. The user has waited
+       * two to five minutes and spent credits they paid for; delivering the
+       * result as an instant DOM swap reads as a page reload rather than as an
+       * arrival. `mode="wait"` is load-bearing — it holds the report back until
+       * the terminal has cleared, so the two never overlap and the handoff reads
+       * as one thing becoming another instead of two things colliding.
+       *
+       * Everything animates via the `transform` string rather than Motion's
+       * `x`/`scale` shorthands, which run on the main thread — busy here with
+       * the tail of an SSE stream and the first render of a long report.
+       */}
+      <AnimatePresence mode="wait" initial={false}>
+        {(phase === "running" || phase === "error") && (
+          <motion.div
+            key="terminal"
+            // The terminal never animates in: it replaces the form the instant
+            // the run is confirmed, and making someone wait to watch their own
+            // run start is the opposite of responsive.
+            initial={false}
+            exit={
+              reduceMotion
+                ? { opacity: 0, transition: { duration: 0.12 } }
+                : {
+                    opacity: 0,
+                    transform: "scale(0.98)",
+                    transition: { duration: 0.18, ease: "linear" },
+                  }
+            }
+            className="mt-6 space-y-4">
+            <ResearchTerminal
+              lines={progress}
+              company={getValues("company")}
+              failed={phase === "error"}
+            />
+            {phase === "error" && error && (
+              <Card>
+                <CardContent>
+                  <p className="text-destructive text-[11px] tracking-widest uppercase">
+                    Reconnaissance failed
+                  </p>
+                  <p className="text-foreground font-display mt-1 text-sm">{error}</p>
+                  <Button variant="outline" size="sm" onClick={resetRun} className="mt-3">
+                    Start over
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
+        )}
 
-      {/* The form is unmounted here and nothing is editing it, so a one-shot read
-          beats a subscription. */}
-      {phase === "done" && report && (
-        <ReportView
-          report={report}
-          costUsd={costUsd}
-          creditsCharged={creditsCharged}
-          company={getValues("company")}
-          onReset={resetRun}
-          researchId={researchId ?? undefined}
-          extendCredits={me?.extendCredits}
-          balance={ringBalance}
-          roleContext={getValues("role").trim() || undefined}
-        />
-      )}
+        {/* The form is unmounted here and nothing is editing it, so a one-shot read
+            beats a subscription. */}
+        {phase === "done" && report && (
+          <motion.div
+            key="report"
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, transform: "translateY(10px)" }}
+            animate={{ opacity: 1, transform: "translateY(0px)" }}
+            transition={
+              reduceMotion
+                ? { duration: 0.2 }
+                : { duration: 0.32, ease: [0.23, 1, 0.32, 1], delay: 0.06 }
+            }>
+            <ReportView
+              report={report}
+              costUsd={costUsd}
+              creditsCharged={creditsCharged}
+              company={getValues("company")}
+              onReset={resetRun}
+              researchId={researchId ?? undefined}
+              extendCredits={me?.extendCredits}
+              balance={ringBalance}
+              roleContext={getValues("role").trim() || undefined}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
