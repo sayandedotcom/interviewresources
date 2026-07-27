@@ -121,17 +121,22 @@ function model(
     (1 + ROUND_WEIGHT * (input.roundsCount - BASELINE_ROUNDS)) *
     (1 + SECTION_WEIGHT * (scope.sectionsCount - BASELINE_SECTIONS));
 
-  const queries = Math.max(
+  const plannedQueries = Math.max(
     1,
     Math.round(
       hintMidpoint(preset.queriesHint) * Math.max(workload, 0.4) +
         QUERIES_PER_INTERVIEWER * input.interviewersCount
     )
   );
+  const gapQueries = Math.min(input.roundsCount * preset.gapQueriesPerRound, preset.gapQueryLimit);
+  const queries = plannedQueries + gapQueries;
 
   const sources = Math.min(queries * preset.searchResults, MAX_SOURCES);
+  const extractMultiplier = preset.extractDepth === "advanced" ? 2 : 1;
   const extractCredits =
-    Math.ceil(preset.extractLimit / 5) + (input.hasCompanyUrl ? COMPANY_URL_EXTRACTS : 0);
+    (Math.ceil(preset.extractLimit / 5) + Math.ceil(preset.gapExtractLimit / 5)) *
+      extractMultiplier +
+    (input.hasCompanyUrl ? COMPANY_URL_EXTRACTS : 0);
   const searchUsd = TAVILY_CREDIT_COST_USD * (queries + extractCredits);
 
   const jdTokens = Math.ceil(input.jobDescriptionLength / CHARS_PER_TOKEN);

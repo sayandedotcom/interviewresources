@@ -279,6 +279,51 @@ describe("the extension run", () => {
     expect(input.roleContext).toBe("Senior BE");
   });
 
+  it("reuses the original role context and excludes previously gathered URLs", async () => {
+    stubSelect({
+      ...row,
+      jsonPayload: {
+        ...existingReport,
+        researchContext: {
+          companyName: "Stripe",
+          companyUrl: "https://stripe.com",
+          jobDescription: "Build payment APIs in Go.",
+          yearsExperience: "5",
+          techStack: "Go, Postgres",
+          location: "Bengaluru",
+          teamContext: "Payments platform",
+          recruiterNotes: "System design and pair programming",
+          interviewers: ["Ada"],
+          roleContext: "Senior BE",
+        },
+        researchResources: [
+          {
+            title: "Existing",
+            url: "https://example.com/interview",
+            why: "Already read",
+            kind: "interview_experience",
+            access: "full_text",
+            usedAsEvidence: true,
+          },
+        ],
+      },
+    });
+
+    await readSse(await POST(post({ interviewTypes: ["behavioral"] }), ctx));
+
+    expect(pipelineMock.mock.calls[0][0]).toMatchObject({
+      companyUrl: "https://stripe.com",
+      jobDescription: "Build payment APIs in Go.",
+      yearsExperience: "5",
+      techStack: "Go, Postgres",
+      location: "Bengaluru",
+      teamContext: "Payments platform",
+      recruiterNotes: "System design and pair programming",
+      interviewers: ["Ada"],
+      excludeSourceUrls: ["https://example.com/interview"],
+    });
+  });
+
   it("forwards the chosen effort to the pipeline, defaulting to medium", async () => {
     await readSse(await POST(post({ interviewTypes: ["dsa"], effort: "high" }), ctx));
     expect(pipelineMock.mock.calls[0][0].effort).toBe("high");

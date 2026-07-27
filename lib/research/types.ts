@@ -99,6 +99,8 @@ export const researchInputSchema = z.object({
     .array(z.string().max(MAX_EXCLUDE_QUESTION_LEN))
     .max(MAX_EXCLUDE_QUESTIONS)
     .default([]),
+  /** URLs already gathered by an earlier pass. Used internally by report extensions. */
+  excludeSourceUrls: z.array(z.string().url().max(MAX_URL)).max(100).optional(),
   /** How wide to search and how many questions to produce. See EFFORT_PRESETS. */
   effort: z.enum(EFFORT_LEVELS).default("medium"),
   /** Extensions that only fill prose sections do not need to synthesize questions. */
@@ -113,36 +115,131 @@ export const researchInputSchema = z.object({
 
 export type ResearchInput = z.infer<typeof researchInputSchema>;
 
-/** Stage 1 output: the search plan. */
+/**
+ * Candidate and role context persisted with a report. Extensions must research
+ * the same target rather than silently falling back to company + role title.
+ */
+export const researchContextSchema = researchInputSchema
+  .pick({
+    companyName: true,
+    companyUrl: true,
+    jobDescription: true,
+    yearsExperience: true,
+    techStack: true,
+    location: true,
+    teamContext: true,
+    recruiterNotes: true,
+    interviewers: true,
+    roleContext: true,
+  })
+  .extend({
+    // A pasted posting can be very large. The pipeline only ever reads its first
+    // 2,000 characters, so persisting more would add no research value.
+    jobDescription: z.string().max(2000).optional(),
+  });
+
+export type ResearchContext = z.infer<typeof researchContextSchema>;
+
+export function researchContextFromInput(input: ResearchInput): ResearchContext {
+  return researchContextSchema.parse({
+    companyName: input.companyName,
+    companyUrl: input.companyUrl,
+    jobDescription: input.jobDescription?.slice(0, 2000),
+    yearsExperience: input.yearsExperience,
+    techStack: input.techStack,
+    location: input.location,
+    teamContext: input.teamContext,
+    recruiterNotes: input.recruiterNotes,
+    interviewers: input.interviewers,
+    roleContext: input.roleContext,
+  });
+}
+
+/**
+ * The planner resolves target identity from the caller's raw input. Keeping
+ * aliases here makes the rest of the pipeline data-driven: no runtime city,
+ * company, role, level, or language dictionaries are needed.
+ */
+export const targetProfileSchema = z.object({
+  company: z.object({
+    canonicalName: z.string().min(1).max(MAX_COMPANY_NAME),
+    aliases: z.array(z.string().min(1).max(MAX_COMPANY_NAME)).max(16),
+    domains: z.array(z.string().min(1).max(253)).max(12),
+  }),
+  role: z.object({
+    canonicalTitle: z.string().min(1).max(MAX_ROLE_CONTEXT).nullable(),
+    aliases: z.array(z.string().min(1).max(MAX_ROLE_CONTEXT)).max(20),
+    description: z.string().max(1200).nullable(),
+    seniority: z.string().max(120).nullable(),
+    experience: z.object({
+      minYears: z.number().min(0).max(100).nullable(),
+      maxYears: z.number().min(0).max(100).nullable(),
+      raw: z.string().max(MAX_YEARS_EXPERIENCE).nullable(),
+    }),
+    skills: z.array(z.string().min(1).max(120)).max(40),
+  }),
+  location: z.object({
+    canonicalName: z.string().min(1).max(MAX_LOCATION).nullable(),
+    aliases: z.array(z.string().min(1).max(MAX_LOCATION)).max(20),
+    country: z.string().min(1).max(MAX_LOCATION).nullable(),
+    searchVariants: z.array(z.string().min(1).max(MAX_LOCATION)).max(20),
+  }),
+  searchLanguages: z.array(z.string().min(1).max(80)).max(12),
+});
+
+export type TargetProfile = z.infer<typeof targetProfileSchema>;
+
+export const researchQuerySchema = z.object({
+  query: z.string().min(1),
+  purpose: z.string().min(1).describe("Why this query and which evidence it targets"),
+  depth: z.enum(["basic", "advanced"]),
+  includeDomains: z
+    .array(z.string().min(1).max(253))
+    .max(8)
+    .optional()
+    .describe("Optional source domains selected for this target and query"),
+  excludeDomains: z
+    .array(z.string().min(1).max(253))
+    .max(12)
+    .optional()
+    .describe("Optional off-target domains selected for this target and query"),
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe("Optional recency floor for time-sensitive evidence"),
+  category: z
+    .string()
+    .describe(
+      'One of the round identifiers supplied in the prompt, or "company", "interviewer", ' +
+        '"loop_format", or "interview_experience"'
+    ),
+});
+
+export type ResearchQuery = z.infer<typeof researchQuerySchema>;
+
+/** Stage 1 output: target identity plus primary and fallback search plans. */
 export const researchPlanSchema = z.object({
   resolvedCompanyDomain: z
     .string()
-    .describe("Best-guess primary domain for the company, e.g. stripe.com"),
+    .describe("Best-guess primary public domain for the target company"),
   companySummaryQuery: z.string(),
+  targetProfile: targetProfileSchema,
   queries: z
-    .array(
-      z.object({
-        query: z.string(),
-        purpose: z.string().describe("Why this query — which evidence it targets"),
-        depth: z.enum(["basic", "advanced"]),
-        category: z
-          .string()
-          .describe(
-            'One of the round identifiers supplied in the prompt, or "company", "interviewer", ' +
-              '"loop_format", or "interview_experience"'
-          ),
-      })
-    )
+    .array(researchQuerySchema)
     .min(3)
-    // High effort plans up to 12 queries.
-    .max(12),
+    // High effort plans up to 18 queries.
+    .max(18),
+  fallbackQueries: z
+    .array(researchQuerySchema)
+    .max(18)
+    .describe("Preplanned alternatives used only when a requested round remains sparse"),
 });
 
 export type ResearchPlan = z.infer<typeof researchPlanSchema>;
 
 /**
- * When direct interview evidence for a company is thin (early-stage startups,
- * companies with no Glassdoor/Blind/Reddit footprint), the pipeline runs a
+ * When direct interview evidence for a company is thin, the pipeline runs a
  * second gather wave using these proxy angles instead of returning an empty
  * report. Questions grounded in this evidence are labelled `basis: "inferred"`.
  */
@@ -183,9 +280,59 @@ export interface GatheredSource {
   url: string;
   title: string;
   category: string;
+  /** Categories the classifier found in the page, not categories inherited from its query. */
+  categories?: string[];
   content: string;
   /** True once tavilyExtract replaced the search snippet with the full page. */
   extracted: boolean;
+  profile?: SourceProfile;
+}
+
+export const SOURCE_TYPES = [
+  "first_hand_interview",
+  "interview_aggregator",
+  "company_official",
+  "company_engineering",
+  "job_posting",
+  "technical_resource",
+  "discussion",
+  "other",
+] as const;
+
+export type SourceType = (typeof SOURCE_TYPES)[number];
+export type ProfileMatch = "exact" | "adjacent" | "unknown" | "mismatch";
+export type SourcePageIntent =
+  | "interview_account"
+  | "company_engineering"
+  | "job"
+  | "technical_prep"
+  | "consumer_support"
+  | "other";
+export type QuestionEvidenceDetail = "exact" | "partial" | "topic" | "none";
+
+/**
+ * Facts about the source itself. These are deliberately separate from the
+ * candidate target so synthesis cannot copy target attributes into a source.
+ */
+export interface SourceProfile {
+  sourceType: SourceType;
+  resourceKind: ResearchResourceKind;
+  access: ResourceAccess;
+  companyMatch: "exact" | "unknown" | "mismatch";
+  role: string | null;
+  roleMatch: ProfileMatch;
+  level: string | null;
+  levelMatch: ProfileMatch;
+  experienceYears: number | null;
+  experienceMatch: ProfileMatch;
+  location: string | null;
+  locationMatch: ProfileMatch;
+  pageIntent: SourcePageIntent;
+  questionDetail: QuestionEvidenceDetail;
+  proxyEvidence: boolean;
+  firstHand: boolean;
+  contentUsable: boolean;
+  canSupportReportedQuestion: boolean;
 }
 
 export const RESOURCE_KINDS = [
@@ -205,18 +352,34 @@ export const RESOURCE_ACCESS_LEVELS = ["full_text", "search_preview", "link_only
 
 export type ResourceAccess = (typeof RESOURCE_ACCESS_LEVELS)[number];
 
+export const RESOURCE_ORIGINS = ["direct", "gap", "proxy"] as const;
+export type ResourceOrigin = (typeof RESOURCE_ORIGINS)[number];
+
+export const RESOURCE_RELEVANCE_TIERS = ["exact", "adjacent", "general", "proxy"] as const;
+export type ResourceRelevanceTier = (typeof RESOURCE_RELEVANCE_TIERS)[number];
+export type ResourceRelevanceDecision = ResourceRelevanceTier | "reject";
+
 /** Internal gather metadata. Content intentionally lives only on GatheredSource. */
 export interface ResourceCandidate {
   url: string;
   title: string;
+  preview: string;
   faviconUrl?: string;
   score: number;
   queries: string[];
   purposes: string[];
   categories: string[];
   domain: string;
+  origin: ResourceOrigin;
   access: ResourceAccess;
   extractionOutcome: "not_attempted" | "full_text" | "failed" | "empty";
+  profile?: SourceProfile;
+  relevance?: {
+    tier: ResourceRelevanceDecision;
+    score: number;
+    reason: string;
+    matchedCategories: string[];
+  };
 }
 
 /** Stage 3 output: one compressed note per source. */
@@ -224,7 +387,9 @@ export interface CompressedNote {
   sourceUrl: string;
   sourceTitle: string;
   category: string;
+  categories?: string[];
   summary: string;
+  profile?: SourceProfile;
 }
 
 /** Stage 4 output: the final report, per PRD §5.2 / §5.3. */
@@ -238,9 +403,11 @@ export const questionSchema = z.object({
   prepNote: z.string().describe("What a strong answer covers"),
   evidenceUrls: z.array(z.string()),
   basis: z
-    .enum(["evidence", "inferred", "baseline"])
+    .enum(["evidence", "reconstructed", "inferred", "baseline"])
     .describe(
       '"evidence" when grounded in direct accounts of interviewing at THIS company; ' +
+        '"reconstructed" when a direct account confirms the topic but does not reveal an ' +
+        "exact prompt; " +
         '"inferred" when derived from proxy signals (founders\' prior companies, comparable ' +
         'companies, funding-stage norms); "baseline" when it is role-standard preparation ' +
         "without evidence that this company asks it"
@@ -278,6 +445,11 @@ export const researchResourceSchema = z.object({
   kind: z.enum(RESOURCE_KINDS),
   access: z.enum(RESOURCE_ACCESS_LEVELS),
   usedAsEvidence: z.boolean(),
+  /** Discovery categories used to place this link beside the relevant rounds. */
+  categories: z.array(z.string()).max(30).optional(),
+  /** Target relevance is independent from whether Tavily could read the page. */
+  relevanceTier: z.enum(RESOURCE_RELEVANCE_TIERS).optional(),
+  relevanceReason: z.string().max(500).optional(),
 });
 
 export type ResearchResource = z.infer<typeof researchResourceSchema>;
@@ -337,8 +509,8 @@ export const reportSchema = z.object({
   interviewExperiences: z
     .array(importantLinkSchema)
     .describe(
-      "First-hand interview experience write-ups for this company (Glassdoor, LeetCode " +
-        "Discuss, Blind, Reddit, personal blogs), chosen from the evidence URLs. Each " +
+      "First-hand interview experience accounts for this company, regardless of platform " +
+        "or format, chosen from the evidence URLs. Each " +
         '"why" names the role, level, and recency when known'
     ),
   recruiterPitch: recruiterPitchSchema.describe(
@@ -355,10 +527,9 @@ export const reportSchema = z.object({
         "must never be described as evidence"
     ),
   /**
-   * Assigned by the pipeline, never earned by the model: "sparse" once the
-   * proxy-research wave fired because direct evidence was thin, "rich"
-   * otherwise. Optional so reports stored before this field render without a
-   * coverage notice.
+   * Assigned by the pipeline, never earned by the model. "Rich" requires
+   * multiple direct sources and grounded questions; optional so reports stored
+   * before this field render without a coverage notice.
    */
   evidenceCoverage: z.enum(["rich", "sparse"]).optional(),
 });
@@ -380,6 +551,8 @@ export const storedReportSchema = reportSchema.extend({
   skillsRequired: reportSchema.shape.skillsRequired.nullable().optional(),
   interviewExperiences: reportSchema.shape.interviewExperiences.nullable(),
   recruiterPitch: reportSchema.shape.recruiterPitch.nullable().optional(),
+  researchContext: researchContextSchema.optional(),
+  evidenceCoverageByCategory: z.record(z.string(), z.enum(["rich", "sparse"])).optional(),
 });
 
 export type Report = z.infer<typeof storedReportSchema>;

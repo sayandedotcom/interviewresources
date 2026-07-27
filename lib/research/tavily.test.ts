@@ -49,6 +49,11 @@ describe("tavilyExtractCredits", () => {
   it("bills no credits when there are no successful extractions", () => {
     expect(tavilyExtractCredits(0)).toBe(0);
   });
+
+  it("bills advanced extraction at twice the basic rate", () => {
+    expect(tavilyExtractCredits(5, "advanced")).toBe(2);
+    expect(tavilyExtractCredits(6, "advanced")).toBe(4);
+  });
 });
 
 describe("tavilySearch", () => {
@@ -65,6 +70,7 @@ describe("tavilySearch", () => {
       search_depth: "advanced",
       max_results: 3,
       include_favicon: true,
+      chunks_per_source: 3,
     });
   });
 
@@ -76,6 +82,20 @@ describe("tavilySearch", () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.search_depth).toBe("basic");
     expect(body.max_results).toBe(5);
+  });
+
+  it("passes target-specific support domains to Tavily's exclusion filter", async () => {
+    const fetchMock = mockFetch({ json: async () => ({ query: "q", results: [] }) });
+
+    await tavilySearch("google full stack interview", {
+      depth: "basic",
+      excludeDomains: ["support.google.com", "accounts.google.com"],
+    });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).exclude_domains).toEqual([
+      "support.google.com",
+      "accounts.google.com",
+    ]);
   });
 
   it("throws on a non-2xx response, surfacing the status and body", async () => {
@@ -94,13 +114,23 @@ describe("tavilyExtract", () => {
   });
 
   it("maps Tavily's snake_case raw_content onto rawContent", async () => {
-    mockFetch({
+    const fetchMock = mockFetch({
       json: async () => ({ results: [{ url: "https://a.dev", raw_content: "hello" }] }),
     });
 
-    await expect(tavilyExtract(["https://a.dev"])).resolves.toEqual([
-      { url: "https://a.dev", rawContent: "hello" },
-    ]);
+    await expect(
+      tavilyExtract(["https://a.dev"], {
+        query: "Google full stack interview questions",
+        depth: "advanced",
+      })
+    ).resolves.toEqual([{ url: "https://a.dev", rawContent: "hello" }]);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      urls: ["https://a.dev"],
+      extract_depth: "advanced",
+      format: "markdown",
+      query: "Google full stack interview questions",
+      chunks_per_source: 5,
+    });
   });
 
   it("tolerates a response with no results key", async () => {

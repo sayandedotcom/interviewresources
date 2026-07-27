@@ -95,17 +95,21 @@ export async function POST(request: Request) {
         const entries = budget.breakdown();
         const creditsCharged = usdToCredits(budget.totalUsd);
 
-        await db
-          .update(researches)
-          .set({
-            status: "done",
-            costMicrosLlm: costMicros(entries, "llm"),
-            costMicrosSearch: costMicros(entries, "search"),
-            creditsCharged,
-          })
-          .where(eq(researches.id, researchId));
-
-        await db.insert(reports).values({ researchId, jsonPayload: report });
+        // A done run must always have a report. Keeping these writes in one
+        // transaction prevents a transient DB failure from creating a
+        // clickable sidebar entry whose report page can only return 404.
+        await db.transaction(async (tx) => {
+          await tx.insert(reports).values({ researchId, jsonPayload: report });
+          await tx
+            .update(researches)
+            .set({
+              status: "done",
+              costMicrosLlm: costMicros(entries, "llm"),
+              costMicrosSearch: costMicros(entries, "search"),
+              creditsCharged,
+            })
+            .where(eq(researches.id, researchId));
+        });
 
         const { balanceAfter } = await settleCreditReservation({
           userId: user.id,

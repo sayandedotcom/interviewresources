@@ -16,7 +16,9 @@ import type { SessionUser } from "@/lib/session";
 
 vi.mock("@/lib/session");
 vi.mock("@/lib/research/pipeline");
-vi.mock("@/lib/db/index", () => ({ db: { insert: vi.fn(), update: vi.fn() } }));
+vi.mock("@/lib/db/index", () => ({
+  db: { insert: vi.fn(), update: vi.fn(), transaction: vi.fn() },
+}));
 vi.mock("@/lib/research/sessions", async (importOriginal) => {
   // Keep the real cap; stub the functions that talk to the DB.
   const actual = await importOriginal<typeof import("@/lib/research/sessions")>();
@@ -57,6 +59,7 @@ const inFlightMock = vi.mocked(hasRunInFlight);
 const startMock = vi.mocked(startResearchRun);
 const insertMock = vi.mocked(db.insert);
 const updateMock = vi.mocked(db.update);
+const transactionMock = vi.mocked(db.transaction);
 
 const user: SessionUser = {
   id: "user-1",
@@ -126,6 +129,9 @@ function stubDb() {
       return { where: vi.fn(async () => undefined) };
     }),
   })) as unknown as typeof db.update);
+  transactionMock.mockImplementation((async (
+    callback: (tx: Pick<typeof db, "insert" | "update">) => unknown
+  ) => callback({ insert: db.insert, update: db.update })) as typeof db.transaction);
 
   return { updates, reportInserts };
 }

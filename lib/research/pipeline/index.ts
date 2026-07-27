@@ -1,10 +1,11 @@
 import { BudgetTracker, EFFORT_PRESETS } from "../budget";
+import { directEvidenceProfile } from "../evidence";
 import { rankResourceCandidates } from "../resources";
-import { assessEvidenceDensity } from "../sparsity";
+import { assessEvidenceDensity, sparseRoundCategories } from "../sparsity";
 import type { Report, ResearchInput, ResourceCandidate } from "../types";
 import { compressStage } from "./compress";
 import { gatherStage } from "./gather";
-import { planStage, proxyPlanStage } from "./plan";
+import { gapPlanStage, planStage, proxyPlanStage } from "./plan";
 import { type OnProgress, emit, noopProgress, wants } from "./shared";
 import { synthesizeStage } from "./synthesize";
 
@@ -38,13 +39,56 @@ export async function runResearchPipeline(
       (q.category !== "company" || companyEvidence) &&
       (q.category !== "loop_format" || wants(input, "loop"))
   );
+  plan.fallbackQueries = plan.fallbackQueries.filter(
+    (query) =>
+      (query.category !== "company" || companyEvidence) &&
+      (query.category !== "loop_format" || wants(input, "loop"))
+  );
+  const directCategories = [
+    ...new Set([
+      ...input.interviewTypes,
+      ...plan.queries.map((query) => query.category),
+      ...plan.fallbackQueries.map((query) => query.category),
+    ]),
+  ];
 
   emit(onProgress, "gather", "Gathering evidence from the web...");
   // Owned here so the proxy wave can dedupe its results against wave 1.
-  const seenUrls = new Set<string>();
+  const seenUrls = new Set(input.excludeSourceUrls ?? []);
   const candidates = new Map<string, ResourceCandidate>();
-  const gathered = await gatherStage(plan, budget, onProgress, preset, { seenUrls, candidates });
+  const gathered = await gatherStage(plan, budget, onProgress, preset, {
+    seenUrls,
+    candidates,
+    input,
+    targetProfile: plan.targetProfile,
+    allowedCategories: directCategories,
+    origin: "direct",
+  });
   const sources = gathered.evidenceSources;
+
+  const sparseRounds = sparseRoundCategories(sources, input.interviewTypes);
+  if (sparseRounds.length > 0 && !budget.shouldDegrade()) {
+    emit(onProgress, "broaden", `Deepening weak rounds: ${sparseRounds.join(", ")}...`);
+    const gapPlan = gapPlanStage(plan, sparseRounds, preset);
+    if (gapPlan.queries.length > 0) {
+      const gapGathered = await gatherStage(
+        gapPlan,
+        budget,
+        onProgress,
+        { ...preset, extractLimit: preset.gapExtractLimit },
+        {
+          seenUrls,
+          candidates,
+          stage: "broaden",
+          input,
+          targetProfile: plan.targetProfile,
+          allowedCategories: directCategories,
+          origin: "gap",
+        }
+      );
+      sources.push(...gapGathered.evidenceSources);
+    }
+  }
 
   // When direct interview evidence is thin — an early-stage or low-profile
   // company — broaden into proxy research rather than return an empty report.
@@ -58,13 +102,21 @@ export async function runResearchPipeline(
       "Public interview data is thin — researching founders, funding stage, and similar companies..."
     );
     try {
-      const proxyPlan = await proxyPlanStage(input, sources, budget, preset);
+      const proxyPlan = await proxyPlanStage(input, plan.targetProfile, sources, budget, preset);
       const proxyGathered = await gatherStage(
         proxyPlan,
         budget,
         onProgress,
         { ...preset, extractLimit: preset.proxyExtractLimit },
-        { seenUrls, candidates, stage: "broaden" }
+        {
+          seenUrls,
+          candidates,
+          stage: "broaden",
+          input,
+          targetProfile: plan.targetProfile,
+          allowedCategories: proxyPlan.queries.map((query) => query.category),
+          origin: "proxy",
+        }
       );
       sources.push(...proxyGathered.evidenceSources);
       broadened = true;
@@ -75,7 +127,34 @@ export async function runResearchPipeline(
 
   emit(onProgress, "compress", `Compressing ${sources.length} sources...`);
   const notes = await compressStage(sources, budget, onProgress);
-  const rankedResources = rankResourceCandidates([...candidates.values()], input);
+  const rankedResources = rankResourceCandidates([...candidates.values()]);
+  if (
+    (process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test") ||
+    process.env.RESEARCH_DEBUG === "1"
+  ) {
+    const allCandidates = [...candidates.values()];
+    const tierCounts = allCandidates.reduce<Record<string, number>>((counts, candidate) => {
+      const tier = candidate.relevance?.tier ?? "unclassified";
+      counts[tier] = (counts[tier] ?? 0) + 1;
+      return counts;
+    }, {});
+    console.info(
+      `[research:relevance] ${JSON.stringify({
+        company: input.companyName,
+        discovered: allCandidates.length,
+        published: rankedResources.length,
+        tiers: tierCounts,
+        rejectedExamples: allCandidates
+          .filter((candidate) => candidate.relevance?.tier === "reject")
+          .slice(0, 8)
+          .map((candidate) => ({
+            title: candidate.title,
+            url: candidate.url,
+            reason: candidate.relevance?.reason,
+          })),
+      })}`
+    );
+  }
 
   emit(onProgress, "synthesize", "Synthesizing final report...");
   // Sparse evidence should still produce useful preparation questions. The
@@ -83,16 +162,31 @@ export async function runResearchPipeline(
   // pretending the company asked them.
   const report = await synthesizeStage(
     input,
+    plan.targetProfile,
     notes,
     rankedResources,
     budget,
     preset,
-    broadened,
-    density.sparse
+    broadened
   );
-  // Assigned in code, not trusted to the model: sparse means direct evidence was
-  // thin, even when the budget prevented or the proxy planner failed to broaden.
-  report.evidenceCoverage = density.sparse ? "sparse" : "rich";
+  // Assigned in code, not trusted to the model. Search-result volume alone is
+  // not rich evidence: the final questions must actually cite direct accounts.
+  const evidenceQuestions = report.questions.filter((question) => question.basis === "evidence");
+  const directQuestionUrls = new Set(
+    evidenceQuestions.flatMap((question) => question.evidenceUrls)
+  );
+  const directProfiles = notes.filter(
+    (note) => directQuestionUrls.has(note.sourceUrl) && directEvidenceProfile(note.profile)
+  );
+  report.evidenceCoverage =
+    density.sparse ||
+    Object.values(report.evidenceCoverageByCategory ?? {}).some(
+      (coverage) => coverage === "sparse"
+    ) ||
+    evidenceQuestions.length < 4 ||
+    new Set(directProfiles.map((note) => note.sourceUrl)).size < 2
+      ? "sparse"
+      : "rich";
 
   emit(onProgress, "done", `Done. Total cost: $${budget.totalUsd.toFixed(4)}`);
 

@@ -34,10 +34,10 @@ describe("hintMidpoint", () => {
 });
 
 describe("estimateRun", () => {
-  it("brackets the ~46 credits a typical medium run really costs", () => {
+  it("brackets a higher-recall medium run around 60 credits", () => {
     const { minCredits, maxCredits } = run();
-    expect(minCredits).toBeLessThanOrEqual(46);
-    expect(maxCredits).toBeGreaterThanOrEqual(46);
+    expect(minCredits).toBeLessThanOrEqual(60);
+    expect(maxCredits).toBeGreaterThanOrEqual(60);
   });
 
   it("returns a range, not a point", () => {

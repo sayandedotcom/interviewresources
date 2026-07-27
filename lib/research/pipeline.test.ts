@@ -9,6 +9,7 @@ import {
   type Report,
   type ResearchInput,
   type ResearchPlan,
+  type TargetProfile,
 } from "./types";
 
 vi.mock("./gemini");
@@ -18,7 +19,7 @@ vi.mock("./tavily", async (importOriginal) => {
   return { ...actual, tavilySearch: vi.fn(), tavilyExtract: vi.fn() };
 });
 
-const { generateStructured } = await import("./gemini");
+const { ResearchStructuredOutputError, generateStructured } = await import("./gemini");
 const { tavilyExtract, tavilySearch } = await import("./tavily");
 const { runResearchPipeline } = await import("./pipeline");
 
@@ -36,22 +37,60 @@ const input: ResearchInput = {
   sections: [...DEFAULT_SECTIONS],
 };
 
+const targetProfile: TargetProfile = {
+  company: {
+    canonicalName: "Stripe",
+    aliases: ["Stripe"],
+    domains: ["stripe.com"],
+  },
+  role: {
+    canonicalTitle: null,
+    aliases: [],
+    description: null,
+    seniority: null,
+    experience: { minYears: null, maxYears: null, raw: null },
+    skills: [],
+  },
+  location: {
+    canonicalName: null,
+    aliases: [],
+    country: null,
+    searchVariants: [],
+  },
+  searchLanguages: ["English"],
+};
+
 function plan(overrides: Partial<ResearchPlan> = {}): ResearchPlan {
-  return {
+  const base: ResearchPlan = {
     resolvedCompanyDomain: "stripe.com",
     companySummaryQuery: "what does stripe do",
+    targetProfile,
     queries: [
       {
         query: "stripe interview process",
         purpose: "loop",
         depth: "advanced",
         category: "loop_format",
+        excludeDomains: ["support.stripe.com", "accounts.stripe.com"],
       },
-      { query: "stripe dsa questions", purpose: "dsa", depth: "basic", category: "dsa" },
-      { query: "stripe tech stack", purpose: "company", depth: "advanced", category: "company" },
+      {
+        query: "stripe dsa questions",
+        purpose: "dsa",
+        depth: "basic",
+        category: "dsa",
+        excludeDomains: ["support.stripe.com", "accounts.stripe.com"],
+      },
+      {
+        query: "stripe tech stack",
+        purpose: "company",
+        depth: "advanced",
+        category: "company",
+        excludeDomains: ["support.stripe.com", "accounts.stripe.com"],
+      },
     ],
-    ...overrides,
+    fallbackQueries: [],
   };
+  return { ...base, ...overrides };
 }
 
 function report(overrides: Partial<Report> = {}): Report {
@@ -80,7 +119,13 @@ function report(overrides: Partial<Report> = {}): Report {
 }
 
 function searchResult(url: string, content = "x".repeat(200), favicon?: string) {
-  return { title: `Title ${url}`, url, content, score: 0.9, ...(favicon ? { favicon } : {}) };
+  return {
+    title: `Stripe software engineer interview resource | ${url}`,
+    url,
+    content,
+    score: 0.9,
+    ...(favicon ? { favicon } : {}),
+  };
 }
 
 function proxyPlan(overrides: Partial<ProxyPlan> = {}): ProxyPlan {
@@ -103,19 +148,113 @@ function proxyPlan(overrides: Partial<ProxyPlan> = {}): ProxyPlan {
   };
 }
 
+function promptJson<T>(prompt: string, marker: string): T {
+  return JSON.parse(prompt.slice(prompt.indexOf(marker) + marker.length)) as T;
+}
+
+function classificationFor(prompt: string) {
+  const candidates = promptJson<
+    Array<{
+      id: number;
+      url: string;
+      title: string;
+      text: string;
+      access: "full_text" | "search_preview" | "link_only";
+      origin: "direct" | "gap" | "proxy";
+      discoveredForCategories: string[];
+    }>
+  >(prompt, "Candidates:\n");
+
+  return {
+    classifications: candidates.map((candidate) => {
+      const rejected =
+        candidate.url.includes("deloitte.example") || candidate.url.includes("support.stripe.com");
+      return {
+        id: candidate.id,
+        tier: rejected ? ("reject" as const) : candidate.origin === "proxy" ? "proxy" : "exact",
+        score: rejected ? 0 : 90,
+        reason: rejected
+          ? "The source is off target."
+          : "The source is semantically relevant to the target.",
+        matchedCategories: rejected ? [] : candidate.discoveredForCategories,
+        profile: {
+          sourceType: "first_hand_interview" as const,
+          resourceKind: "interview_experience" as const,
+          companyMatch: rejected ? ("mismatch" as const) : ("exact" as const),
+          role: "Software engineering",
+          roleMatch: "adjacent" as const,
+          level: null,
+          levelMatch: "unknown" as const,
+          experienceYears: null,
+          experienceMatch: "unknown" as const,
+          location: null,
+          locationMatch: "unknown" as const,
+          pageIntent: rejected ? ("other" as const) : ("interview_account" as const),
+          questionDetail: candidate.access === "link_only" ? ("none" as const) : ("exact" as const),
+          firstHand: !rejected,
+          contentUsable: !rejected && candidate.access !== "link_only",
+        },
+      };
+    }),
+  };
+}
+
+function auditFor(prompt: string) {
+  const questions = promptJson<
+    Array<{
+      id: number;
+      question: string;
+      confidence: "high" | "medium" | "low";
+      rationale: string;
+      prepNote: string;
+      evidenceUrls: string[];
+      basis: "evidence" | "reconstructed" | "inferred" | "baseline";
+    }>
+  >(prompt, "Questions to audit:\n");
+  return {
+    decisions: questions.map(({ id, ...question }) => ({ id, keep: true, ...question })),
+  };
+}
+
+function generatedQuestionBatch(
+  prompt: string,
+  system: string,
+  seeds: Report["questions"] = report().questions
+): Report["questions"] {
+  const category = prompt.match(/^Round identifier: (.+)$/m)?.[1] ?? seeds[0]?.category ?? "dsa";
+  const count = Number(prompt.match(/^Questions required in this batch: (\d+)$/m)?.[1] ?? 0);
+  const batchIndex = Number(system.match(/This is batch (\d+) of \d+/)?.[1] ?? 1);
+  const offset = (batchIndex - 1) * 5;
+  const fallback = seeds[0] ?? report().questions[0];
+
+  return Array.from({ length: count }, (_, index) => {
+    const seed = seeds[offset + index] ?? seeds[(offset + index) % seeds.length] ?? fallback;
+    const ordinal = offset + index + 1;
+    return {
+      ...seed,
+      category,
+      question:
+        `Implement ${category}variant${ordinal} with input${ordinal}, output${ordinal}, ` +
+        `and constraint${ordinal}.`,
+    };
+  });
+}
+
 /**
  * Non-sparse evidence: many distinct substantive sources across queries, with
  * the top of each extracted. Used by tests that must not trip the proxy wave.
  */
 function nonSparseSearches() {
+  const firsthand =
+    "My interview at Stripe included an onsite where they asked me to design a cache. ".repeat(4);
   searchMock.mockImplementation(async (q) => ({
     query: q,
     results: Array.from({ length: 3 }, (_, i) =>
-      searchResult(`https://${q.replaceAll(" ", "-")}-${i}.dev`)
+      searchResult(`https://candidate-blog.dev/${q.replaceAll(" ", "-")}-${i}`, firsthand)
     ),
   }));
   extractMock.mockImplementation(async (urls) =>
-    urls.map((url) => ({ url, rawContent: "R".repeat(500) }))
+    urls.map((url) => ({ url, rawContent: `${firsthand}${"R".repeat(500)}` }))
   );
 }
 
@@ -128,6 +267,7 @@ function stubStages(opts: {
   plan?: ResearchPlan;
   proxyPlan?: ProxyPlan;
   report?: Report;
+  topupQuestions?: Report["questions"];
   tokensByStage?: Partial<Record<string, [number, number]>>;
   model?: GeminiModel;
 }) {
@@ -138,8 +278,38 @@ function stubStages(opts: {
 
     if (args.stage === "plan") return (opts.plan ?? plan()) as never;
     if (args.stage === "plan_proxy") return (opts.proxyPlan ?? proxyPlan()) as never;
+    if (args.stage === "classify" || args.stage === "classify_extracted") {
+      return classificationFor(args.prompt) as never;
+    }
     if (args.stage === "compress") return { summary: `summary of ${args.stage}` } as never;
-    if (args.stage === "synthesize") return (opts.report ?? report()) as never;
+    if (args.stage === "synthesize" || args.stage.startsWith("synthesize_core_")) {
+      const source = opts.report ?? report();
+      const shape = (args.schema as unknown as z.ZodObject<z.ZodRawShape>).shape;
+      return Object.fromEntries(
+        Object.keys(shape).map((key) => [key, source[key as keyof Report]])
+      ) as never;
+    }
+    if (args.stage === "synthesize_experiences") {
+      return {
+        interviewExperiences: (opts.report ?? report()).interviewExperiences ?? [],
+      } as never;
+    }
+    if (args.stage === "synthesize_links") {
+      return { importantLinks: (opts.report ?? report()).importantLinks } as never;
+    }
+    if (args.stage === "synthesize_questions") {
+      return { questions: (opts.report ?? report()).questions } as never;
+    }
+    if (args.stage === "synthesize_topup" || args.stage === "synthesize_repair") {
+      return {
+        questions: generatedQuestionBatch(
+          args.prompt,
+          args.system,
+          opts.topupQuestions ?? (opts.report ?? report()).questions
+        ),
+      } as never;
+    }
+    if (args.stage === "synthesize_audit") return auditFor(args.prompt) as never;
     throw new Error(`unexpected stage ${args.stage}`);
   });
 }
@@ -161,7 +331,9 @@ describe("stage orchestration", () => {
 
     const stages = genMock.mock.calls.map((c) => c[0].stage);
     expect(stages[0]).toBe("plan");
-    expect(stages.at(-1)).toBe("synthesize");
+    expect(stages).toContain("synthesize_topup");
+    expect(stages).toContain("synthesize_audit");
+    expect(stages.at(-1)).toBe("synthesize_links");
   });
 
   it("uses the cheap model to plan and compress, and the strong model to synthesize", async () => {
@@ -173,8 +345,14 @@ describe("stage orchestration", () => {
 
     const byStage = Object.fromEntries(genMock.mock.calls.map((c) => [c[0].stage, c[0].model]));
     expect(byStage.plan).toBe("gemini-3.1-flash-lite");
+    expect(byStage.classify).toBe("gemini-3.1-flash-lite");
     expect(byStage.compress).toBe("gemini-3.1-flash-lite");
     expect(byStage.synthesize).toBe("gemini-3.1-pro-preview");
+    expect(byStage.synthesize_experiences).toBe("gemini-3.5-flash");
+    expect(byStage.synthesize_links).toBe("gemini-3.5-flash");
+    expect(byStage.synthesize_questions).toBe("gemini-3.5-flash");
+    expect(byStage.synthesize_topup).toBe("gemini-3.5-flash");
+    expect(byStage.synthesize_audit).toBe("gemini-3.5-flash");
   });
 
   it("emits a progress event for each stage, ending in done", async () => {
@@ -244,7 +422,7 @@ describe("stage orchestration", () => {
 
     await runResearchPipeline({ ...input, effort: "high" });
     expect(genMock.mock.calls.find((c) => c[0].stage === "plan")![0].system).toContain(
-      "8-12 targeted web-search"
+      "12-18 targeted web-search"
     );
 
     vi.clearAllMocks();
@@ -307,13 +485,17 @@ describe("gather stage", () => {
     const { budget } = await runResearchPipeline(input);
 
     expect(searchMock).toHaveBeenCalledTimes(3);
+    for (const call of searchMock.mock.calls) {
+      expect(call[1]?.excludeDomains).toContain("support.stripe.com");
+      expect(call[1]?.excludeDomains).toContain("accounts.stripe.com");
+    }
     const searchSpend = budget.breakdown().filter((e) => e.kind === "search");
-    // two advanced (2 credits) + one basic (1) = 5 credits, plus one extract (1).
+    // Two advanced (2 credits) + one basic (1), plus a multi-page advanced extract (4).
     const credits = searchSpend.reduce((s, e) => s + e.costUsd, 0) / 0.008;
-    expect(Math.round(credits)).toBe(6);
+    expect(Math.round(credits)).toBe(9);
   });
 
-  it("extracts full pages for the top result of each query, capped at five urls", async () => {
+  it("extracts the top result of every query within the medium ten-url cap", async () => {
     stubStages({
       plan: plan({
         queries: Array.from({ length: 8 }, (_, i) => ({
@@ -332,7 +514,7 @@ describe("gather stage", () => {
     await runResearchPipeline(input);
 
     expect(extractMock).toHaveBeenCalledOnce();
-    expect(extractMock.mock.calls[0][0]).toHaveLength(5);
+    expect(extractMock.mock.calls[0][0]).toHaveLength(8);
   });
 
   it("overwrites a source's snippet with the extracted full text, truncated to 8k", async () => {
@@ -358,46 +540,59 @@ describe("gather stage", () => {
 
   it("keeps a single copy of a url that ranks for several queries", async () => {
     stubStages({});
+    const firsthand =
+      "My interview at Stripe included an onsite where they asked me to design a cache. ".repeat(4);
     // Every query returns the same overlapping url plus one unique to it.
     searchMock.mockImplementation(async (q) => ({
       query: q,
       results: [
-        searchResult("https://shared.dev"),
-        searchResult(`https://${q.replaceAll(" ", "-")}.dev`),
+        searchResult("https://candidate-blog.dev/shared", firsthand),
+        searchResult(`https://candidate-blog.dev/${q.replaceAll(" ", "-")}`, firsthand),
+        searchResult(`https://candidate-blog.dev/${q.replaceAll(" ", "-")}-second`, firsthand),
       ],
     }));
     // Extracting the shared page keeps the run non-sparse (a full page behind
     // the evidence), so the proxy wave stays out of the source count.
-    extractMock.mockResolvedValue([{ url: "https://shared.dev", rawContent: "S".repeat(500) }]);
+    extractMock.mockResolvedValue([
+      { url: "https://candidate-blog.dev/shared", rawContent: firsthand.repeat(3) },
+    ]);
 
     await runResearchPipeline(input);
 
     // One evidence note, not one per query: the url shows up twice in the
     // synthesize prompt (the fixture title embeds it, plus the citation line).
     const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
-    expect(prompt.split("https://shared.dev").length - 1).toBe(2);
-    expect(prompt).toContain("[4] "); // shared + 3 uniques
-    expect(prompt).not.toContain("[5] ");
+    const evidenceBlock = prompt.split("Metadata-only resource catalog")[0];
+    expect(evidenceBlock.split("https://candidate-blog.dev/shared").length - 1).toBe(2);
+    expect(prompt).toContain("[7] "); // shared + 6 uniques
+    expect(prompt).not.toContain("[8] ");
   });
 
   it("never queues the same url for extraction twice", async () => {
     stubStages({});
+    const firsthand =
+      "My interview at Stripe included an onsite where they asked me to design a cache. ".repeat(4);
     // The same page is the top hit for all three queries; each also brings a
     // unique second result so the run stays non-sparse and the proxy wave,
     // which would call extract again, never fires.
     searchMock.mockImplementation(async (q) => ({
       query: q,
       results: [
-        searchResult("https://top.dev"),
-        searchResult(`https://${q.replaceAll(" ", "-")}.dev`),
+        searchResult("https://candidate-blog.dev/top", firsthand),
+        searchResult(`https://candidate-blog.dev/${q.replaceAll(" ", "-")}`, firsthand),
+        searchResult(`https://candidate-blog.dev/${q.replaceAll(" ", "-")}-second`, firsthand),
       ],
     }));
-    extractMock.mockResolvedValue([{ url: "https://top.dev", rawContent: "E".repeat(500) }]);
+    extractMock.mockResolvedValue([
+      { url: "https://candidate-blog.dev/top", rawContent: `${firsthand}${"E".repeat(500)}` },
+    ]);
 
     await runResearchPipeline(input);
 
     expect(extractMock).toHaveBeenCalledOnce();
-    expect(extractMock.mock.calls[0][0]).toEqual(["https://top.dev"]);
+    const queued = extractMock.mock.calls[0][0];
+    expect(queued).toContain("https://candidate-blog.dev/top");
+    expect(new Set(queued).size).toBe(queued.length);
 
     // And the extracted text patches the (single) source that gets compressed.
     const compressed = genMock.mock.calls.filter((c) => c[0].stage === "compress");
@@ -411,7 +606,7 @@ describe("gather stage", () => {
     await runResearchPipeline({ ...input, effort: "high" });
 
     for (const call of searchMock.mock.calls) {
-      expect(call[1]!.maxResults).toBe(8);
+      expect(call[1]!.maxResults).toBe(10);
     }
   });
 
@@ -443,7 +638,7 @@ describe("gather stage", () => {
 
     await runResearchPipeline({ ...input, effort: "high" });
 
-    expect(extractMock.mock.calls[0][0]).toHaveLength(8);
+    expect(extractMock.mock.calls[0][0]).toHaveLength(10);
   });
 
   it("reads fewer full pages at low effort", async () => {
@@ -512,15 +707,17 @@ describe("compress stage", () => {
       results: [searchResult("https://short.dev", "tiny"), searchResult("https://long.dev")],
     });
 
-    await runResearchPipeline(input);
+    const { report: out } = await runResearchPipeline(input);
 
     const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
-    const evidence = prompt.split("Metadata-only resource catalog")[0];
-    expect(evidence).not.toContain("short.dev");
-    expect(evidence).toContain("long.dev");
-    // Thin pages are no longer discarded: they survive as manual-open metadata.
-    expect(prompt).toContain("https://short.dev");
-    expect(prompt).toContain("Access: link_only");
+    expect(prompt).not.toContain("short.dev");
+    expect(prompt).toContain("long.dev");
+    // Thin pages bypass synthesis but remain available to the user.
+    expect(out.researchResources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ url: "https://short.dev", access: "link_only" }),
+      ])
+    );
   });
 
   it("drops a source whose content is under the 40-character floor", async () => {
@@ -572,8 +769,26 @@ describe("compress stage", () => {
   it("falls back to the raw page opening when a compress call fails", async () => {
     genMock.mockImplementation(async (args) => {
       if (args.stage === "plan") return plan() as never;
+      if (args.stage === "classify" || args.stage === "classify_extracted") {
+        return classificationFor(args.prompt) as never;
+      }
       if (args.stage === "compress") throw new Error("gemini 503");
       if (args.stage === "synthesize") return report() as never;
+      if (args.stage === "synthesize_experiences") {
+        return { interviewExperiences: report().interviewExperiences } as never;
+      }
+      if (args.stage === "synthesize_links") {
+        return { importantLinks: report().importantLinks } as never;
+      }
+      if (args.stage === "synthesize_questions") {
+        return { questions: report().questions } as never;
+      }
+      if (args.stage === "synthesize_topup" || args.stage === "synthesize_repair") {
+        return {
+          questions: generatedQuestionBatch(args.prompt, args.system),
+        } as never;
+      }
+      if (args.stage === "synthesize_audit") return auditFor(args.prompt) as never;
       throw new Error(`unexpected stage ${args.stage}`);
     });
     extractMock.mockResolvedValue([{ url: "https://a.dev", rawContent: "E".repeat(3000) }]);
@@ -614,6 +829,124 @@ describe("compress stage", () => {
 });
 
 describe("synthesize stage", () => {
+  it("keeps narrative and question structured outputs independently bounded", async () => {
+    stubStages({});
+
+    await runResearchPipeline(input);
+
+    const narrative = genMock.mock.calls.find((call) => call[0].stage === "synthesize")![0];
+    const narrativeShape = (narrative.schema as unknown as z.ZodObject<z.ZodRawShape>).shape;
+    const experienceLinks = genMock.mock.calls.find(
+      (call) => call[0].stage === "synthesize_experiences"
+    )![0];
+    const importantLinks = genMock.mock.calls.find(
+      (call) => call[0].stage === "synthesize_links"
+    )![0];
+    const questionCalls = genMock.mock.calls.filter(
+      (call) => call[0].stage === "synthesize_questions"
+    );
+
+    expect(Object.keys(narrativeShape)).not.toContain("questions");
+    expect(Object.keys(narrativeShape)).not.toContain("interviewExperiences");
+    expect(Object.keys(narrativeShape)).not.toContain("importantLinks");
+    expect(narrative.maxOutputTokens).toBeLessThanOrEqual(6_300);
+    expect(narrative.thinkingLevel).toBe("low");
+    expect(experienceLinks.maxOutputTokens).toBeLessThanOrEqual(3_800);
+    expect(importantLinks.maxOutputTokens).toBeLessThanOrEqual(3_800);
+    expect(experienceLinks.thinkingLevel).toBe("low");
+    expect(importantLinks.thinkingLevel).toBe("low");
+    expect(questionCalls.length).toBeGreaterThan(0);
+    expect(questionCalls.every((call) => call[0].maxOutputTokens <= 7_000)).toBe(true);
+  });
+
+  it("recovers a malformed core narrative by isolating smaller field groups", async () => {
+    stubStages({});
+    const fallback = genMock.getMockImplementation()!;
+    genMock.mockImplementation(async (args) => {
+      if (args.stage === "synthesize") {
+        throw new ResearchStructuredOutputError(
+          "synthesize",
+          "core-truncated",
+          2,
+          new Error("length")
+        );
+      }
+      return fallback(args);
+    });
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.companySnapshot).toBe("Payments");
+    const recoveryCalls = genMock.mock.calls.filter((call) =>
+      call[0].stage.startsWith("synthesize_core_")
+    );
+    expect(recoveryCalls).toHaveLength(2);
+    expect(
+      recoveryCalls.every(
+        (call) =>
+          Object.keys((call[0].schema as unknown as z.ZodObject<z.ZodRawShape>).shape).length <= 3
+      )
+    ).toBe(true);
+  });
+
+  it("uses evidence-safe fallbacks when even isolated core fields are malformed", async () => {
+    stubStages({});
+    const fallback = genMock.getMockImplementation()!;
+    genMock.mockImplementation(async (args) => {
+      if (args.stage === "synthesize" || args.stage.startsWith("synthesize_core_")) {
+        throw new ResearchStructuredOutputError(
+          args.stage,
+          "core-field-truncated",
+          2,
+          new Error("length")
+        );
+      }
+      return fallback(args);
+    });
+
+    const { report: out } = await runResearchPipeline(input);
+
+    expect(out.companySnapshot).toEqual(expect.any(String));
+    expect(out.companyExplainer).toContain("Stripe");
+    expect(out.prepPlan.length).toBeGreaterThan(0);
+    expect(
+      genMock.mock.calls.some(
+        (call) =>
+          call[0].stage.startsWith("synthesize_core_") &&
+          Object.keys((call[0].schema as unknown as z.ZodObject<z.ZodRawShape>).shape).length === 1
+      )
+    ).toBe(true);
+  });
+
+  it("uses ranked evidence links when optional link synthesis is malformed", async () => {
+    stubStages({});
+    const fallback = genMock.getMockImplementation()!;
+    genMock.mockImplementation(async (args) => {
+      if (args.stage === "synthesize_links") {
+        throw new ResearchStructuredOutputError(
+          "synthesize_links",
+          "links-truncated",
+          2,
+          new Error("length")
+        );
+      }
+      return fallback(args);
+    });
+
+    const { report: out } = await runResearchPipeline({
+      ...input,
+      sections: ["company", "loop", "skills"],
+    });
+
+    expect(out.interviewExperiences).toBeNull();
+    expect(out.importantLinks).toEqual([
+      expect.objectContaining({
+        url: "https://a.dev",
+        why: expect.stringContaining("semantically relevant"),
+      }),
+    ]);
+  });
+
   it("feeds every compressed note into the evidence block with its citation index", async () => {
     stubStages({});
 
@@ -621,7 +954,7 @@ describe("synthesize stage", () => {
 
     const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
     expect(prompt).toContain("Evidence notes:");
-    expect(prompt).toContain("[1] (loop_format)");
+    expect(prompt).toContain("[1] (loop_format, dsa, company)");
     expect(prompt).toContain("https://a.dev");
   });
 
@@ -630,8 +963,8 @@ describe("synthesize stage", () => {
 
     await runResearchPipeline({ ...input, excludeQuestions: ["LRU cache", "Two sum"] });
 
-    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
-    expect(prompt).toContain("Already predicted");
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize_questions")![0].prompt;
+    expect(prompt).toContain("Questions already used");
     expect(prompt).toContain("- LRU cache");
     expect(prompt).toContain("- Two sum");
   });
@@ -641,8 +974,9 @@ describe("synthesize stage", () => {
 
     await runResearchPipeline(input);
 
-    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].prompt;
-    expect(prompt).not.toContain("Already predicted");
+    const prompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize_questions")![0].prompt;
+    expect(prompt).toContain("Questions already used");
+    expect(prompt).toContain("(none)");
   });
 
   it("asks for more questions and more links at high effort", async () => {
@@ -650,9 +984,11 @@ describe("synthesize stage", () => {
 
     await runResearchPipeline({ ...input, effort: "high" });
 
-    const call = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0];
-    expect(call.system).toContain("Aim for 30-50 questions");
-    expect(call.system).toContain("pick the 6-10 highest-value sources");
+    const questionCalls = genMock.mock.calls.filter((c) => c[0].stage === "synthesize_questions");
+    const links = genMock.mock.calls.find((c) => c[0].stage === "synthesize_links")![0];
+    expect(questionCalls).toHaveLength(7);
+    expect(questionCalls.every((call) => call[0].maxOutputTokens <= 7_000)).toBe(true);
+    expect(links.system).toContain("Pick the 6-10 highest-value sources");
   });
 
   it("asks for fewer questions and fewer links at low effort", async () => {
@@ -660,9 +996,108 @@ describe("synthesize stage", () => {
 
     await runResearchPipeline({ ...input, effort: "low" });
 
-    const call = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0];
-    expect(call.system).toContain("Aim for 8-15 questions");
-    expect(call.system).toContain("pick the 2-4 highest-value sources");
+    const questionCalls = genMock.mock.calls.filter((c) => c[0].stage === "synthesize_questions");
+    const links = genMock.mock.calls.find((c) => c[0].stage === "synthesize_links")![0];
+    expect(questionCalls).toHaveLength(2);
+    expect(
+      questionCalls.reduce(
+        (sum, call) => sum + Number(call[0].system.match(/Return (\d+) distinct/)?.[1] ?? 0),
+        0
+      )
+    ).toBe(8);
+    expect(questionCalls.every((call) => call[0].thinkingLevel === "low")).toBe(true);
+    expect(links.system).toContain("Pick the 2-4 highest-value sources");
+  });
+
+  it("splits a malformed question batch into smaller recovery batches", async () => {
+    stubStages({});
+    const fallback = genMock.getMockImplementation()!;
+    let failed = false;
+    genMock.mockImplementation(async (args) => {
+      if (args.stage === "synthesize_questions" && !failed) {
+        failed = true;
+        throw new ResearchStructuredOutputError(
+          "synthesize_questions",
+          "test-diagnostic",
+          2,
+          new Error("truncated")
+        );
+      }
+      return fallback(args);
+    });
+
+    const { report: out } = await runResearchPipeline({ ...input, effort: "low" });
+
+    expect(out.questions).toHaveLength(8);
+    const questionSystems = genMock.mock.calls
+      .filter((call) => call[0].stage === "synthesize_questions")
+      .map((call) => call[0].system);
+    expect(questionSystems.some((system) => system.includes("Return 2 distinct"))).toBe(true);
+  });
+
+  it("enforces a balanced minimum across every requested round", async () => {
+    stubStages({});
+
+    const { report: out } = await runResearchPipeline({
+      ...input,
+      effort: "low",
+      interviewTypes: ["dsa", "system_design"],
+    });
+
+    expect(out.questions.filter((question) => question.category === "dsa")).toHaveLength(4);
+    expect(out.questions.filter((question) => question.category === "system_design")).toHaveLength(
+      4
+    );
+  });
+
+  it("rejects a report when bounded repairs cannot complete a requested round", async () => {
+    stubStages({});
+    const fallback = genMock.getMockImplementation()!;
+    genMock.mockImplementation(async (args) => {
+      if (
+        args.stage === "synthesize_questions" ||
+        args.stage === "synthesize_topup" ||
+        args.stage === "synthesize_repair"
+      ) {
+        return { questions: report().questions } as never;
+      }
+      return fallback(args);
+    });
+    const events: PipelineProgressEvent[] = [];
+
+    await expect(
+      runResearchPipeline({ ...input, effort: "low" }, (event) => events.push(event))
+    ).rejects.toThrow("dsa: 1/8");
+    expect(events.some((event) => event.stage === "done")).toBe(false);
+  });
+
+  it("fills a short primary report to the effort minimum with distinct baselines", async () => {
+    const prompts = [
+      "Implement a trie that supports prefix search and deletion.",
+      "Design a bounded queue with blocking producers and consumers.",
+      "Find the shortest path through a weighted directed graph.",
+      "Return the longest substring containing at most two distinct characters.",
+      "Merge overlapping time intervals and preserve their source identifiers.",
+      "Build an iterator that flattens a nested integer list lazily.",
+      "Detect whether a linked list has a cycle and return its entry node.",
+    ];
+    stubStages({
+      topupQuestions: prompts.map((question) => ({
+        category: "dsa",
+        question,
+        confidence: "low",
+        rationale: "Role-standard preparation, not a reported company question.",
+        prepNote: "Explain complexity and edge cases.",
+        evidenceUrls: [],
+        basis: "baseline",
+      })),
+    });
+
+    const { report: out } = await runResearchPipeline({ ...input, effort: "low" });
+
+    expect(out.questions).toHaveLength(8);
+    expect(out.questions.slice(1).every((question) => question.basis === "baseline")).toBe(true);
+    expect(genMock.mock.calls.some((call) => call[0].stage === "synthesize_topup")).toBe(true);
   });
 
   it("keeps up to ten links at high effort, where medium would clip to six", async () => {
@@ -815,10 +1250,20 @@ describe("synthesize stage", () => {
 
     const call = genMock.mock.calls.find((c) => c[0].stage === "plan")![0];
     expect(call.system).toContain("interview_experience");
-    expect(call.system).toContain("Glassdoor");
+    expect(call.system).toContain("community discussions, video accounts");
+    expect(call.system).toContain("do not bake one platform list");
   });
 
   it("strips a hallucinated url from a question's citations but keeps the real one", async () => {
+    searchMock.mockResolvedValue({
+      query: "q",
+      results: [
+        searchResult(
+          "https://a.dev",
+          "My interview at Stripe included an onsite where they asked me to design an LRU cache."
+        ),
+      ],
+    });
     stubStages({
       report: report({
         questions: [
@@ -838,7 +1283,9 @@ describe("synthesize stage", () => {
     const { report: out } = await runResearchPipeline(input);
 
     expect(out.questions[0].evidenceUrls).toEqual(["https://a.dev"]);
-    expect(out.questions[0].confidence).toBe("high"); // still grounded
+    // One adjacent/unknown-role account remains useful, but is not enough for
+    // high confidence about this exact target role.
+    expect(out.questions[0].confidence).toBe("medium");
   });
 
   it("downgrades a question to low confidence when every citation was hallucinated", async () => {
@@ -874,18 +1321,18 @@ describe("synthesize stage", () => {
     expect(out.importantLinks).toEqual([]);
   });
 
-  it("preserves an unreadable result as link-only without letting it support a question", async () => {
-    const url = "https://www.linkedin.com/posts/example?utm_source=search#detail";
+  it("preserves an unreadable result as link-only without platform-specific rules", async () => {
+    const url = "https://blocked.example/posts/example?utm_source=search#detail";
     searchMock.mockResolvedValue({
       query: "q",
-      results: [searchResult(url, "A seemingly substantive search snippet. ".repeat(8))],
+      results: [searchResult(url, "tiny")],
     });
     stubStages({
       report: report({
         questions: [
           {
             category: "dsa",
-            question: "Claimed LinkedIn question",
+            question: "Claimed question from an unreadable page",
             confidence: "high",
             rationale: "claimed",
             prepNote: "prep",
@@ -912,13 +1359,16 @@ describe("synthesize stage", () => {
     expect(out.questions[0].confidence).toBe("low");
     expect(out.researchResources).toEqual([
       expect.objectContaining({
-        url: "https://www.linkedin.com/posts/example",
+        url: "https://blocked.example/posts/example",
         access: "link_only",
         usedAsEvidence: false,
-        why: expect.stringContaining("Discovered while researching"),
+        relevanceTier: "exact",
+        why: expect.stringContaining("semantically relevant"),
       }),
     ]);
-    expect(extractMock).not.toHaveBeenCalled();
+    expect(extractMock.mock.calls.flatMap((call) => call[0])).toContain(
+      "https://blocked.example/posts/example"
+    );
   });
 
   it("preserves a thin result when extraction fails instead of dropping its URL", async () => {
@@ -940,9 +1390,7 @@ describe("synthesize stage", () => {
     ]);
     const synthPrompt = genMock.mock.calls.find((call) => call[0].stage === "synthesize")![0]
       .prompt;
-    expect(synthPrompt).toContain("Metadata-only resource catalog");
-    expect(synthPrompt).toContain("https://paywall.dev/story");
-    expect(synthPrompt.split("Metadata-only resource catalog")[0]).not.toContain("paywall.dev");
+    expect(synthPrompt).not.toContain("paywall.dev");
   });
 
   it("labels extracted pages and substantive snippets independently", async () => {
@@ -960,11 +1408,11 @@ describe("synthesize stage", () => {
 
     expect(byUrl["https://full.dev/post"]).toMatchObject({
       access: "full_text",
-      usedAsEvidence: true,
+      usedAsEvidence: false,
     });
     expect(byUrl["https://preview.dev/post"]).toMatchObject({
       access: "search_preview",
-      usedAsEvidence: true,
+      usedAsEvidence: false,
     });
   });
 
@@ -1040,7 +1488,7 @@ describe("synthesize stage", () => {
     expect(byUrl["https://backfilled.dev/post"].faviconUrl).toBe("https://icons.dev/backfill.ico");
   });
 
-  it("curates resource libraries to the effort ceiling without inventing padding", async () => {
+  it("keeps every relevant discovered resource without inventing padding", async () => {
     const urls = Array.from({ length: 25 }, (_, i) => `https://resource-${i}.dev/post`);
     searchMock.mockResolvedValue({
       query: "q",
@@ -1052,7 +1500,7 @@ describe("synthesize stage", () => {
     stubStages({});
 
     const low = await runResearchPipeline({ ...input, effort: "low" });
-    expect(low.report.researchResources).toHaveLength(12);
+    expect(low.report.researchResources).toHaveLength(25);
 
     vi.clearAllMocks();
     searchMock.mockResolvedValue({
@@ -1065,7 +1513,7 @@ describe("synthesize stage", () => {
     extractMock.mockResolvedValue([]);
     stubStages({});
     const medium = await runResearchPipeline(input);
-    expect(medium.report.researchResources).toHaveLength(16);
+    expect(medium.report.researchResources).toHaveLength(25);
 
     vi.clearAllMocks();
     searchMock.mockResolvedValue({
@@ -1076,6 +1524,42 @@ describe("synthesize stage", () => {
     stubStages({});
     const scarce = await runResearchPipeline({ ...input, effort: "high" });
     expect(scarce.report.researchResources).toHaveLength(1);
+  });
+
+  it("rejects wrong-company and consumer-support hits before extraction and publication", async () => {
+    const firsthand =
+      "My interview at Stripe included an onsite where they asked me to design a cache. ".repeat(4);
+    searchMock.mockImplementation(async (query) => ({
+      query,
+      results: [
+        searchResult(`https://candidate-blog.dev/${query.replaceAll(" ", "-")}`, firsthand),
+        searchResult(`https://candidate-blog.dev/${query.replaceAll(" ", "-")}-2`, firsthand),
+        searchResult(`https://candidate-blog.dev/${query.replaceAll(" ", "-")}-3`, firsthand),
+        {
+          ...searchResult("https://deloitte.example/interview", firsthand),
+          title: "Deloitte Interview Questions and Answers",
+        },
+        {
+          ...searchResult("https://support.stripe.com/account", "Stripe account help center."),
+          title: "Stripe account support",
+        },
+      ],
+    }));
+    extractMock.mockImplementation(async (urls) =>
+      urls.map((url) => ({ url, rawContent: firsthand }))
+    );
+    stubStages({});
+
+    const events: PipelineProgressEvent[] = [];
+    const { report: out } = await runResearchPipeline(input, (event) => events.push(event));
+    const urls = out.researchResources?.map((resource) => resource.url) ?? [];
+
+    expect(urls).not.toContain("https://deloitte.example/interview");
+    expect(urls).not.toContain("https://support.stripe.com/account");
+    expect(extractMock.mock.calls.flatMap((call) => call[0])).not.toContain(
+      "https://deloitte.example/interview"
+    );
+    expect(events.some((event) => event.message.includes("rejected 2 off-target"))).toBe(true);
   });
 });
 
@@ -1112,7 +1596,9 @@ describe("sparse-evidence proxy wave", () => {
     const stages = genMock.mock.calls.map((c) => c[0].stage);
     expect(stages).not.toContain("plan_proxy");
     expect(events.some((e) => e.stage === "broaden")).toBe(false);
-    expect(out.evidenceCoverage).toBe("rich");
+    // Search density is sufficient, but the mocked report contains only one
+    // grounded question, so the final report honestly remains sparse.
+    expect(out.evidenceCoverage).toBe("sparse");
   });
 
   it("skips the proxy wave when the budget is already stretched, despite sparsity", async () => {
@@ -1132,8 +1618,26 @@ describe("sparse-evidence proxy wave", () => {
     genMock.mockImplementation(async (args) => {
       if (args.stage === "plan") return plan() as never;
       if (args.stage === "plan_proxy") throw new Error("gemini 503");
+      if (args.stage === "classify" || args.stage === "classify_extracted") {
+        return classificationFor(args.prompt) as never;
+      }
       if (args.stage === "compress") return { summary: "s" } as never;
       if (args.stage === "synthesize") return report() as never;
+      if (args.stage === "synthesize_experiences") {
+        return { interviewExperiences: report().interviewExperiences } as never;
+      }
+      if (args.stage === "synthesize_links") {
+        return { importantLinks: report().importantLinks } as never;
+      }
+      if (args.stage === "synthesize_questions") {
+        return { questions: report().questions } as never;
+      }
+      if (args.stage === "synthesize_topup" || args.stage === "synthesize_repair") {
+        return {
+          questions: generatedQuestionBatch(args.prompt, args.system),
+        } as never;
+      }
+      if (args.stage === "synthesize_audit") return auditFor(args.prompt) as never;
       throw new Error(`unexpected stage ${args.stage}`);
     });
     const events: PipelineProgressEvent[] = [];
@@ -1160,7 +1664,16 @@ describe("sparse-evidence proxy wave", () => {
   });
 
   it("keeps an inferred question's proxy citation but caps its confidence", async () => {
-    searchMock.mockResolvedValue({ query: "q", results: [searchResult("https://shared.dev")] });
+    searchMock.mockImplementation(async (query) => ({
+      query,
+      results: [
+        searchResult(
+          query === "founder background" || query === "comparable startup interview"
+            ? "https://proxy.dev"
+            : "https://direct.dev"
+        ),
+      ],
+    }));
     stubStages({
       report: report({
         questions: [
@@ -1170,7 +1683,7 @@ describe("sparse-evidence proxy wave", () => {
             confidence: "high",
             rationale: "the CTO ran a big-tech infra loop",
             prepNote: "p",
-            evidenceUrls: ["https://shared.dev"],
+            evidenceUrls: ["https://proxy.dev"],
             basis: "inferred",
           },
         ],
@@ -1179,7 +1692,7 @@ describe("sparse-evidence proxy wave", () => {
 
     const { report: out } = await runResearchPipeline(input);
 
-    expect(out.questions[0].evidenceUrls).toEqual(["https://shared.dev"]);
+    expect(out.questions[0].evidenceUrls).toEqual(["https://proxy.dev"]);
     expect(out.questions[0].basis).toBe("inferred");
     expect(out.questions[0].confidence).toBe("medium");
   });
@@ -1187,8 +1700,9 @@ describe("sparse-evidence proxy wave", () => {
   it("relaxes the synthesis prompt to allow inferred questions only when broadened", async () => {
     stubStages({});
     await runResearchPipeline(input);
-    const sparsePrompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].system;
-    expect(sparsePrompt).toContain('set "basis" to "inferred"');
+    const sparsePrompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize_questions")![0]
+      .system;
+    expect(sparsePrompt).toContain('Set "basis" to "inferred" only');
 
     vi.clearAllMocks();
     searchMock.mockResolvedValue({ query: "q", results: [searchResult("https://a.dev")] });
@@ -1196,9 +1710,10 @@ describe("sparse-evidence proxy wave", () => {
     stubStages({});
     nonSparseSearches();
     await runResearchPipeline(input);
-    const richPrompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize")![0].system;
-    expect(richPrompt).toContain('Set every question\'s "basis" to "evidence"');
-    expect(richPrompt).not.toContain('set "basis" to "inferred"');
+    const richPrompt = genMock.mock.calls.find((c) => c[0].stage === "synthesize_questions")![0]
+      .system;
+    expect(richPrompt).toContain('"inferred" is reserved for notes marked proxy=true');
+    expect(richPrompt).toContain('Set "basis" to "reconstructed"');
   });
 });
 
@@ -1264,8 +1779,11 @@ describe("optional report sections", () => {
         "companyExplainer",
         "likelyLoopStructure",
         "skillsRequired",
-        "interviewExperiences",
       ])
+    );
+    expect(synthesizeSchemaKeys()).not.toContain("interviewExperiences");
+    expect(genMock.mock.calls.some((call) => call[0].stage === "synthesize_experiences")).toBe(
+      true
     );
     expect(synthesizeSchemaKeys()).not.toContain("recruiterPitch");
     expect(out.recruiterPitch).toBeNull();
@@ -1373,7 +1891,9 @@ describe("optional report sections", () => {
     expect(searchedQueries()).toContain("stripe interview experience blind");
     expect(systemFor("plan")).toContain('category "interview_experience"');
     expect(synthesizeSchemaKeys()).not.toContain("interviewExperiences");
-    expect(systemFor("synthesize")).not.toContain("Never repeat a URL you already placed");
+    expect(genMock.mock.calls.some((call) => call[0].stage === "synthesize_experiences")).toBe(
+      false
+    );
     // Null, not []: we never looked for the section, which is not the same as
     // having looked and found nothing.
     expect(out.interviewExperiences).toBeNull();
@@ -1391,7 +1911,7 @@ describe("optional report sections", () => {
     expect(out.interviewExperiences).toBeNull();
     expect(out.recruiterPitch).toBeNull();
     // What the caller still paid for, and still gets.
-    expect(out.questions).toHaveLength(1);
+    expect(out.questions).toHaveLength(20);
     expect(out.prepPlan).toEqual(["Drill LRU"]);
   });
 });

@@ -7,7 +7,8 @@ vi.mock("@/lib/session");
 const limit = vi.fn();
 const orderBy = vi.fn(() => ({ limit }));
 const where = vi.fn(() => ({ orderBy }));
-const from = vi.fn(() => ({ where }));
+const innerJoin = vi.fn(() => ({ where }));
+const from = vi.fn(() => ({ innerJoin }));
 vi.mock("@/lib/db/index", () => ({ db: { select: vi.fn(() => ({ from })) } }));
 
 const { getSessionUser } = await import("@/lib/session");
@@ -54,6 +55,7 @@ describe("authorization", () => {
     // The `where` clause is the only thing standing between this list and every
     // other user's research history.
     expect(where).toHaveBeenCalledOnce();
+    expect(innerJoin).toHaveBeenCalledOnce();
     expect(selectMock).toHaveBeenCalledOnce();
   });
 });

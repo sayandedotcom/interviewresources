@@ -20,6 +20,7 @@ const {
   MAX_SESSIONS_PER_USER,
   RUN_INFLIGHT_WINDOW_MS,
   deleteSession,
+  getUserResearches,
   hasRunInFlight,
   pruneToLimit,
   startResearchRun,
@@ -144,6 +145,20 @@ describe("pruneToLimit", () => {
     // 500 - 11 * 10. The two evicted charges survive as detached ledger rows.
     await expect(getBalance(userId)).resolves.toBe(390);
     expect(await db.select().from(creditsLedger)).toHaveLength(12);
+  });
+});
+
+describe("getUserResearches", () => {
+  it("returns only completed runs that have a stored report", async () => {
+    const userId = await seedUser(db);
+    const complete = await seedRun(userId, "complete", 0, "done");
+    await seedReport(complete);
+    await seedRun(userId, "orphan", 1, "done");
+    await seedRun(userId, "failed", 2, "failed");
+
+    await expect(getUserResearches(userId)).resolves.toMatchObject([
+      { id: complete, companyName: "complete", status: "done" },
+    ]);
   });
 });
 

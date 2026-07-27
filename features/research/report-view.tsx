@@ -58,8 +58,10 @@ import {
   BASELINE_BASIS_META,
   BASIS_META,
   CONFIDENCE_META,
+  RECONSTRUCTED_BASIS_META,
   RESOURCE_ACCESS_META,
   RESOURCE_KIND_META,
+  RESOURCE_RELEVANCE_META,
   SECTION_META,
   categoryCode,
   categoryLabel,
@@ -142,6 +144,16 @@ function questionKey(question: Report["questions"][number]): string {
 
 function skillKey(skill: NonNullable<Report["skillsRequired"]>[number]): string {
   return `${skill.skill}\u0000${skill.why}`;
+}
+
+function resourcesForRound(resources: ResearchResource[], category: string) {
+  return resources
+    .filter((resource) => resource.categories?.includes(category))
+    .sort(
+      (a, b) =>
+        RESOURCE_RELEVANCE_META[b.relevanceTier ?? "general"].order -
+        RESOURCE_RELEVANCE_META[a.relevanceTier ?? "general"].order
+    );
 }
 
 /** The transient delta between what was visible and one extension response. */
@@ -613,8 +625,7 @@ export function ReportView({
       )}
       <Separator />
 
-      {/* Only present once the pipeline broadened into proxy research; legacy
-          and well-documented reports leave it unset and show nothing. */}
+      {/* Legacy and well-documented reports leave this unset or rich. */}
       {current.evidenceCoverage === "sparse" && (
         <div className="bg-primary/5 border-primary/40 mt-5 rounded-md border-l-2 px-4 py-3">
           <SectionLabel>
@@ -622,9 +633,9 @@ export function ReportView({
             Limited public data
           </SectionLabel>
           <p className="font-display text-foreground mt-1.5 text-[13.5px] leading-relaxed">
-            There is little first-hand interview data for this company. Some questions are inferred
-            from the founders&apos; backgrounds, comparable companies, and stage norms — look for
-            the <span className="font-semibold">Inferred</span> tag.
+            First-hand evidence is limited for one or more rounds. Inferred questions use the job
+            description, company engineering signals, and comparable companies where relevant; look
+            for the <span className="font-semibold">Inferred</span> tag.
           </p>
         </div>
       )}
@@ -782,6 +793,11 @@ export function ReportView({
                   <h3 className="font-display text-muted-foreground text-sm font-semibold tracking-wide uppercase">
                     {categoryLabel(cat)}
                   </h3>
+                  {current.evidenceCoverageByCategory?.[cat] === "sparse" && (
+                    <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                      Limited evidence
+                    </Badge>
+                  )}
                   {newContent.categories.has(cat) && <NewBadge />}
                   <div className="ml-auto flex items-center gap-2">
                     {researchId && busy === cat && progress && (
@@ -876,6 +892,14 @@ export function ReportView({
                     // then play on the wrong question.
                     const key = questionKey(q);
                     const newIndex = newOrder.get(key);
+                    const basisMeta =
+                      q.basis === "reconstructed"
+                        ? RECONSTRUCTED_BASIS_META
+                        : q.basis === "inferred"
+                          ? BASIS_META
+                          : q.basis === "baseline"
+                            ? BASELINE_BASIS_META
+                            : null;
                     return (
                       <motion.li
                         key={key}
@@ -906,23 +930,19 @@ export function ReportView({
                                 {newIndex !== undefined && (
                                   <NewBadge index={staggerIndex(newIndex)} />
                                 )}
-                                {(q.basis === "inferred" || q.basis === "baseline") && (
+                                {basisMeta && (
                                   <Tooltip>
                                     <TooltipTrigger
                                       render={
                                         <Badge
                                           variant="outline"
                                           className="text-muted-foreground cursor-default text-[10px]">
-                                          {q.basis === "baseline"
-                                            ? BASELINE_BASIS_META.label
-                                            : BASIS_META.label}
+                                          {basisMeta.label}
                                         </Badge>
                                       }
                                     />
                                     <TooltipContent className="max-w-xs">
-                                      {q.basis === "baseline"
-                                        ? BASELINE_BASIS_META.tooltip
-                                        : BASIS_META.tooltip}
+                                      {basisMeta.tooltip}
                                     </TooltipContent>
                                   </Tooltip>
                                 )}
@@ -970,6 +990,10 @@ export function ReportView({
                     );
                   })}
                 </ul>
+                <RoundResources
+                  resources={resourcesForRound(researchResources, cat)}
+                  newUrls={newContent.resources}
+                />
               </div>
             );
           })}
@@ -1239,7 +1263,13 @@ function ResourceLibrary({
   return (
     <div className="mt-6 space-y-7">
       {RESOURCE_KINDS.map((kind) => {
-        const items = resources.filter((resource) => resource.kind === kind);
+        const items = resources
+          .filter((resource) => resource.kind === kind)
+          .sort(
+            (a, b) =>
+              RESOURCE_RELEVANCE_META[b.relevanceTier ?? "general"].order -
+              RESOURCE_RELEVANCE_META[a.relevanceTier ?? "general"].order
+          );
         if (items.length === 0) return null;
         return (
           <div key={kind}>
@@ -1249,6 +1279,7 @@ function ResourceLibrary({
             <ul className="mt-3 space-y-3">
               {items.map((resource) => {
                 const access = RESOURCE_ACCESS_META[resource.access];
+                const relevance = RESOURCE_RELEVANCE_META[resource.relevanceTier ?? "general"];
                 return (
                   <li key={resource.url}>
                     <Card className="hover:ring-primary/30 transition-all hover:shadow-[var(--shadow-md)]">
@@ -1267,10 +1298,17 @@ function ResourceLibrary({
                               {resource.title}
                             </a>
                           </span>
-                          <span
-                            title={access.description}
-                            className="text-primary bg-primary/10 border-primary/20 shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium">
-                            {access.label}
+                          <span className="flex shrink-0 items-center gap-1.5">
+                            <span
+                              title={relevance.description}
+                              className="text-foreground bg-muted shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                              {relevance.label}
+                            </span>
+                            <span
+                              title={access.description}
+                              className="text-primary bg-primary/10 border-primary/20 shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium">
+                              {access.label}
+                            </span>
                           </span>
                           {newUrls.has(resource.url) && <NewBadge />}
                         </div>
@@ -1290,6 +1328,58 @@ function ResourceLibrary({
         );
       })}
     </div>
+  );
+}
+
+function RoundResources({
+  resources,
+  newUrls,
+}: {
+  resources: ResearchResource[];
+  newUrls: Set<string>;
+}) {
+  if (resources.length === 0) return null;
+
+  return (
+    <details className="border-border/70 bg-muted/20 mt-4 rounded-lg border px-4 py-3">
+      <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs font-semibold tracking-wide uppercase">
+        Other resources ({resources.length})
+      </summary>
+      <p className="font-display text-muted-foreground mt-2 text-xs leading-relaxed">
+        Every relevant link discovered for this round is retained and ranked by target match. “Open
+        manually” means the page could not be reliably parsed and was not used as evidence.
+      </p>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        {resources.map((resource) => {
+          const access = RESOURCE_ACCESS_META[resource.access];
+          const relevance = RESOURCE_RELEVANCE_META[resource.relevanceTier ?? "general"];
+          return (
+            <li key={resource.url} className="bg-background rounded-md border px-3 py-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <ResourceLinkIcon faviconUrl={resource.faviconUrl} />
+                <a
+                  href={resource.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-display text-foreground hover:text-primary min-w-0 truncate text-[13px] font-medium hover:underline">
+                  {resource.title}
+                </a>
+                {newUrls.has(resource.url) && <NewBadge />}
+              </div>
+              <div className="text-muted-foreground mt-1 flex items-center justify-between gap-2 text-[10px]">
+                <span className="truncate">{hostOf(resource.url)}</span>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <span title={relevance.description}>{relevance.label}</span>
+                  <span className="text-primary" title={access.description}>
+                    {access.label}
+                  </span>
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 }
 

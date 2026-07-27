@@ -189,30 +189,54 @@ describe("interviewerSchema", () => {
 
 describe("researchPlanSchema", () => {
   const query = { query: "q", purpose: "p", depth: "basic" as const, category: "dsa" };
+  const targetProfile = {
+    company: { canonicalName: "Acme", aliases: ["Acme"], domains: ["acme.example"] },
+    role: {
+      canonicalTitle: null,
+      aliases: [],
+      description: null,
+      seniority: null,
+      experience: { minYears: null, maxYears: null, raw: null },
+      skills: [],
+    },
+    location: {
+      canonicalName: null,
+      aliases: [],
+      country: null,
+      searchVariants: [],
+    },
+    searchLanguages: [],
+  };
 
   it("requires at least three queries", () => {
     const plan = {
       resolvedCompanyDomain: "stripe.com",
       companySummaryQuery: "what does stripe do",
+      targetProfile,
       queries: [query, query],
+      fallbackQueries: [],
     };
     expect(() => researchPlanSchema.parse(plan)).toThrow();
   });
 
-  it("caps the plan at twelve queries so one run cannot fan out unbounded", () => {
+  it("caps the plan at eighteen queries so one run cannot fan out unbounded", () => {
     const plan = {
       resolvedCompanyDomain: "stripe.com",
       companySummaryQuery: "what does stripe do",
-      queries: Array.from({ length: 13 }, () => query),
+      targetProfile,
+      queries: Array.from({ length: 19 }, () => query),
+      fallbackQueries: [],
     };
     expect(() => researchPlanSchema.parse(plan)).toThrow();
   });
 
-  it("accepts the twelve queries a high-effort run may plan", () => {
+  it("accepts the eighteen queries a high-effort run may plan", () => {
     const plan = {
       resolvedCompanyDomain: "stripe.com",
       companySummaryQuery: "what does stripe do",
-      queries: Array.from({ length: 12 }, () => query),
+      targetProfile,
+      queries: Array.from({ length: 18 }, () => query),
+      fallbackQueries: [],
     };
     expect(() => researchPlanSchema.parse(plan)).not.toThrow();
   });
@@ -221,9 +245,40 @@ describe("researchPlanSchema", () => {
     const plan = {
       resolvedCompanyDomain: "stripe.com",
       companySummaryQuery: "q",
+      targetProfile,
       queries: [{ ...query, depth: "deep" }, query, query],
+      fallbackQueries: [],
     };
     expect(() => researchPlanSchema.parse(plan)).toThrow();
+  });
+
+  it("preserves non-Latin target names, roles, locations, and search languages", () => {
+    const parsed = researchPlanSchema.parse({
+      resolvedCompanyDomain: "example.jp",
+      companySummaryQuery: "会社概要",
+      targetProfile: {
+        ...targetProfile,
+        company: { canonicalName: "株式会社みらい", aliases: ["みらい"], domains: ["example.jp"] },
+        role: {
+          ...targetProfile.role,
+          canonicalTitle: "مهندس برمجيات",
+          aliases: ["مهندس"],
+        },
+        location: {
+          canonicalName: "Київ",
+          aliases: ["Київ"],
+          country: "Україна",
+          searchVariants: ["Київ Україна"],
+        },
+        searchLanguages: ["日本語", "العربية", "Українська"],
+      },
+      queries: [query, query, query],
+      fallbackQueries: [],
+    });
+
+    expect(parsed.targetProfile.company.canonicalName).toBe("株式会社みらい");
+    expect(parsed.targetProfile.role.canonicalTitle).toBe("مهندس برمجيات");
+    expect(parsed.targetProfile.location.canonicalName).toBe("Київ");
   });
 });
 
@@ -373,7 +428,7 @@ describe("reportSchema", () => {
     expect(() => reportSchema.parse(bad)).toThrow();
   });
 
-  it("rejects a basis value that is neither evidence nor inferred", () => {
+  it("rejects an unknown basis value", () => {
     const bad = { ...validReport, questions: [{ ...question, basis: "guessed" }] };
     expect(() => reportSchema.parse(bad)).toThrow();
   });
@@ -381,6 +436,14 @@ describe("reportSchema", () => {
   it("accepts an inferred question", () => {
     const inferred = { ...validReport, questions: [{ ...question, basis: "inferred" }] };
     expect(reportSchema.parse(inferred).questions[0].basis).toBe("inferred");
+  });
+
+  it("accepts a reconstructed question with direct-topic citations", () => {
+    const reconstructed = {
+      ...validReport,
+      questions: [{ ...question, basis: "reconstructed", confidence: "medium" }],
+    };
+    expect(reportSchema.parse(reconstructed).questions[0].basis).toBe("reconstructed");
   });
 
   it("accepts a role-baseline question without evidence urls", () => {

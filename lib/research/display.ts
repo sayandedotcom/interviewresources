@@ -7,6 +7,7 @@ import {
   type ReportSection,
   type ResearchResourceKind,
   type ResourceAccess,
+  type ResourceRelevanceTier,
 } from "./types";
 
 /** UI-facing labels and short codes for each interview category (PRD §5.3). */
@@ -102,8 +103,8 @@ export function categoryCode(cat: string): string {
  * The bare hostname of a source URL, for labelling a link by where it leads.
  *
  * On the public company pages this replaces "Source 1": a reader deciding
- * whether to trust a predicted question is persuaded by `stripe.com` or
- * `leetcode.com`, and an ordinal throws that away.
+ * whether to trust a predicted question depends on the source identity, and an
+ * ordinal throws that away.
  */
 export function hostLabel(url: string): string {
   try {
@@ -143,6 +144,40 @@ export const BASELINE_BASIS_META = {
   tooltip:
     "A useful question for this role and startup context, but there is no evidence this company has asked it.",
 } as const;
+
+export const RECONSTRUCTED_BASIS_META = {
+  label: "Reconstructed",
+  tooltip:
+    "A first-hand account confirms this topic or partial prompt, but the exact question was not public. This is a concrete practice reconstruction.",
+} as const;
+
+export const RESOURCE_RELEVANCE_META: Record<
+  ResourceRelevanceTier,
+  { label: string; description: string; order: number }
+> = {
+  exact: {
+    label: "Exact target",
+    description:
+      "Matches the target company and role without a level, experience, or location conflict.",
+    order: 4,
+  },
+  adjacent: {
+    label: "Adjacent",
+    description:
+      "Useful company evidence, but the role, level, experience, or location is not exact.",
+    order: 3,
+  },
+  general: {
+    label: "General prep",
+    description: "Relevant to the role or interview round, but not evidence about this company.",
+    order: 2,
+  },
+  proxy: {
+    label: "Proxy",
+    description: "A deliberate comparison used because direct evidence for the target is sparse.",
+    order: 1,
+  },
+};
 
 export const RESOURCE_KIND_META: Record<ResearchResourceKind, { label: string }> = {
   interview_experience: { label: "Interview experiences" },

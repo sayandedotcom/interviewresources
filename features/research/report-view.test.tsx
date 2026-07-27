@@ -184,6 +184,70 @@ describe("evidence coverage", () => {
     expect(screen.queryByText("Limited public data")).not.toBeInTheDocument();
   });
 
+  it("labels only the rounds whose direct evidence is limited", () => {
+    render(
+      <ReportView {...base} report={report({ evidenceCoverageByCategory: { dsa: "sparse" } })} />
+    );
+
+    expect(screen.getByText("Limited evidence")).toBeInTheDocument();
+  });
+
+  it("keeps unreadable discovery links beside the relevant question round", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report({
+          researchResources: [
+            {
+              title: "Google Fullstack L4 India",
+              url: "https://leetcode.com/discuss/google-fullstack",
+              why: "Discovered for DSA.",
+              kind: "interview_experience",
+              access: "link_only",
+              usedAsEvidence: false,
+              categories: ["dsa"],
+              relevanceTier: "exact",
+              relevanceReason: "Exact target interview link.",
+            },
+          ],
+        })}
+      />
+    );
+
+    expect(screen.getByText("Other resources (1)")).toBeInTheDocument();
+    expect(screen.getAllByText("Open manually").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Exact target").length).toBeGreaterThan(0);
+  });
+
+  it("does not copy generic discovery categories into every question round", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report({
+          questions: [
+            question({ category: "dsa", question: "Graph traversal" }),
+            question({ category: "system_design", question: "Design a queue" }),
+          ],
+          researchResources: [
+            {
+              title: "General Stripe interview overview",
+              url: "https://example.com/stripe-overview",
+              why: "General interview overview.",
+              kind: "interview_experience",
+              access: "search_preview",
+              usedAsEvidence: false,
+              categories: ["interview_experience"],
+              relevanceTier: "adjacent",
+            },
+          ],
+        })}
+      />
+    );
+
+    expect(screen.queryByText("Other resources (1)")).not.toBeInTheDocument();
+    expect(screen.getByText("General Stripe interview overview")).toBeInTheDocument();
+  });
+
   it("tags an inferred question", () => {
     const r = report({
       evidenceCoverage: "sparse",
@@ -192,6 +256,26 @@ describe("evidence coverage", () => {
     render(<ReportView {...base} report={r} />);
 
     expect(screen.getAllByText("Inferred").length).toBeGreaterThan(0);
+  });
+
+  it("tags a reconstructed practice question separately from proxy inference", () => {
+    render(
+      <ReportView
+        {...base}
+        report={report({
+          questions: [
+            question({
+              question: "Reconstructed routing problem",
+              basis: "reconstructed",
+              confidence: "medium",
+            }),
+          ],
+        })}
+      />
+    );
+
+    expect(screen.getByText("Reconstructed")).toBeInTheDocument();
+    expect(screen.queryByText("Inferred")).not.toBeInTheDocument();
   });
 
   it("shows no inferred tag when every question is evidence-backed", () => {

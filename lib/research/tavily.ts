@@ -22,7 +22,13 @@ export interface TavilySearchResponse {
 
 export async function tavilySearch(
   query: string,
-  opts: { depth: "basic" | "advanced"; maxResults?: number } = { depth: "basic" }
+  opts: {
+    depth: "basic" | "advanced";
+    maxResults?: number;
+    includeDomains?: string[];
+    excludeDomains?: string[];
+    startDate?: string;
+  } = { depth: "basic" }
 ): Promise<TavilySearchResponse> {
   const apiKey = requireApiKey();
   const res = await fetch(`${TAVILY_API_BASE}/search`, {
@@ -31,8 +37,12 @@ export async function tavilySearch(
     body: JSON.stringify({
       query,
       search_depth: opts.depth,
+      ...(opts.depth === "advanced" ? { chunks_per_source: 3 } : {}),
       max_results: opts.maxResults ?? 5,
       include_favicon: true,
+      ...(opts.includeDomains?.length ? { include_domains: opts.includeDomains } : {}),
+      ...(opts.excludeDomains?.length ? { exclude_domains: opts.excludeDomains } : {}),
+      ...(opts.startDate ? { start_date: opts.startDate } : {}),
     }),
   });
 
@@ -48,13 +58,21 @@ export interface TavilyExtractResult {
   rawContent: string;
 }
 
-export async function tavilyExtract(urls: string[]): Promise<TavilyExtractResult[]> {
+export async function tavilyExtract(
+  urls: string[],
+  opts: { query?: string; depth?: "basic" | "advanced" } = {}
+): Promise<TavilyExtractResult[]> {
   if (urls.length === 0) return [];
   const apiKey = requireApiKey();
   const res = await fetch(`${TAVILY_API_BASE}/extract`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ urls }),
+    body: JSON.stringify({
+      urls,
+      extract_depth: opts.depth ?? "basic",
+      format: "markdown",
+      ...(opts.query ? { query: opts.query, chunks_per_source: 5 } : {}),
+    }),
   });
 
   if (!res.ok) {
@@ -73,8 +91,11 @@ export function tavilySearchCredits(depth: "basic" | "advanced"): number {
   return depth === "advanced" ? 2 : 1;
 }
 
-export function tavilyExtractCredits(urlCount: number): number {
-  return Math.ceil(Math.max(0, urlCount) / 5);
+export function tavilyExtractCredits(
+  urlCount: number,
+  depth: "basic" | "advanced" = "basic"
+): number {
+  return Math.ceil(Math.max(0, urlCount) / 5) * (depth === "advanced" ? 2 : 1);
 }
 
 function requireApiKey(): string {

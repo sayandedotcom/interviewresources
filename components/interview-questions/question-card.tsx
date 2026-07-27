@@ -32,7 +32,11 @@ function ConfidenceMeter({ confidence }: { confidence: PublicQuestion["confidenc
   );
 }
 
-const BASIS_LABEL = { inferred: "Inferred", baseline: "Role-standard" } as const;
+const BASIS_LABEL = {
+  reconstructed: "Reconstructed",
+  inferred: "Inferred",
+  baseline: "Role-standard",
+} as const;
 
 export function QuestionCard({ question }: { question: PublicQuestion }) {
   return (

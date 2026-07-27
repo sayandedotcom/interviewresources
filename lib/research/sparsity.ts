@@ -1,3 +1,4 @@
+import { directEvidenceProfile } from "./evidence";
 import type { GatheredSource } from "./types";
 
 /**
@@ -36,7 +37,10 @@ export interface EvidenceDensity {
  */
 export function assessEvidenceDensity(sources: GatheredSource[]): EvidenceDensity {
   const direct = sources.filter(
-    (s) => !NON_DIRECT_CATEGORIES.has(s.category) && s.content.length >= MIN_DIRECT_CONTENT_CHARS
+    (s) =>
+      (s.profile && s.profile.sourceType !== "other"
+        ? directEvidenceProfile(s.profile)
+        : !NON_DIRECT_CATEGORIES.has(s.category)) && s.content.length >= MIN_DIRECT_CONTENT_CHARS
   );
   const directSources = direct.length;
   const extractedDirect = direct.filter((s) => s.extracted).length;
@@ -47,4 +51,30 @@ export function assessEvidenceDensity(sources: GatheredSource[]): EvidenceDensit
     directSources < SPARSE_DIRECT_THRESHOLD || (directSources < 5 && extractedDirect === 0);
 
   return { directSources, extractedDirect, sparse };
+}
+
+/**
+ * Requested rounds that still lack two direct first-hand sources. Unclassified
+ * result sets are left to the existing global sparse/proxy path; this follow-up
+ * is for a meaningful result set whose coverage is uneven across rounds.
+ */
+export function sparseRoundCategories(sources: GatheredSource[], categories: string[]): string[] {
+  const hasClassifiedSources = sources.some(
+    (source) => source.profile && source.profile.sourceType !== "other"
+  );
+  if (!hasClassifiedSources) return [];
+
+  return categories.filter((category) => {
+    const urls = new Set(
+      sources
+        .filter(
+          (source) =>
+            (source.categories ?? [source.category]).includes(category) &&
+            directEvidenceProfile(source.profile) &&
+            source.content.length >= MIN_DIRECT_CONTENT_CHARS
+        )
+        .map((source) => source.url)
+    );
+    return urls.size < 2;
+  });
 }

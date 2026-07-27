@@ -1,4 +1,4 @@
-import type { ResearchInput, ResearchResource, ResourceCandidate } from "./types";
+import type { ResearchResource, ResourceCandidate, ResourceRelevanceTier } from "./types";
 
 const TRACKING_PARAMS = new Set([
   "fbclid",
@@ -16,6 +16,12 @@ const ACCESS_STRENGTH = {
   search_preview: 1,
   full_text: 2,
 } as const;
+const RELEVANCE_STRENGTH: Record<ResourceRelevanceTier, number> = {
+  exact: 4,
+  adjacent: 3,
+  general: 2,
+  proxy: 1,
+};
 
 /** Accepts only web links and returns the stable form used for all comparisons. */
 export function canonicalizePublicUrl(raw: string): string | null {
@@ -50,68 +56,20 @@ export function normalizeFaviconUrl(raw: unknown): string | undefined {
   }
 }
 
-export function resourceKind(candidate: Pick<ResourceCandidate, "domain" | "url" | "categories">) {
-  const domain = candidate.domain.toLowerCase();
-  const path = new URL(candidate.url).pathname.toLowerCase();
-  const categories = new Set(candidate.categories);
-
-  if (categories.has("interview_experience")) return "interview_experience" as const;
-  if (categories.has("interviewer")) return "interviewer" as const;
-  if (/(^|\.)youtube\.com$|(^|\.)youtu\.be$|(^|\.)vimeo\.com$/.test(domain)) {
-    return "video" as const;
-  }
-  if (/(^|\.)github\.com$|(^|\.)gitlab\.com$|(^|\.)codeberg\.org$/.test(domain)) {
-    return "code" as const;
-  }
-  if (
-    /(^|\.)(reddit\.com|glassdoor\.com|teamblind\.com|blind\.com)$/.test(domain) ||
-    /discuss|forum|community/.test(path)
-  ) {
-    return "discussion" as const;
-  }
-  if (/^docs\.|^developer\.|\/docs(?:\/|$)|\/documentation(?:\/|$)/.test(`${domain}${path}`)) {
-    return "company_docs" as const;
-  }
-  if (
-    categories.has("company") &&
-    (/^engineering\.|\/engineering(?:\/|$)|\/blog(?:\/|$)|\/tech(?:\/|$)/.test(
-      `${domain}${path}`
-    ) ||
-      path !== "/")
-  ) {
-    return "company_engineering" as const;
-  }
-  return "other" as const;
+export function resourceKind(candidate: Pick<ResourceCandidate, "profile">) {
+  return candidate.profile?.resourceKind ?? ("other" as const);
 }
 
-function yearSignal(candidate: ResourceCandidate): number {
-  const years = `${candidate.title} ${candidate.queries.join(" ")}`.match(/\b20\d{2}\b/g) ?? [];
-  return Math.max(0, ...years.map(Number)) / 100_000;
-}
-
-function baseRank(candidate: ResourceCandidate, input: ResearchInput): number {
-  const haystack =
-    `${candidate.title} ${candidate.queries.join(" ")} ${candidate.purposes.join(" ")}`.toLowerCase();
-  const company = input.companyName.trim().toLowerCase();
-  const role = input.roleContext?.trim().toLowerCase();
-  const kind = resourceKind(candidate);
-  const categoryBoost =
-    kind === "interview_experience"
-      ? 0.18
-      : kind === "company_engineering" || kind === "company_docs"
-        ? 0.12
-        : kind === "interviewer"
-          ? 0.1
-          : kind === "discussion"
-            ? 0.08
-            : 0.04;
-
+function baseRank(candidate: ResourceCandidate): number {
+  const tier =
+    candidate.relevance?.tier && candidate.relevance.tier !== "reject"
+      ? RELEVANCE_STRENGTH[candidate.relevance.tier]
+      : 0;
   return (
-    candidate.score +
-    (company && haystack.includes(company) ? 0.16 : 0) +
-    (role && haystack.includes(role) ? 0.1 : 0) +
-    categoryBoost +
-    yearSignal(candidate)
+    tier * 100 +
+    (candidate.relevance?.score ?? 0) +
+    candidate.score * 10 +
+    ACCESS_STRENGTH[candidate.access] * 2
   );
 }
 
@@ -119,18 +77,17 @@ function baseRank(candidate: ResourceCandidate, input: ResearchInput): number {
  * Greedy diversity-aware ranking. Repeated domains remain eligible, but each
  * earlier selection from that domain makes a different source more competitive.
  */
-export function rankResourceCandidates(
-  candidates: ResourceCandidate[],
-  input: ResearchInput
-): ResourceCandidate[] {
-  const remaining = [...candidates];
+export function rankResourceCandidates(candidates: ResourceCandidate[]): ResourceCandidate[] {
+  const remaining = candidates.filter(
+    (candidate) => candidate.relevance && candidate.relevance.tier !== "reject"
+  );
   const ranked: ResourceCandidate[] = [];
   const domains = new Map<string, number>();
 
   while (remaining.length > 0) {
     remaining.sort((a, b) => {
       const adjusted = (candidate: ResourceCandidate) =>
-        baseRank(candidate, input) - (domains.get(candidate.domain) ?? 0) * 0.14;
+        baseRank(candidate) - (domains.get(candidate.domain) ?? 0) * 15;
       return adjusted(b) - adjusted(a) || a.url.localeCompare(b.url);
     });
     const next = remaining.shift()!;
@@ -141,6 +98,7 @@ export function rankResourceCandidates(
 }
 
 export function candidateWhy(candidate: ResourceCandidate): string {
+  if (candidate.relevance?.reason) return candidate.relevance.reason;
   const purpose = candidate.purposes.find(Boolean);
   return purpose
     ? `Discovered while researching ${purpose}.`
@@ -165,24 +123,54 @@ export function mergeResearchResources(
       merged.set(url, normalized);
       continue;
     }
+    const categories = [
+      ...new Set([...(current.categories ?? []), ...(normalized.categories ?? [])]),
+    ];
+    const normalizedTierIsStronger = Boolean(
+      normalized.relevanceTier &&
+      (!current.relevanceTier ||
+        RELEVANCE_STRENGTH[normalized.relevanceTier] > RELEVANCE_STRENGTH[current.relevanceTier])
+    );
+    const relevanceTier = normalizedTierIsStronger
+      ? normalized.relevanceTier
+      : current.relevanceTier;
+    const relevanceReason = normalizedTierIsStronger
+      ? normalized.relevanceReason
+      : current.relevanceReason;
     if (ACCESS_STRENGTH[normalized.access] > ACCESS_STRENGTH[current.access]) {
       merged.set(url, {
         ...current,
         ...normalized,
         faviconUrl: current.faviconUrl ?? normalized.faviconUrl,
         usedAsEvidence: current.usedAsEvidence || normalized.usedAsEvidence,
+        categories,
+        relevanceTier,
+        relevanceReason,
       });
     } else if (
       (!current.faviconUrl && normalized.faviconUrl) ||
-      (normalized.usedAsEvidence && !current.usedAsEvidence)
+      (normalized.usedAsEvidence && !current.usedAsEvidence) ||
+      categories.length !== (current.categories?.length ?? 0) ||
+      normalizedTierIsStronger
     ) {
       merged.set(url, {
         ...current,
         faviconUrl: current.faviconUrl ?? normalized.faviconUrl,
         usedAsEvidence: current.usedAsEvidence || normalized.usedAsEvidence,
+        categories,
+        relevanceTier,
+        relevanceReason,
       });
     }
   }
 
-  return [...merged.values()].slice(0, limit);
+  return [...merged.values()]
+    .sort(
+      (a, b) =>
+        Number(b.usedAsEvidence) - Number(a.usedAsEvidence) ||
+        (b.relevanceTier ? RELEVANCE_STRENGTH[b.relevanceTier] : 0) -
+          (a.relevanceTier ? RELEVANCE_STRENGTH[a.relevanceTier] : 0) ||
+        ACCESS_STRENGTH[b.access] - ACCESS_STRENGTH[a.access]
+    )
+    .slice(0, limit);
 }

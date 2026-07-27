@@ -5,31 +5,29 @@ import {
   mergeResearchResources,
   normalizeFaviconUrl,
   rankResourceCandidates,
+  resourceKind,
 } from "./resources";
-import { DEFAULT_SECTIONS, type ResearchInput, type ResourceCandidate } from "./types";
-
-const input: ResearchInput = {
-  companyName: "Acme",
-  roleContext: "Backend Engineer",
-  interviewers: [],
-  interviewTypes: ["dsa"],
-  fullLoop: false,
-  excludeQuestions: [],
-  effort: "medium",
-  sections: [...DEFAULT_SECTIONS],
-};
+import type { ResourceCandidate, SourceProfile } from "./types";
 
 function candidate(overrides: Partial<ResourceCandidate> = {}): ResourceCandidate {
   return {
     url: "https://example.com/post",
     title: "Acme backend interview",
+    preview: "Acme backend interview questions and coding round details.",
     score: 0.8,
     queries: ["Acme backend interview"],
     purposes: ["find a first-hand interview account"],
     categories: ["interview_experience"],
     domain: "example.com",
+    origin: "direct",
     access: "link_only",
     extractionOutcome: "failed",
+    relevance: {
+      tier: "general",
+      score: 60,
+      reason: "Semantically useful general preparation.",
+      matchedCategories: ["dsa"],
+    },
     ...overrides,
   };
 }
@@ -62,35 +60,54 @@ describe("normalizeFaviconUrl", () => {
 });
 
 describe("rankResourceCandidates", () => {
-  it("combines relevance and company/role specificity", () => {
+  it("uses semantic relevance rather than matching company or role keywords", () => {
     const generic = candidate({
       url: "https://generic.dev/post",
       domain: "generic.dev",
       title: "General interview guide",
-      queries: ["interview guide"],
       score: 0.82,
+      relevance: {
+        tier: "general",
+        score: 99,
+        reason: "General preparation.",
+        matchedCategories: ["dsa"],
+      },
     });
     const specific = candidate({
       url: "https://specific.dev/post",
       domain: "specific.dev",
       score: 0.75,
+      relevance: {
+        tier: "exact",
+        score: 70,
+        reason: "Exact target evidence.",
+        matchedCategories: ["dsa"],
+      },
     });
 
-    expect(rankResourceCandidates([generic, specific], input)[0].url).toBe(specific.url);
+    expect(rankResourceCandidates([generic, specific])[0].url).toBe(specific.url);
   });
 
   it("promotes domain diversity without discarding repeated-domain results", () => {
-    const ranked = rankResourceCandidates(
-      [
-        candidate({ url: "https://same.dev/a", domain: "same.dev", score: 0.95 }),
-        candidate({ url: "https://same.dev/b", domain: "same.dev", score: 0.94 }),
-        candidate({ url: "https://other.dev/a", domain: "other.dev", score: 0.9 }),
-      ],
-      input
-    );
+    const ranked = rankResourceCandidates([
+      candidate({ url: "https://same.dev/a", domain: "same.dev", score: 0.95 }),
+      candidate({ url: "https://same.dev/b", domain: "same.dev", score: 0.94 }),
+      candidate({ url: "https://other.dev/a", domain: "other.dev", score: 0.9 }),
+    ]);
 
     expect(ranked.slice(0, 2).map((item) => item.domain)).toEqual(["same.dev", "other.dev"]);
     expect(ranked).toHaveLength(3);
+  });
+});
+
+describe("resourceKind", () => {
+  it("uses the semantic source profile without inspecting a platform domain", () => {
+    const profile = {
+      resourceKind: "video",
+    } as SourceProfile;
+
+    expect(resourceKind({ profile })).toBe("video");
+    expect(resourceKind({ profile: undefined })).toBe("other");
   });
 });
 
@@ -105,6 +122,7 @@ describe("mergeResearchResources", () => {
           kind: "company_engineering",
           access: "full_text",
           usedAsEvidence: true,
+          categories: ["dsa"],
         },
       ],
       [
@@ -115,6 +133,7 @@ describe("mergeResearchResources", () => {
           kind: "other",
           access: "link_only",
           usedAsEvidence: false,
+          categories: ["system_design"],
         },
       ],
       20
@@ -126,6 +145,7 @@ describe("mergeResearchResources", () => {
         url: "https://example.com/post",
         access: "full_text",
         usedAsEvidence: true,
+        categories: ["dsa", "system_design"],
       }),
     ]);
   });

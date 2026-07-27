@@ -21,6 +21,7 @@ import {
   MAX_EFFORT_RESOURCES,
 } from "@/lib/research/budget";
 import { missingSections } from "@/lib/research/display";
+import { appendDistinctQuestions, coverageByCategory } from "@/lib/research/evidence";
 import { runResearchPipeline } from "@/lib/research/pipeline";
 import { canonicalizePublicUrl, mergeResearchResources } from "@/lib/research/resources";
 import {
@@ -90,6 +91,11 @@ function mergeReports(
     return links.slice(0, MAX_EFFORT_LINKS);
   };
 
+  const questions = opts.addedRounds
+    ? appendDistinctQuestions(existing.questions, addition.questions)
+    : existing.questions;
+  const evidenceCoverageByCategory = coverageByCategory(questions);
+
   return {
     ...existing,
     // A hole the original left null is filled by the freshly gathered section;
@@ -99,9 +105,7 @@ function mergeReports(
     likelyLoopStructure: existing.likelyLoopStructure ?? addition.likelyLoopStructure,
     skillsRequired: existing.skillsRequired ?? addition.skillsRequired,
     recruiterPitch: existing.recruiterPitch ?? addition.recruiterPitch,
-    questions: opts.addedRounds
-      ? [...existing.questions, ...addition.questions]
-      : existing.questions,
+    questions,
     interviewExperiences: mergeLinks(
       existing.interviewExperiences,
       addition.interviewExperiences,
@@ -113,6 +117,12 @@ function mergeReports(
       addition.researchResources,
       MAX_EFFORT_RESOURCES
     ),
+    evidenceCoverageByCategory,
+    evidenceCoverage: Object.values(evidenceCoverageByCategory).every(
+      (coverage) => coverage === "rich"
+    )
+      ? "rich"
+      : "sparse",
   };
 }
 
@@ -206,15 +216,24 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        const context = existing.researchContext;
         const { report: addition, budget } = await runResearchPipeline(
           {
             companyName: row.companyName,
+            companyUrl: context?.companyUrl,
+            jobDescription: context?.jobDescription,
+            yearsExperience: context?.yearsExperience,
+            techStack: context?.techStack,
+            location: context?.location,
+            teamContext: context?.teamContext,
+            recruiterNotes: context?.recruiterNotes,
             roleContext: row.roleContext ?? undefined,
-            interviewers: [],
+            interviewers: context?.interviewers ?? [],
             interviewTypes: body.interviewTypes,
             fullLoop: false,
             sections,
             excludeQuestions: existing.questions.map((q) => q.question),
+            excludeSourceUrls: (existing.researchResources ?? []).map((resource) => resource.url),
             generateQuestions: body.interviewTypes.length > 0,
             // The caller picks how hard this extension searches, independent of
             // the original run's effort (which isn't persisted). The budget is

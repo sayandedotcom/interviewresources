@@ -33,7 +33,8 @@ export async function getUserResearches(userId: string): Promise<ResearchSummary
       createdAt: researches.createdAt,
     })
     .from(researches)
-    .where(eq(researches.userId, userId))
+    .innerJoin(reports, eq(reports.researchId, researches.id))
+    .where(and(eq(researches.userId, userId), eq(researches.status, "done")))
     .orderBy(desc(researches.createdAt))
     .limit(MAX_SESSIONS_PER_USER);
 

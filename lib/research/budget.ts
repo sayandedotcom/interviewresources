@@ -28,6 +28,14 @@ export interface EffortPreset {
   searchResults: number;
   /** How many top URLs get their full page extracted. */
   extractLimit: number;
+  /** Extraction depth; medium/high trade a few extra credits for higher success. */
+  extractDepth: "basic" | "advanced";
+  /** Targeted follow-up searches per requested round whose evidence is thin. */
+  gapQueriesPerRound: number;
+  /** Maximum targeted follow-up searches across all rounds. */
+  gapQueryLimit: number;
+  /** Full pages read during the targeted follow-up wave. */
+  gapExtractLimit: number;
   /** Query-count range for the proxy wave when direct evidence is sparse. */
   proxyQueriesHint: string;
   /** Full-page extracts allowed in the proxy wave — kept small; proxy pages are context, not primary evidence. */
@@ -37,11 +45,8 @@ export interface EffortPreset {
   /** Hard ceiling on importantLinks, and the range shown to the model. */
   linksMax: number;
   linksHint: string;
-  /** Curated Research library size. Never padded when discovery returns fewer links. */
-  resourcesMin: number;
+  /** Safety ceiling for retained discovery links; presets exceed their maximum possible fan-out. */
   resourcesMax: number;
-  /** Maximum metadata-only candidates exposed to synthesis. */
-  resourceCatalogMax: number;
   /** Hard provider ceiling; the budget can lower it further at runtime. */
   synthesisMaxOutputTokens: number;
   label: string;
@@ -51,8 +56,7 @@ export interface EffortPreset {
 /**
  * The one place output volume and spend are tuned together. Raising question or
  * link counts without raising capUsd just starves the synthesize call; raising
- * capUsd alone buys evidence the prompt then refuses to use. Medium reproduces
- * the pre-effort behaviour exactly, so old reports and tests stay honest.
+ * capUsd alone buys evidence the prompt then refuses to use.
  */
 export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
   low: {
@@ -60,48 +64,54 @@ export const EFFORT_PRESETS: Record<Effort, EffortPreset> = {
     queriesHint: "3-5",
     searchResults: 4,
     extractLimit: 3,
+    extractDepth: "basic",
+    gapQueriesPerRound: 1,
+    gapQueryLimit: 2,
+    gapExtractLimit: 2,
     proxyQueriesHint: "2-3",
     proxyExtractLimit: 1,
     questionTarget: "8-15",
     linksMax: 4,
     linksHint: "2-4",
-    resourcesMin: 8,
-    resourcesMax: 12,
-    resourceCatalogMax: 30,
+    resourcesMax: 100,
     synthesisMaxOutputTokens: 6_000,
     label: "Low",
     blurb: "Quick scan — fewer searches, the essentials only",
   },
   medium: {
     capUsd: BUDGET_CAP_USD,
-    queriesHint: "4-8",
-    searchResults: 5,
-    extractLimit: 5,
+    queriesHint: "8-12",
+    searchResults: 8,
+    extractLimit: 10,
+    extractDepth: "advanced",
+    gapQueriesPerRound: 2,
+    gapQueryLimit: 8,
+    gapExtractLimit: 6,
     proxyQueriesHint: "3-5",
     proxyExtractLimit: 2,
-    questionTarget: "15-30",
+    questionTarget: "20-35",
     linksMax: 6,
     linksHint: "3-6",
-    resourcesMin: 12,
-    resourcesMax: 16,
-    resourceCatalogMax: 35,
+    resourcesMax: 250,
     synthesisMaxOutputTokens: 9_000,
     label: "Medium",
     blurb: "Balanced — the default depth",
   },
   high: {
     capUsd: 2.0,
-    queriesHint: "8-12",
-    searchResults: 8,
-    extractLimit: 8,
+    queriesHint: "12-18",
+    searchResults: 10,
+    extractLimit: 15,
+    extractDepth: "advanced",
+    gapQueriesPerRound: 3,
+    gapQueryLimit: 12,
+    gapExtractLimit: 10,
     proxyQueriesHint: "5-8",
     proxyExtractLimit: 3,
-    questionTarget: "30-50",
+    questionTarget: "35-60",
     linksMax: 10,
     linksHint: "6-10",
-    resourcesMin: 16,
-    resourcesMax: 20,
-    resourceCatalogMax: 40,
+    resourcesMax: 500,
     synthesisMaxOutputTokens: 14_000,
     label: "High",
     blurb: "Exhaustive — widest search, most questions",
@@ -175,7 +185,7 @@ export class BudgetTracker {
   }
 
   private reservableMicros(stage: string): number {
-    const protectedMicros = stage === "synthesize" ? 0 : this.synthesisReserveMicros;
+    const protectedMicros = stage.startsWith("synthesize") ? 0 : this.synthesisReserveMicros;
     return Math.max(
       0,
       this.capMicros - protectedMicros - this.committedMicros - this.reservedMicros

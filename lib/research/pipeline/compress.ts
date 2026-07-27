@@ -28,7 +28,9 @@ export async function compressStage(
     sourceUrl: source.url,
     sourceTitle: source.title,
     category: source.category,
+    categories: source.categories,
     summary,
+    profile: source.profile,
   });
 
   usable.forEach((source, index) => {
@@ -55,9 +57,13 @@ export async function compressStage(
           budget,
           maxOutputTokens: 768,
           system: `Summarize the given web page content into a dense note for an interview-prep
-researcher. Keep concrete, checkable facts: specific questions mentioned, technologies
-named, round structure, difficulty signals, dates. Drop filler. Do not editorialize.`,
-          prompt: `Source: ${source.title}\nURL: ${source.url}\nCategory: ${source.category}\n\nContent:\n${source.content.slice(0, 6000)}`,
+researcher. Preserve concrete, checkable facts: the source candidate's stated role, level,
+location, interview date, outcome, round structure, and the full requirements of every
+specific question mentioned. Clearly distinguish a question the candidate says was asked
+from a topic or practice example supplied by the author. Never copy the target candidate's
+role into the source. Keep technologies, constraints, difficulty signals, and follow-ups;
+drop filler and do not editorialize.`,
+          prompt: `Source: ${source.title}\nURL: ${source.url}\nCategories: ${(source.categories ?? [source.category]).join(", ")}\n\nContent:\n${source.content.slice(0, 6000)}`,
         });
         slots[index] = noteFrom(source, summary);
       } catch {
