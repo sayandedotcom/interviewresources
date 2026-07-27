@@ -350,11 +350,17 @@
   --input: oklch(0.504 0.022 258); /* 3.00:1 on card */
   --ring: oklch(0.656 0.166 249); /* 6.07:1 on background */
 
-  /* --brand-50/--brand-300 only, and only because they're reachable from
-     app/(app) (the sidebar canvas tint and the dot-pattern backdrop). See the
-     block comment above .dark for why overriding a "shared" brand token here
-     is safe. --brand-400 and up are deliberately absent. */
+  /* --brand-50/--brand-100/--brand-300 only, and only because they're
+     reachable from app/(app): the sidebar canvas tint, the dot-pattern
+     backdrop, and the featured-plan card gradient in
+     features/payments/pricing-plans.tsx (from-brand-100/90 to-brand-50/30),
+     shared with the /payments route. Without this override that card rendered
+     as a near-white slab with unreadable text — --brand-100 was the one step
+     of the ramp this block missed initially. See the block comment above
+     .dark for why overriding a "shared" brand token here is safe.
+     --brand-400 and up are deliberately absent. */
   --brand-50: oklch(0.23 0.024 258);
+  --brand-100: oklch(0.29 0.03 256); /* fg 12.94:1, muted-fg 5.69:1 */
   --brand-300: oklch(0.32 0.05 255);
 
   /* Status palette: good/warning already clear AA against the new --card
