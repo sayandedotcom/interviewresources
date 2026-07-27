@@ -1285,10 +1285,17 @@ function ResourceLibrary({
                     <Card className="hover:ring-primary/30 transition-all hover:shadow-[var(--shadow-md)]">
                       <CardContent>
                         <div className="flex flex-wrap items-baseline justify-between gap-3">
-                          <span className="flex min-w-0 items-baseline gap-2">
+                          {/* `items-start`, not `items-baseline`: an icon is a
+                              replaced element, so baseline alignment sits its
+                              bottom edge on the text baseline and leaves it
+                              hanging below a title that can also wrap to two
+                              lines. The margin centres it on the first line
+                              instead — (20.6px line-box − 16px icon) / 2. */}
+                          <span className="flex min-w-0 items-start gap-2">
                             <ResourceLinkIcon
                               key={resource.faviconUrl}
                               faviconUrl={resource.faviconUrl}
+                              className="mt-[2px]"
                             />
                             <a
                               href={resource.url}
@@ -1386,11 +1393,18 @@ function RoundResources({
   );
 }
 
-function ResourceLinkIcon({ faviconUrl }: { faviconUrl?: string }) {
+function ResourceLinkIcon({
+  faviconUrl,
+  className = "",
+}: {
+  faviconUrl?: string;
+  /** Lets a caller nudge the icon onto its title's first line. */
+  className?: string;
+}) {
   const [failed, setFailed] = useState(false);
 
   if (!faviconUrl || failed) {
-    return <LinkIcon className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />;
+    return <LinkIcon className={`text-primary h-4 w-4 shrink-0 ${className}`} aria-hidden="true" />;
   }
 
   return (
@@ -1406,7 +1420,7 @@ function ResourceLinkIcon({ faviconUrl }: { faviconUrl?: string }) {
       height={16}
       loading="lazy"
       referrerPolicy="no-referrer"
-      className="h-4 w-4 shrink-0 object-contain"
+      className={`h-4 w-4 shrink-0 object-contain ${className}`}
       onError={() => setFailed(true)}
     />
   );
@@ -1423,8 +1437,13 @@ function LinkCards({ links, newUrls }: { links: ImportantLink[]; newUrls: Set<st
           <Card className="hover:ring-primary/30 transition-all hover:shadow-[var(--shadow-md)]">
             <CardContent>
               <div className="flex items-baseline justify-between gap-3">
-                <span className="flex min-w-0 items-baseline gap-2">
-                  <LinkIcon className="text-primary h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {/* Centred on the title's first line rather than baseline-set —
+                    see the note in ResourceLibrary. */}
+                <span className="flex min-w-0 items-start gap-2">
+                  <LinkIcon
+                    className="text-primary mt-[3px] h-3.5 w-3.5 shrink-0"
+                    aria-hidden="true"
+                  />
                   <a
                     href={link.url}
                     target="_blank"
