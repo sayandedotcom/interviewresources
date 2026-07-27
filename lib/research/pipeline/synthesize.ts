@@ -148,7 +148,6 @@ export async function synthesizeStage(
         return `[${i + 1}] (${(n.categories ?? [n.category]).join(", ")}) ${n.sourceTitle} — ${n.sourceUrl}\n${profile}\n${n.summary}`;
       })
       .join("\n\n");
-  const evidenceBlock = renderEvidence(notes);
   const evidenceForRound = (category: string) => {
     const relevant = notes.filter((note) => {
       const categories = note.categories ?? [note.category];
