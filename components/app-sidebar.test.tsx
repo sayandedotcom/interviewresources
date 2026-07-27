@@ -89,6 +89,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   pathname.mockReturnValue("/prepare");
   useSessionMock.mockReturnValue({ data: { user: ada }, isPending: false });
+  // The sample row's dismissal lives here; a test that removes it would
+  // otherwise hide the row for every test that runs after it.
+  window.localStorage.clear();
 });
 
 /**
@@ -242,6 +245,107 @@ describe("share", () => {
 
     expect(await screen.findByText("Could not create a share link")).toBeInTheDocument();
     expect(writeText).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The sample is a bundled report, not a row in anyone's account. It has to look
+ * like a session in the list without being counted or charged like one, and
+ * removing it must never reach the API.
+ */
+describe("sample report", () => {
+  const SAMPLE_KEY = "sample-report-dismissed";
+
+  it("appears for a signed-in user with no sessions of their own", async () => {
+    stubFetch([]);
+    renderSidebar(ada, []);
+
+    expect(await screen.findByRole("link", { name: /Google/ })).toHaveAttribute(
+      "href",
+      "/prepare/sample"
+    );
+    expect(screen.getByText("Sample")).toBeInTheDocument();
+    // The row is something to show, so the empty-state line must give way.
+    expect(screen.queryByText("No sessions yet")).not.toBeInTheDocument();
+  });
+
+  it("sits after the user's own sessions", async () => {
+    stubFetch([session("r1", "Stripe")]);
+    renderSidebar(ada, [session("r1", "Stripe")]);
+
+    await screen.findByText("Sample");
+    const names = screen.getAllByRole("link").map((l) => l.textContent ?? "");
+    expect(names.findIndex((n) => n.includes("Stripe"))).toBeLessThan(
+      names.findIndex((n) => n.includes("Google"))
+    );
+  });
+
+  it("does not count against the session quota", async () => {
+    stubFetch([session("r1", "Stripe")]);
+    renderSidebar(ada, [session("r1", "Stripe")]);
+
+    await screen.findByText("Sample");
+    // Two rows on screen, but only one of them is the user's.
+    expect(screen.getByText("1/10")).toBeInTheDocument();
+  });
+
+  it("does not put a signed-out visitor's list back on screen", () => {
+    useSessionMock.mockReturnValue({ data: null as never, isPending: false });
+    stubFetch([]);
+    renderSidebar(null, []);
+
+    expect(screen.queryByText("Sample")).not.toBeInTheDocument();
+    expect(screen.getByText("Sign in to save sessions")).toBeInTheDocument();
+  });
+
+  it("stays hidden once dismissed", () => {
+    window.localStorage.setItem(SAMPLE_KEY, "1");
+    stubFetch([]);
+    renderSidebar(ada, []);
+
+    expect(screen.queryByText("Sample")).not.toBeInTheDocument();
+    expect(screen.getByText("No sessions yet")).toBeInTheDocument();
+  });
+
+  it("offers delete but not share", async () => {
+    const user = userEvent.setup();
+    stubFetch([]);
+    renderSidebar(ada, []);
+
+    await openRowMenu(user, "Google");
+
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { name: "Share" })).not.toBeInTheDocument();
+  });
+
+  it("removes itself through the flag, without calling the API", async () => {
+    const user = userEvent.setup();
+    const fetchMock = stubFetch([]);
+    renderSidebar(ada, []);
+
+    await openRowMenu(user, "Google");
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(screen.queryByText("Sample")).not.toBeInTheDocument());
+    expect(window.localStorage.getItem(SAMPLE_KEY)).toBe("1");
+    // A DELETE here would 404 — there is no research row behind the sample.
+    expect(fetchMock.mock.calls.every(([url]) => url === "/api/researches")).toBe(true);
+    expect(await screen.findByText("Sample removed")).toBeInTheDocument();
+  });
+
+  it("sends you back to the form if you delete it while reading it", async () => {
+    const user = userEvent.setup();
+    pathname.mockReturnValue("/prepare/sample");
+    stubFetch([]);
+    renderSidebar(ada, []);
+
+    await openRowMenu(user, "Google");
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/prepare"));
   });
 });
 

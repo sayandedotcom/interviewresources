@@ -58,9 +58,12 @@ import { contactConfig } from "@/config/contact";
 
 import { useSession } from "@/lib/auth-client";
 import { categoryLabel } from "@/lib/research/display";
+import { SAMPLE_RESEARCH_ID, SAMPLE_SUMMARY } from "@/lib/research/sample-report";
 import type { ResearchSummary } from "@/lib/research/sessions";
 import type { SessionUser } from "@/lib/session";
 import { cn } from "@/lib/utils";
+
+import { dismissSample, isSampleDismissed } from "@/features/research/sample-dismissal";
 
 /**
  * Acknowledges the click while the destination renders. Must live inside the
@@ -115,6 +118,11 @@ export function AppSidebar({
   const [limit, setLimit] = React.useState<number | null>(initialLimit);
   const [pendingDelete, setPendingDelete] = React.useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = React.useState(false);
+  // Read on mount, never during render: localStorage is not available to the
+  // server pass, and consulting it inline would hydrate a different list than
+  // the server sent. `null` means "not known yet", which renders as no row.
+  const [sampleDismissed, setSampleDismissed] = React.useState<boolean | null>(null);
+  React.useEffect(() => setSampleDismissed(isSampleDismissed()), []);
 
   // The server already knows who this is; `useSession` only overrides it once it
   // has an answer, which is what lets a sign-out empty the sidebar.
@@ -174,6 +182,17 @@ export function AppSidebar({
     if (!pendingDelete) return;
     const id = pendingDelete;
     setPendingDelete(null);
+
+    // The sample has no row to delete — forgetting it is the whole operation,
+    // and there is no /api/research/sample to call.
+    if (id === SAMPLE_RESEARCH_ID) {
+      dismissSample();
+      setSampleDismissed(true);
+      flash("Sample removed");
+      if (pathname === `/prepare/${SAMPLE_RESEARCH_ID}`) router.push("/prepare");
+      return;
+    }
+
     try {
       const res = await fetch(`/api/research/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("delete failed");
@@ -191,6 +210,15 @@ export function AppSidebar({
   // skeleton, because the server already told us there is nothing to wait for.
   const sessions = user ? fetched : [];
   const atLimit = limit != null && sessions != null && sessions.length >= limit;
+
+  // The sample is appended for display only. `sessions` stays the user's real
+  // runs, because it feeds the n/limit counter and the at-limit warning — the
+  // sample is not one of the stored sessions and must not count against them.
+  // Last, not first, so it never pushes the user's own recent work down; with
+  // no real sessions it is still the first thing they see, which is the case
+  // that matters.
+  const showSample = user != null && sampleDismissed === false;
+  const rows = sessions && showSample ? [...sessions, SAMPLE_SUMMARY] : sessions;
 
   return (
     <>
@@ -278,66 +306,84 @@ export function AppSidebar({
               )}
             </SidebarGroupLabel>
             <SidebarMenu className="gap-1">
-              {sessions === null &&
+              {rows === null &&
                 Array.from({ length: 3 }).map((_, i) => (
                   <SidebarMenuItem key={i}>
                     <Skeleton className="h-12 w-full" />
                   </SidebarMenuItem>
                 ))}
-              {sessions?.length === 0 && (
+              {/* Keyed on the rendered list, not on `sessions`: with the sample
+                  present there is something to show, so "No sessions yet" would
+                  be sitting above a visible row. */}
+              {rows?.length === 0 && (
                 <SidebarMenuItem>
                   <span className="font-display text-sidebar-foreground/70 px-2 py-1.5 text-xs">
                     {user ? "No sessions yet" : "Sign in to save sessions"}
                   </span>
                 </SidebarMenuItem>
               )}
-              {sessions?.map((s) => (
-                <SidebarMenuItem key={s.id}>
-                  <SidebarMenuButton
-                    size="lg"
-                    isActive={pathname === `/prepare/${s.id}`}
-                    className={navItemActive}
-                    render={<Link href={`/prepare/${s.id}`} />}>
-                    <div className="flex min-w-0 flex-col gap-0.5 py-1">
-                      <span className="font-display truncate">{s.companyName}</span>
-                      {/* Tints with the row: left grey it reads as a half-selected
+              {rows?.map((s) => {
+                const isSample = s.id === SAMPLE_RESEARCH_ID;
+                return (
+                  <SidebarMenuItem key={s.id}>
+                    <SidebarMenuButton
+                      size="lg"
+                      isActive={pathname === `/prepare/${s.id}`}
+                      className={navItemActive}
+                      render={<Link href={`/prepare/${s.id}`} />}>
+                      <div className="flex min-w-0 flex-col gap-0.5 py-1">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="font-display truncate">{s.companyName}</span>
+                          {/* Says why a report the user never ran is in their list. */}
+                          {isSample && (
+                            <span className="border-sidebar-border text-sidebar-foreground/60 shrink-0 rounded-full border px-1.5 text-[9px] tracking-wide uppercase">
+                              Sample
+                            </span>
+                          )}
+                        </span>
+                        {/* Tints with the row: left grey it reads as a half-selected
                           row once the company name above it turns brand. */}
-                      <span className="font-display text-sidebar-foreground/60 group-data-active/menu-button:text-primary/70 truncate text-xs">
-                        {s.interviewType
-                          .split(",")
-                          .map((c) => categoryLabel(c))
-                          .join(", ")}
-                      </span>
-                    </div>
-                    {/* Clear of the row's absolutely-positioned action button. */}
-                    <NavPendingHint className="mr-5" />
-                  </SidebarMenuButton>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <SidebarMenuAction
-                          showOnHover
-                          aria-label={`Actions for ${s.companyName}`}
-                        />
-                      }>
-                      <MoreHorizontalIcon />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      className="w-40"
-                      side={isMobile ? "bottom" : "right"}
-                      align="start">
-                      <DropdownMenuItem onClick={() => share(s.id)}>
-                        <Share2Icon />
-                        <span className="font-display">Share</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive" onClick={() => remove(s.id)}>
-                        <Trash2Icon />
-                        <span className="font-display">Delete</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </SidebarMenuItem>
-              ))}
+                        <span className="font-display text-sidebar-foreground/60 group-data-active/menu-button:text-primary/70 truncate text-xs">
+                          {s.interviewType
+                            .split(",")
+                            .map((c) => categoryLabel(c))
+                            .join(", ")}
+                        </span>
+                      </div>
+                      {/* Clear of the row's absolutely-positioned action button. */}
+                      <NavPendingHint className="mr-5" />
+                    </SidebarMenuButton>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <SidebarMenuAction
+                            showOnHover
+                            aria-label={`Actions for ${s.companyName}`}
+                          />
+                        }>
+                        <MoreHorizontalIcon />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        className="w-40"
+                        side={isMobile ? "bottom" : "right"}
+                        align="start">
+                        {/* Sharing mints a token against a real research row, so
+                          the sample has nothing to share. */}
+                        {!isSample && (
+                          <DropdownMenuItem onClick={() => share(s.id)}>
+                            <Share2Icon />
+                            <span className="font-display">Share</span>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem variant="destructive" onClick={() => remove(s.id)}>
+                          <Trash2Icon />
+                          <span className="font-display">Delete</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
             {notice && (
               <p className="text-sidebar-foreground/60 px-2 pt-2 text-[11px] group-data-[collapsible=icon]:hidden">
@@ -362,9 +408,15 @@ export function AppSidebar({
         onOpenChange={(open) => !open && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {pendingDelete === SAMPLE_RESEARCH_ID
+                ? "Remove the sample report?"
+                : "Delete this session?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The report will be permanently deleted.
+              {pendingDelete === SAMPLE_RESEARCH_ID
+                ? "It will not come back. Nothing of yours is affected — the sample is an example report, not one of your sessions."
+                : "This action cannot be undone. The report will be permanently deleted."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
