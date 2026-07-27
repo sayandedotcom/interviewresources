@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,8 +10,12 @@ import {
   CreditCardIcon,
   GiftIcon,
   LogOutIcon,
+  MonitorIcon,
+  MoonIcon,
   SettingsIcon,
+  SunIcon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -33,6 +37,7 @@ import {
 
 import { signOut, useSession } from "@/lib/auth-client";
 import type { SessionUser } from "@/lib/session";
+import { cn } from "@/lib/utils";
 
 function initials(name: string): string {
   return (
@@ -43,6 +48,45 @@ function initials(name: string): string {
       .slice(0, 2)
       .join("")
       .toUpperCase() || "?"
+  );
+}
+
+const THEME_OPTIONS = [
+  { value: "light", label: "Light", icon: SunIcon },
+  { value: "dark", label: "Dark", icon: MoonIcon },
+  { value: "system", label: "System", icon: MonitorIcon },
+] as const;
+
+/** A 3-way segmented control rather than DropdownMenuItems: picking a theme
+ * shouldn't close the menu, so the choice can be compared before moving on.
+ * `mounted` guards the active state — next-themes doesn't know `theme` until
+ * after the client reads localStorage, so rendering it during SSR would
+ * disagree with the client's first render and every option would flash
+ * unselected → selected on hydration. */
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  return (
+    <div className="flex items-center gap-1 px-1.5 py-1">
+      {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+        <button
+          key={value}
+          type="button"
+          aria-label={label}
+          aria-pressed={mounted && theme === value}
+          onClick={() => setTheme(value)}
+          className={cn(
+            "flex flex-1 items-center justify-center rounded-md py-1.5 transition-colors",
+            mounted && theme === value
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+          )}>
+          <Icon className="size-4" />
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -134,6 +178,8 @@ export function NavUser({
                 <span className="font-display">Settings</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <ThemeToggle />
             <DropdownMenuSeparator />
             {/* `signOut` only clears the cookie; the `/prepare` → `/` redirect
                 lives in proxy.ts and won't fire until a new request. Navigate

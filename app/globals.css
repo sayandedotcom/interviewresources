@@ -83,25 +83,38 @@
   --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /* Soft, blue-tinted, layered shadows (replace hairline borders between sections). */
-  --shadow-xs: 0 1px 2px oklch(0.45 0.1 252 / 0.05);
-  --shadow-sm: 0 1px 2px oklch(0.45 0.1 252 / 0.04), 0 2px 6px -1px oklch(0.45 0.1 252 / 0.06);
-  --shadow-md:
-    0 1px 2px oklch(0.45 0.1 252 / 0.04), 0 4px 10px -2px oklch(0.45 0.1 252 / 0.06),
-    0 10px 24px -6px oklch(0.45 0.1 252 / 0.06);
-  --shadow-lg:
-    0 1px 2px oklch(0.45 0.1 252 / 0.04), 0 8px 16px -4px oklch(0.45 0.1 252 / 0.06),
-    0 24px 48px -12px oklch(0.42 0.09 252 / 0.1);
-  --shadow-xl:
-    0 2px 4px oklch(0.45 0.1 252 / 0.04), 0 12px 24px -6px oklch(0.45 0.1 252 / 0.07),
-    0 40px 72px -20px oklch(0.42 0.09 252 / 0.12);
-  --shadow-float:
-    0 2px 4px oklch(0.45 0.1 252 / 0.04), 0 12px 28px -6px oklch(0.45 0.1 252 / 0.08),
-    0 56px 100px -28px oklch(0.4 0.09 252 / 0.16);
+  /* Soft, blue-tinted, layered shadows (replace hairline borders between sections).
+     Indirected through --elevation-* (defined in :root/.dark below) rather than
+     inlined here: @theme inline is not re-evaluated per .dark, so a literal value
+     here can never change with the theme — it has to be one more var() hop, same
+     as every color above it. */
+  --shadow-xs: var(--elevation-xs);
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
+  --shadow-xl: var(--elevation-xl);
+  --shadow-float: var(--elevation-float);
 }
 
 :root {
   color-scheme: light;
+
+  /* Moved verbatim from the old inline --shadow-* values in @theme inline —
+     see the comment there for why this indirection exists. */
+  --elevation-xs: 0 1px 2px oklch(0.45 0.1 252 / 0.05);
+  --elevation-sm: 0 1px 2px oklch(0.45 0.1 252 / 0.04), 0 2px 6px -1px oklch(0.45 0.1 252 / 0.06);
+  --elevation-md:
+    0 1px 2px oklch(0.45 0.1 252 / 0.04), 0 4px 10px -2px oklch(0.45 0.1 252 / 0.06),
+    0 10px 24px -6px oklch(0.45 0.1 252 / 0.06);
+  --elevation-lg:
+    0 1px 2px oklch(0.45 0.1 252 / 0.04), 0 8px 16px -4px oklch(0.45 0.1 252 / 0.06),
+    0 24px 48px -12px oklch(0.42 0.09 252 / 0.1);
+  --elevation-xl:
+    0 2px 4px oklch(0.45 0.1 252 / 0.04), 0 12px 24px -6px oklch(0.45 0.1 252 / 0.07),
+    0 40px 72px -20px oklch(0.42 0.09 252 / 0.12);
+  --elevation-float:
+    0 2px 4px oklch(0.45 0.1 252 / 0.04), 0 12px 28px -6px oklch(0.45 0.1 252 / 0.08),
+    0 56px 100px -28px oklch(0.4 0.09 252 / 0.16);
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.205 0.012 250);
@@ -277,6 +290,109 @@
   --tertiary-foreground: var(--primary-foreground);
 }
 
+/* Dark mode is scoped to app/(app) only (see components/theme-provider.tsx),
+   which forces every other route group to `light` regardless of OS preference
+   or a stored choice — so `.dark` never applies on a marketing/legal/support
+   page and none of the overrides below can leak there.
+
+   Because of that guarantee, this block freely overrides tokens that are also
+   used by marketing surfaces (--brand-50, --brand-300) — those call sites only
+   ever see this value while sitting inside a route that has `.dark` applied,
+   which by construction is never a marketing page. It is not a general reskin
+   of the brand ramp: --brand-400..900 are untouched, since section washes,
+   hero gradients and glossy CTAs are marketing-only and stay exactly as they
+   render today.
+
+   Deep blue-slate, not neutral charcoal: surfaces carry the same ~258 hue as
+   the light theme's brand blue, so dark mode reads as the same product with
+   the lights off rather than a generic dark-UI reskin. Elevation is carried by
+   lightness (bg .17 -> card .21 -> popover .24), not by shadow — shadows barely
+   read on a dark ground, which is also why --elevation-* gets an entirely
+   different treatment below (a rim highlight, not a soft drop).
+
+   Every ratio in this block was measured (oklch -> sRGB -> WCAG relative
+   luminance), not eyeballed — re-measure before changing any value here. */
+.dark {
+  color-scheme: dark;
+
+  --background: oklch(0.17 0.018 258);
+  --foreground: oklch(0.97 0.005 258); /* 17.53:1 on background */
+  --card: oklch(0.21 0.02 258); /* fg 16.25:1 */
+  --card-foreground: oklch(0.97 0.005 258);
+  --popover: oklch(0.24 0.022 258); /* fg 15.08:1 */
+  --popover-foreground: oklch(0.97 0.005 258);
+
+  /* --primary becomes --brand-400 (a LIGHT blue) rather than a darker brand
+     step: on a dark ground a mid/deep blue fill reads as inert, and --brand-400
+     is legible as text at 8.46:1 without needing a fill at all — most uses in
+     (app) are text/icon color, not a button (the button fills are `glossy` and
+     unaffected by this token). --primary-foreground therefore INVERTS to a
+     dark label, since it now sits on a light fill. */
+  --primary: oklch(0.743 0.133 246);
+  --primary-foreground: oklch(0.17 0.03 258); /* 8.46:1 on primary */
+
+  --secondary: oklch(0.26 0.022 258);
+  /* Was oklch(0.417 ...) — a dark blue meant to sit on a pale chip. Inverted:
+     the chip is now dark, so the label has to be light. */
+  --secondary-foreground: oklch(0.97 0.005 258);
+  --muted: oklch(0.25 0.02 258);
+  --muted-foreground: oklch(0.72 0.022 258); /* 7.15:1 on card */
+  --muted-foreground-subtle: oklch(0.62 0.022 258); /* 4.87:1 on card */
+  --accent: oklch(0.3 0.035 255);
+  /* Was oklch(0.493 ...), same inversion as --secondary-foreground. */
+  --accent-foreground: oklch(0.97 0.005 258);
+  /* Lifted from the light value (oklch 0.577, 4.31:1 on this ramp's --card) to
+     clear AA; still reads as the same red, just not washed out to get there. */
+  --destructive: oklch(0.68 0.19 27.325); /* 4.75:1 on card */
+  --border: oklch(0.3 0.02 258); /* decorative hairline, not measured to 3:1 */
+  /* Controls need the 3:1 WCAG 1.4.11 boundary the hairline doesn't; see the
+     --border/--input split rationale in the light :root block above. */
+  --input: oklch(0.504 0.022 258); /* 3.00:1 on card */
+  --ring: oklch(0.656 0.166 249); /* 6.07:1 on background */
+
+  /* --brand-50/--brand-300 only, and only because they're reachable from
+     app/(app) (the sidebar canvas tint and the dot-pattern backdrop). See the
+     block comment above .dark for why overriding a "shared" brand token here
+     is safe. --brand-400 and up are deliberately absent. */
+  --brand-50: oklch(0.23 0.024 258);
+  --brand-300: oklch(0.32 0.05 255);
+
+  /* Status palette: good/warning already clear AA against the new --card
+     (6.17:1 / 11.29:1) and are unchanged. Critical is lifted slightly — the
+     light value was 4.31:1 here, just under AA. The chart tokens and
+     status-serious are unreachable from app/(app) today and are left as-is. */
+  --status-critical: oklch(0.68 0.19 27.3); /* 4.75:1 on card */
+
+  --sidebar: oklch(0.185 0.019 258); /* fg 17.09:1 */
+  --sidebar-foreground: oklch(0.97 0.005 258);
+  /* Was --brand-100/--brand-800 — a near-white chip with dark text for the
+     active/hover nav item. Inverted to a raised dark chip with a light label. */
+  --sidebar-accent: oklch(0.28 0.03 256);
+  --sidebar-accent-foreground: oklch(0.97 0.005 258);
+
+  /* Elevation on dark can't be a soft blue-tinted drop shadow — at these
+     lightnesses that shadow is invisible, and it's what every card in the app
+     depends on for definition against --background. A 1px top rim (light
+     catching the top edge) plus a genuinely dark drop is what actually reads
+     as "raised" on a dark ground. */
+  --elevation-xs: inset 0 1px 0 oklch(1 0 0 / 0.03), 0 1px 2px oklch(0 0 0 / 0.3);
+  --elevation-sm:
+    inset 0 1px 0 oklch(1 0 0 / 0.04), 0 1px 2px oklch(0 0 0 / 0.3),
+    0 2px 6px -1px oklch(0 0 0 / 0.3);
+  --elevation-md:
+    inset 0 1px 0 oklch(1 0 0 / 0.04), 0 1px 2px oklch(0 0 0 / 0.3),
+    0 4px 10px -2px oklch(0 0 0 / 0.35), 0 10px 24px -6px oklch(0 0 0 / 0.4);
+  --elevation-lg:
+    inset 0 1px 0 oklch(1 0 0 / 0.05), 0 1px 2px oklch(0 0 0 / 0.3),
+    0 8px 16px -4px oklch(0 0 0 / 0.4), 0 24px 48px -12px oklch(0 0 0 / 0.5);
+  --elevation-xl:
+    inset 0 1px 0 oklch(1 0 0 / 0.05), 0 2px 4px oklch(0 0 0 / 0.3),
+    0 12px 24px -6px oklch(0 0 0 / 0.42), 0 40px 72px -20px oklch(0 0 0 / 0.55);
+  --elevation-float:
+    inset 0 1px 0 oklch(1 0 0 / 0.06), 0 2px 4px oklch(0 0 0 / 0.3),
+    0 12px 28px -6px oklch(0 0 0 / 0.45), 0 56px 100px -28px oklch(0 0 0 / 0.6);
+}
+
 /* The standard raised surface: white fill, a visible grey hairline, and a soft
    shadow. Border and shadow together — a shadow alone reads as mushy on white. */
 @utility card-surface {
@@ -321,7 +437,12 @@
 /* A 1px brushed-silver edge. Drawn as a gradient in a masked ::before rather
    than a border, because a border can only take a flat colour — the mask punches
    out the inside so only the 1px ring paints. The light runs top-left to
-   bottom-right, so highlights and shadows land where the page's light does. */
+   bottom-right, so highlights and shadows land where the page's light does.
+
+   The light-mode gradient is a near-white sweep (oklch 0.82-1.0) — on a dark
+   ground that renders as a glaring bright wire rather than a brushed edge, so
+   .dark gets its own sweep, a full ramp darker but keeping the same highlight
+   shape and light direction. */
 @utility silver-edge {
   position: relative;
 
@@ -342,6 +463,18 @@
       oklch(0.95 0.004 250) 82%,
       oklch(1 0 0) 100%
     );
+
+    @variant dark {
+      background: linear-gradient(
+        145deg,
+        oklch(0.42 0.02 258) 0%,
+        oklch(0.28 0.018 258) 22%,
+        oklch(0.46 0.022 258) 42%,
+        oklch(0.24 0.018 258) 62%,
+        oklch(0.36 0.02 258) 82%,
+        oklch(0.42 0.02 258) 100%
+      );
+    }
     /* Longhands, not the `mask` shorthand: the shorthand resets mask-composite
        to `add`, and the minifier then drops the exclude as dead — which paints
        the gradient over the whole card instead of just the 1px ring. */

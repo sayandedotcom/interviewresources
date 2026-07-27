@@ -5,6 +5,7 @@ import { siteConfig } from "@/site";
 
 import { Analytics } from "@/components/analytics";
 import { CookieConsentBanner } from "@/components/cookie-consent";
+import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { founderJsonLd, organizationJsonLd, webApplicationJsonLd } from "@/lib/seo/json-ld";
@@ -74,7 +75,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning is required here, not decorative: next-themes'
+    // inline script sets the `dark` class (and inline color-scheme) on this
+    // element before React hydrates, so the server-rendered class list and the
+    // first client render legitimately disagree for one frame.
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-background text-foreground flex min-h-full flex-col`}>
         <script
@@ -86,17 +91,21 @@ export default function RootLayout({
             __html: JSON.stringify([webApplicationJsonLd, organizationJsonLd, founderJsonLd]),
           }}
         />
-        {/* Site-wide so tooltip timing is one decision rather than a per-call-site
-            one. Without it, components that wrapped their own provider opened
-            instantly while everything else fell through to Base UI's 600ms
-            default — the gather form had both behaviours at once. */}
-        <TooltipProvider>
-          <ToastProvider>
-            {children}
-            <Analytics />
-            <CookieConsentBanner />
-          </ToastProvider>
-        </TooltipProvider>
+        {/* Single provider for the whole site — see components/theme-provider.tsx
+            for why it must not be nested per route group. */}
+        <ThemeProvider>
+          {/* Site-wide so tooltip timing is one decision rather than a per-call-site
+              one. Without it, components that wrapped their own provider opened
+              instantly while everything else fell through to Base UI's 600ms
+              default — the gather form had both behaviours at once. */}
+          <TooltipProvider>
+            <ToastProvider>
+              {children}
+              <Analytics />
+              <CookieConsentBanner />
+            </ToastProvider>
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

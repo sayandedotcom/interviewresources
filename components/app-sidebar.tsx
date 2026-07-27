@@ -9,6 +9,7 @@ import { siteConfig } from "@/site";
 import {
   Gift,
   Loader2Icon,
+  MailIcon,
   MessageSquareIcon,
   MoreHorizontalIcon,
   PlusIcon,
@@ -113,6 +114,7 @@ export function AppSidebar({
   const [fetched, setFetched] = React.useState<ResearchSummary[] | null>(initialSessions);
   const [limit, setLimit] = React.useState<number | null>(initialLimit);
   const [pendingDelete, setPendingDelete] = React.useState<string | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = React.useState(false);
 
   // The server already knows who this is; `useSession` only overrides it once it
   // has an answer, which is what lets a sign-out empty the sidebar.
@@ -250,13 +252,8 @@ export function AppSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip="Share your thoughts or report an issue"
-                render={
-                  <a
-                    href={`mailto:${contactConfig.feedback}?subject=${encodeURIComponent("Feedback: [ Write your subject here ]")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                }>
+                className="cursor-pointer"
+                onClick={() => setFeedbackOpen(true)}>
                 <MessageSquareIcon className="size-4" />
                 <span className="font-display font-medium">Feedback</span>
               </SidebarMenuButton>
@@ -373,6 +370,33 @@ export function AppSidebar({
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Help us make this better</AlertDialogTitle>
+            <AlertDialogDescription>
+              A bug, a rough edge, a feature you wish existed — it goes straight to the people
+              building this, and every note gets read. Opens your mail app with the address already
+              filled in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setFeedbackOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => setFeedbackOpen(false)}
+              render={
+                <a
+                  href={`mailto:${contactConfig.feedback}?subject=${encodeURIComponent("Feedback: [ Write your subject here ]")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                />
+              }>
+              <MailIcon className="size-4" />
+              Send Mail
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

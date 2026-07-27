@@ -153,7 +153,7 @@ export function ResearchTerminal({
         </ul>
         {!failed && (
           <span
-            className="mt-1 ml-2 inline-block h-3.5 w-2 animate-pulse bg-neutral-400"
+            className="bg-muted-foreground mt-1 ml-2 inline-block h-3.5 w-2 animate-pulse"
             aria-hidden="true"
           />
         )}

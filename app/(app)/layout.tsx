@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import { redirect } from "next/navigation";
 
 import { EXPIRED_PARAM } from "@/proxy";
@@ -14,6 +15,16 @@ import { getCurrentUser } from "@/lib/session";
 // Applied at the group layout so every route in this segment — including ones
 // added later — inherits it, rather than relying on each page remembering.
 export const metadata = noIndexMetadata;
+
+// This is the only route group where the OS theme can actually change what
+// renders (see components/theme-provider.tsx), so it's the only one that
+// needs a non-default browser-chrome color for dark.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1017" },
+  ],
+};
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -34,7 +45,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         initialLimit={MAX_SESSIONS_PER_USER}
       />
       <SidebarInset className="bg-brand-50/40">
-        <DotBackground className="flex flex-1 flex-col p-6 pt-0">
+        <DotBackground className="flex flex-1 flex-col p-6">
           <div className="bg-card flex flex-1 flex-col rounded-2xl shadow-[var(--shadow-sm)]">
             {children}
           </div>
