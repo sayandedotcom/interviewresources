@@ -2,30 +2,37 @@
 
 import { siteConfig } from "@/site";
 import {
+  BookOpen,
   Brain,
   Building2,
   Check,
   CircleDashed,
+  ClipboardList,
   Compass,
   FileSearch,
   Handshake,
+  HelpCircle,
   Home,
   Info,
   LayoutList,
+  Lightbulb,
   Link2,
   type LucideIcon,
   MessageCircle,
   MessagesSquare,
+  Mic,
   Plus,
   Puzzle,
   Swords,
   Target,
   Trash2,
+  UserCheck,
   Users,
   Wrench,
   Zap,
 } from "lucide-react";
 
+import { SAMPLE_REPORT, SAMPLE_RESEARCH, type SampleQuestion } from "@/components/sample-report";
 import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
 
 /* These panels used to stagger their contents in on mount. StickyScroll keys the
@@ -33,6 +40,12 @@ import { StickyScroll } from "@/components/ui/sticky-scroll-reveal";
    replayed the whole cascade — up to ~0.9s in ResearchPanel, on top of the
    crossfade. The crossfade already covers the swap; the stagger only ever
    delayed content the reader had already scrolled to. */
+
+/* Every panel below is dressed from one real run — the Google · Software
+   Engineer, Full Stack report captured in `sample-report.ts`. The form inputs,
+   the progress log, the report body and the prep list all describe that same
+   run, so a reader scrolling the four stages watches one story rather than four
+   unrelated mockups. */
 
 function FormCard({
   icon: Icon,
@@ -118,20 +131,24 @@ function Field({
 }
 
 function TargetPanel() {
+  /* Only the rounds and sections this run actually asked for are lit: two
+     rounds (DSA, system design) and every section but the recruiter pitch,
+     which is why the report carries no "How to impress the recruiter". */
   const rounds: { icon: LucideIcon; label: string; on: boolean }[] = [
     { icon: Puzzle, label: "Algorithmic Coding", on: true },
     { icon: Building2, label: "System Design", on: true },
     { icon: Brain, label: "Domain Quiz", on: false },
     { icon: Home, label: "Take-home Project", on: false },
     { icon: Users, label: "Pair Programming", on: false },
-    { icon: MessageCircle, label: "Behavioral", on: true },
+    { icon: MessageCircle, label: "Behavioral", on: false },
     { icon: Handshake, label: "HR / Culture", on: false },
   ];
   const sections: { icon: LucideIcon; label: string; on: boolean }[] = [
     { icon: Building2, label: "The company", on: true },
     { icon: Compass, label: "The loop", on: true },
     { icon: Wrench, label: "Skills required", on: true },
-    { icon: MessagesSquare, label: "Interview experiences", on: false },
+    { icon: MessagesSquare, label: "Interview experiences", on: true },
+    { icon: UserCheck, label: "Impress the recruiter", on: false },
   ];
   const efforts = [
     {
@@ -151,18 +168,18 @@ function TargetPanel() {
         title="Target"
         sub="The company and role you are interviewing for, helps find relevant questions.">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Company" hint="*" value="Stripe" caret />
-          <Field label="Company URL" hint="· preferred" info value="https://stripe.com" />
-          <Field label="Role / level" hint="· optional" value="Senior Backend Engineer" />
-          <Field label="Years of Experience" hint="· optional" value="3-5" />
-          <Field label="Team / org" hint="· optional" info value="Payments Infra" />
-          <Field label="Location" hint="· optional" value="Bengaluru, India" />
+          <Field label="Company" hint="*" value={SAMPLE_RESEARCH.companyName} caret />
+          <Field label="Company URL" hint="· preferred" info placeholder="https://google.com" />
+          <Field label="Role / level" hint="· optional" value={SAMPLE_RESEARCH.roleContext} />
+          <Field label="Years of Experience" hint="· optional" placeholder="e.g. 2-4" />
+          <Field label="Team / org" hint="· optional" info value="Core" />
+          <Field label="Location" hint="· optional" value={SAMPLE_RESEARCH.location} />
           <Field
             label="Tech Stack"
             hint="· optional"
             info
             wide
-            value="React, Node.js, PostgreSQL"
+            value="Java, Python, Go, TypeScript, Angular"
           />
           <Field
             label="Job Description"
@@ -170,7 +187,7 @@ function TargetPanel() {
             info
             area
             wide
-            value="Own the payments ledger service. Design idempotent APIs and keep them reliable past 10k req/s."
+            value="Full stack development across back-end (Java, Python, Golang, C++) and front-end (JavaScript, TypeScript, Angular). The Core team builds the technical foundation behind Google's flagship products."
           />
           <Field
             label="Recruiter notes"
@@ -178,7 +195,7 @@ function TargetPanel() {
             info
             area
             wide
-            value="Phone screen done. Next: two coding rounds, a system design round, and a team-fit chat."
+            value="Recruiter screen done. Next: coding rounds on DSA, then a system design round."
           />
           <div className="grid gap-1.5 sm:col-span-2">
             <div className="flex items-center gap-1">
@@ -189,10 +206,10 @@ function TargetPanel() {
             </div>
             <div className="flex items-center gap-2">
               <div className="border-input bg-muted flex h-8 flex-1 items-center rounded-lg border px-2.5">
-                <span className="font-display text-sm">Jordan · Payments Eng Manager</span>
+                <span className="font-display text-sm">Komal Tanwani · Recruiter</span>
               </div>
               <div className="border-input bg-muted flex h-8 flex-1 items-center rounded-lg border px-2.5">
-                <span className="font-display text-sm">linkedin.com/in/jordan-eng</span>
+                <span className="font-display text-sm">linkedin.com/in/komaltanwani</span>
               </div>
               <Trash2 className="text-muted-foreground/50 h-4 w-4 shrink-0" aria-hidden="true" />
             </div>
@@ -254,17 +271,19 @@ function TargetPanel() {
 }
 
 function ResearchPanel() {
+  /* The counts are this run's real ones: 39 resources retained, 8 of them read
+     in full and the rest kept as search previews, 20 questions synthesized. */
   const lines: { text: string; note: string; status: "done" | "active" | "pending" }[] = [
-    { text: "Resolving company domain", note: "stripe.com", status: "done" },
-    { text: "Planning 7 queries · system design, behavioral", note: "plan ok", status: "done" },
-    { text: "Scanning stripe.com/blog", note: "3 posts", status: "done" },
-    { text: "Reading interview reviews", note: "+12 new", status: "done" },
+    { text: "Resolving company", note: "Google", status: "done" },
+    { text: "Planning 11 queries · DSA, system design", note: "plan ok", status: "done" },
+    { text: "Reading LeetCode interview experiences", note: "+18 found", status: "done" },
+    { text: "Scanning r/leetcode threads", note: "3 posts", status: "done" },
     { text: "Parsing job description", note: "ok", status: "done" },
-    { text: "Watching public talks", note: "4 found", status: "done" },
-    { text: "Extracting 5 full pages", note: "done", status: "done" },
-    { text: "Direct evidence rich · skipping broaden", note: "", status: "active" },
-    { text: "Compressing 12 sources", note: "", status: "pending" },
-    { text: "Synthesizing report", note: "24 questions", status: "pending" },
+    { text: "Reading Google engineering culture write-ups", note: "2 sources", status: "done" },
+    { text: "Extracting 8 full pages", note: "done", status: "done" },
+    { text: "Direct evidence thin · broadening to L4/L5 India", note: "", status: "active" },
+    { text: "Compressing 39 sources", note: "", status: "pending" },
+    { text: "Synthesizing report", note: "20 questions", status: "pending" },
   ];
   const done = lines.filter((l) => l.status === "done").length;
   const pct = Math.round((done / lines.length) * 100);
@@ -278,7 +297,7 @@ function ResearchPanel() {
             <span className="bg-tertiary relative inline-flex h-2 w-2 rounded-full" />
           </span>
           <span className="font-display text-sm font-semibold">Researching…</span>
-          <span className="text-muted-foreground ml-auto text-xs">02:47 elapsed</span>
+          <span className="text-muted-foreground ml-auto text-xs">02:09 elapsed</span>
         </div>
         <div className="mt-3 flex items-center gap-3">
           <div className="bg-brand-100 h-1.5 flex-1 overflow-hidden rounded-full">
@@ -328,74 +347,132 @@ function ResearchPanel() {
 
         <div className="bg-tertiary/10 mt-4 flex items-center justify-between gap-3 rounded-lg px-3 py-2.5">
           <span className="text-tertiary font-display text-sm font-medium">
-            stripe.com/careers · Senior Engineer
+            leetcode.com · Google L5 Bangalore
           </span>
-          <span className="text-tertiary shrink-0 text-xs font-semibold">MATCH 92%</span>
+          <span className="text-tertiary shrink-0 text-xs font-semibold">MATCH 94%</span>
         </div>
       </div>
 
       <div className="border-border/60 text-muted-foreground flex items-center justify-between border-t px-5 py-3 text-xs">
         <span>metered · charged what the run spends</span>
         <span>
-          cost so far <span className="text-tertiary font-medium">$0.31</span> · cap $1.00
+          cost so far{" "}
+          <span className="text-tertiary font-medium">${SAMPLE_RESEARCH.costUsd.toFixed(2)}</span> ·
+          cap $1.00
         </span>
       </div>
     </div>
   );
 }
 
-function SampleQuestion({
-  confidence,
-  question,
-  sources,
-  note,
-}: {
-  confidence: "High" | "Medium";
-  question: string;
-  sources: string[];
-  note: string;
-}) {
-  const tone =
-    confidence === "High"
-      ? "text-status-good border-status-good/30 bg-status-good/10"
-      : "text-status-warning border-status-warning/30 bg-status-warning/10";
+/* ── Report panel ────────────────────────────────────────────────────────
+   A scaled-down restatement of `features/research/report-view.tsx`: the same
+   sections, in the same order, with the same visual language. Two knowing
+   departures, both presentational — the report's own controls (copy, export,
+   "gather more") are dropped since nothing here is interactive, and confidence
+   is rendered at the top of the scale rather than this run's medium/low. */
+
+function ReportSectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-muted-foreground text-[10px] font-semibold tracking-widest uppercase">
+      {children}
+    </p>
+  );
+}
+
+function ReportHeading({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <h3 className="font-display text-muted-foreground flex items-center gap-1.5 text-sm font-semibold tracking-tight">
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      {children}
+    </h3>
+  );
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "source";
+  }
+}
+
+const BASIS_LABEL: Record<SampleQuestion["basis"], string> = {
+  reconstructed: "Reconstructed",
+  baseline: "Role baseline",
+};
+
+function QuestionCard({ q }: { q: SampleQuestion }) {
+  // `basis` and confidence moved together on this run — every reconstructed
+  // question scored above every baseline one — so one drives the other here.
+  const strong = q.basis === "reconstructed";
 
   return (
-    <div className="border-border bg-background rounded-lg border p-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-display text-sm leading-snug font-semibold">{question}</p>
-        <span
-          className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-semibold tracking-wide uppercase ${tone}`}>
-          {confidence}
-        </span>
-      </div>
-      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
-        {sources.map((s) => (
-          <span key={s} className="text-tertiary flex items-center gap-1.5 text-[11px]">
-            <Link2 className="h-3 w-3 shrink-0" />
-            <span className="hover:underline">{s}</span>
+    <div className="border-border bg-background rounded-lg border p-3">
+      <div className="flex items-start justify-between gap-2.5">
+        <p className="font-display text-[13px] leading-snug font-medium">{q.question}</p>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="text-muted-foreground border-border rounded-full border px-1.5 py-0.5 text-[9px]">
+            {BASIS_LABEL[q.basis]}
           </span>
-        ))}
+          <span
+            className={`text-[11px] leading-none ${strong ? "text-primary" : "text-muted-foreground"}`}
+            title={`Confidence: ${strong ? "High" : "Medium"}`}>
+            {strong ? "●●●" : "●●○"}
+          </span>
+        </div>
       </div>
-      <p className="text-muted-foreground font-display mt-2 text-xs">
-        <span className="text-foreground font-medium">Prep:</span> {note}
+      <p className="text-muted-foreground font-display mt-1.5 text-[11px] leading-relaxed">
+        {q.rationale}
       </p>
+      <p className="text-muted-foreground font-display mt-1.5 text-[11px] leading-relaxed">
+        <span className="text-foreground font-medium">Prep note:</span> {q.prepNote}
+      </p>
+      {q.evidenceUrls.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {q.evidenceUrls.map((url) => (
+            <span
+              key={url}
+              className="text-tertiary border-border flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px]">
+              <Link2 className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+              {hostOf(url)}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
+const ROUNDS = [
+  { cat: "dsa", code: "DSA", label: "Algorithmic Coding", icon: Puzzle },
+  { cat: "system_design", code: "SYS", label: "System Design", icon: Building2 },
+] as const;
+
+const RESOURCE_KIND_LABEL: Record<string, string> = {
+  interview_experience: "Interview experiences",
+  company_engineering: "Company engineering",
+  company_docs: "Company docs",
+  discussion: "Discussions",
+  video: "Videos",
+  other: "Other resources",
+};
+
+const ACCESS_LABEL: Record<string, string> = {
+  full_text: "Read in full",
+  search_preview: "Search preview",
+};
+
 /**
- * `revealRows` staggers the three category groups in, and is opt-in for a
- * reason: this panel is also PANELS[2] in the sticky-scroll stepper, where it is
- * keyed on the active stage and remounts on every stage change. Defaulting it on
- * would re-deal the cards each time the reader moved between stages — the exact
- * bug the Stagger removal above fixed. Only the hero, which mounts once, passes
- * it. Kept in CSS rather than Motion so a remount stays cheap regardless.
+ * No entrance stagger here: this panel is PANELS[2] in the sticky-scroll
+ * stepper, keyed on the active stage, so it remounts on every stage change and
+ * any mount animation would re-deal the sections each time the reader moved
+ * between stages — the exact bug the Stagger removal above fixed. The hero's
+ * card, which mounts once and can afford a cascade, is a separate component
+ * (`components/sections/hero-report-panel.tsx`).
  */
-export function SampleReportPanel({ revealRows = false }: { revealRows?: boolean }) {
-  const group = revealRows
-    ? "animate-in fade-in slide-in-from-bottom-1 fill-mode-both ease-out-strong duration-400 motion-reduce:slide-in-from-bottom-0"
-    : "";
+function SampleReportPanel() {
+  const kinds = [...new Set(SAMPLE_REPORT.researchResources.map((r) => r.kind))];
 
   return (
     <div className="flex h-full flex-col">
@@ -405,75 +482,166 @@ export function SampleReportPanel({ revealRows = false }: { revealRows?: boolean
           <span className="size-2.5 rounded-full bg-neutral-300" />
           <span className="size-2.5 rounded-full bg-neutral-300" />
         </div>
-        <span className="font-display text-muted-foreground ml-1 text-xs font-medium">
-          Stripe · Senior Engineer report
+        <span className="font-display text-muted-foreground ml-1 truncate text-xs font-medium">
+          {SAMPLE_RESEARCH.companyName} · {SAMPLE_RESEARCH.roleContext} report
         </span>
-        <span className="text-tertiary border-tertiary/30 bg-tertiary/10 ml-auto rounded-full border px-2 py-0.5 text-[9px] tracking-wide uppercase">
-          24 questions
+        {/* One text node, not `{n} questions` — React splits that with a comment
+            node, and `tracking-wide` then swallows the space between them. */}
+        <span className="text-tertiary border-tertiary/30 bg-tertiary/10 ml-auto shrink-0 rounded-full border px-2 py-0.5 text-[9px] tracking-wide uppercase">
+          {`${SAMPLE_REPORT.questions.length} questions`}
         </span>
       </div>
       <div className="border-border text-muted-foreground flex items-center gap-3 border-b px-4 py-1.5 text-[10px]">
-        <span>12 sources</span>
+        <span>{SAMPLE_REPORT.researchResources.length} sources</span>
         <span>·</span>
         <span>
           evidence <span className="text-status-good">rich</span>
         </span>
         <span>·</span>
-        <span>3 rounds</span>
+        <span>{ROUNDS.length} rounds</span>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        <div className={`${group} delay-500`}>
-          <p className="text-muted-foreground mb-2 text-[10px] tracking-widest uppercase">
-            System Design · 3 questions
+      <div className="flex-1 space-y-6 overflow-y-auto p-4">
+        {/* The company */}
+        <div>
+          <ReportHeading icon={Building2}>The company</ReportHeading>
+          <p className="font-display text-foreground mt-2 text-[12px] leading-relaxed">
+            {SAMPLE_REPORT.companySnapshot}
           </p>
-          <div className="space-y-2.5">
-            <SampleQuestion
-              confidence="High"
-              question="Design a rate limiter for the payments API. How do you handle idempotency keys?"
-              sources={["Stripe Engineering blog", "Interview review · levels.fyi"]}
-              note="Cover token storage, retry windows, and duplicate requests mid-flight."
-            />
-            <SampleQuestion
-              confidence="High"
-              question="How would you design a globally consistent ledger for money movement?"
-              sources={["Increment · distributed systems", "Public tech talk"]}
-              note="Discuss double-entry accounting, idempotency, and eventual consistency trade-offs."
-            />
+          <div className="bg-primary/10 border-primary/40 mt-2.5 rounded-md border-l-2 px-3 py-2">
+            <ReportSectionLabel>
+              <Lightbulb className="mr-1 inline h-3 w-3" aria-hidden="true" />
+              In plain terms
+            </ReportSectionLabel>
+            <p className="font-display text-foreground mt-1 text-[12px] leading-relaxed">
+              {SAMPLE_REPORT.companyExplainer}
+            </p>
           </div>
         </div>
 
-        <div className={`${group} delay-[560ms]`}>
-          <p className="text-muted-foreground mb-2 text-[10px] tracking-widest uppercase">
-            Algorithmic Coding · 2 questions
+        {/* The loop */}
+        <div>
+          <ReportSectionLabel>
+            <Compass className="mr-1 inline h-3 w-3" aria-hidden="true" />
+            The loop
+          </ReportSectionLabel>
+          <p className="font-display border-primary text-foreground mt-1.5 border-l-2 pl-3 text-[12px] leading-relaxed">
+            {SAMPLE_REPORT.likelyLoopStructure}
           </p>
-          <div className="space-y-2.5">
-            <SampleQuestion
-              confidence="High"
-              question="Given a stream of transactions, detect duplicates within a sliding time window."
-              sources={["Interview review · Glassdoor", "Interview review · Blind"]}
-              note="Hash map plus deque; talk through the memory trade-off at Stripe's volume."
-            />
+        </div>
+
+        {/* The interviewer */}
+        <div>
+          <div className="border-border bg-card rounded-lg border p-3">
+            <ReportSectionLabel>
+              <Mic className="mr-1 inline h-3 w-3" aria-hidden="true" />
+              The interviewer
+            </ReportSectionLabel>
+            <p className="font-display text-foreground mt-1 text-[12px] leading-relaxed">
+              {SAMPLE_REPORT.interviewerSummary}
+            </p>
           </div>
         </div>
 
-        <div className={`${group} delay-[620ms]`}>
-          <p className="text-muted-foreground mb-2 text-[10px] tracking-widest uppercase">
-            Behavioral · 2 questions
+        {/* Skills required */}
+        <div>
+          <ReportHeading icon={Wrench}>Skills required</ReportHeading>
+          <p className="text-muted-foreground font-display mt-1 text-[11px] leading-relaxed">
+            What the role actually demands — including what the job post leaves unsaid.
           </p>
-          <div className="space-y-2.5">
-            <SampleQuestion
-              confidence="Medium"
-              question="Tell me about a time you shipped under an ambiguous deadline."
-              sources={["Company values page"]}
-              note="Anchor to Stripe's 'move with urgency' value; quantify the outcome."
-            />
-            <SampleQuestion
-              confidence="Medium"
-              question="Describe a disagreement with a teammate about an API design. How did it resolve?"
-              sources={["Interview review · Glassdoor"]}
-              note="Show you argued from user impact, not preference, and committed after the call."
-            />
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {SAMPLE_REPORT.skillsRequired.map((s) => (
+              <span
+                key={s.skill}
+                title={s.why}
+                className="border-border font-display rounded-full border px-2 py-0.5 text-[11px]">
+                {s.skill}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Pinpointed questions */}
+        <div>
+          <ReportHeading icon={HelpCircle}>Pinpointed questions</ReportHeading>
+          <div className="mt-3 space-y-5">
+            {ROUNDS.map(({ cat, code, label, icon: Icon }) => {
+              const questions = SAMPLE_REPORT.questions.filter((q) => q.category === cat);
+              return (
+                <div key={cat}>
+                  <div className="flex items-baseline gap-2">
+                    <Icon className="text-primary h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span className="text-primary text-[9px] font-semibold tracking-widest">
+                      {code}
+                    </span>
+                    <span className="text-muted-foreground font-display text-[11px] font-semibold tracking-wide uppercase">
+                      {label}
+                    </span>
+                    <span className="text-muted-foreground ml-auto text-[10px]">
+                      {questions.length} questions
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-2.5">
+                    {questions.map((q) => (
+                      <QuestionCard key={q.question} q={q} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Prep plan */}
+        <div>
+          <ReportHeading icon={ClipboardList}>Prep plan</ReportHeading>
+          <ol className="mt-2 space-y-1.5">
+            {SAMPLE_REPORT.prepPlan.map((step, i) => (
+              <li key={step} className="font-display text-foreground flex gap-2.5 text-[12px]">
+                <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {/* Research library */}
+        <div>
+          <ReportHeading icon={BookOpen}>Research library</ReportHeading>
+          <p className="text-muted-foreground font-display mt-1 text-[11px] leading-relaxed">
+            Every link the run kept, ranked by how well it matches the target.
+          </p>
+          <div className="mt-3 space-y-4">
+            {kinds.map((kind) => {
+              const items = SAMPLE_REPORT.researchResources.filter((r) => r.kind === kind);
+              return (
+                <div key={kind}>
+                  <p className="text-muted-foreground font-display text-[11px] font-semibold tracking-wide uppercase">
+                    {RESOURCE_KIND_LABEL[kind]} ({items.length})
+                  </p>
+                  <ul className="mt-1.5 space-y-1.5">
+                    {items.map((r) => (
+                      <li
+                        key={r.url}
+                        className="border-border bg-background rounded-md border px-2.5 py-1.5">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <Link2 className="text-primary h-3 w-3 shrink-0" aria-hidden="true" />
+                          <span className="font-display text-foreground min-w-0 truncate text-[11px] font-medium">
+                            {r.title}
+                          </span>
+                        </div>
+                        <div className="text-muted-foreground mt-0.5 flex items-center justify-between gap-2 text-[9px]">
+                          <span className="truncate">{hostOf(r.url)}</span>
+                          <span className="text-primary shrink-0">{ACCESS_LABEL[r.access]}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -482,13 +650,19 @@ export function SampleReportPanel({ revealRows = false }: { revealRows?: boolean
 }
 
 function PrepPanel() {
+  /* Drawn from the report's own questions, strongest evidence first, so the
+     checklist is the same 20 questions the Report stage just showed. */
   const items = [
-    { q: "Idempotency in the payments API", tag: "High", done: true },
-    { q: "Design Stripe's webhook delivery system", tag: "High", done: true },
-    { q: "Rate limiting at scale", tag: "High", done: false },
-    { q: "Duplicate detection in a transaction stream", tag: "High", done: false },
-    { q: "Behavioral: a time you disagreed with a lead", tag: "Medium", done: false },
-    { q: "Why Stripe? Product and culture fit", tag: "Medium", done: false },
+    { q: "Longest cycle in an undirected graph", tag: "High", done: true },
+    { q: "3D router grid · connected components with DSU", tag: "High", done: true },
+    { q: "Expression calculator with custom precedence", tag: "High", done: false },
+    { q: "Build targets · cycle detection and topological sort", tag: "High", done: false },
+    { q: "Priority queue manager with O(log N) updates", tag: "High", done: false },
+    { q: "Design a distributed in-memory cache", tag: "High", done: false },
+    { q: "Design a personalized feed · push vs pull fan-out", tag: "High", done: false },
+    { q: "Design an async job execution queue", tag: "High", done: false },
+    { q: "Design a logs and metrics ingestion pipeline", tag: "Medium", done: false },
+    { q: "Design routing and traffic estimation like Maps", tag: "Medium", done: false },
   ];
   const doneCount = items.filter((i) => i.done).length;
 
