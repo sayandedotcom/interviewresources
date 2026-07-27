@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import { notFound } from "next/navigation";
 
 import { eq } from "drizzle-orm";
@@ -15,6 +16,15 @@ export const dynamic = "force-dynamic";
 // The token is the only credential, so a shared report must stay out of search
 // results even if the link is posted somewhere public.
 export const metadata = noIndexMetadata;
+
+// This route follows the viewer's OS theme (see components/theme-provider.tsx),
+// so it needs the same light/dark browser-chrome pair as app/(app).
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1017" },
+  ],
+};
 
 /**
  * A report rendered for whoever holds the link. No session is required, and no

@@ -6,8 +6,11 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 // The route prefixes that get a theme choice at all. Every other route is
 // forced light regardless of OS preference or a stored choice — this list
-// *is* the scoping policy. Keep it in sync with app/(app)'s route segments.
-const APP_ROUTES = ["/prepare", "/payments", "/referrals", "/settings"];
+// *is* the scoping policy. The first four are app/(app)'s route segments;
+// /share is a standalone route (app/share/[token]) that renders the same
+// ReportView as /prepare/[id], so it gets the same treatment even though it's
+// outside that route group and needs no session.
+const APP_ROUTES = ["/prepare", "/payments", "/referrals", "/settings", "/share"];
 
 function isAppRoute(pathname: string) {
   return APP_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
