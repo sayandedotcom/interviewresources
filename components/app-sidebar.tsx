@@ -10,6 +10,7 @@ import {
   Gift,
   Loader2Icon,
   MailIcon,
+  MessageCircleIcon,
   MessageSquareIcon,
   MoreHorizontalIcon,
   PlusIcon,
@@ -431,12 +432,21 @@ export function AppSidebar({
             <AlertDialogTitle>Help us make this better</AlertDialogTitle>
             <AlertDialogDescription>
               A bug, a rough edge, a feature you wish existed — it goes straight to the people
-              building this, and every note gets read. Opens your mail app with the address already
-              filled in.
+              building this, and every note gets read. Reach out by mail or a direct message,
+              whichever's faster for you.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setFeedbackOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="outline"
+              onClick={() => setFeedbackOpen(false)}
+              render={
+                <a href={siteConfig.links.twitter} target="_blank" rel="noopener noreferrer" />
+              }>
+              <MessageCircleIcon className="size-4" />
+              DM on X
+            </AlertDialogAction>
             <AlertDialogAction
               onClick={() => setFeedbackOpen(false)}
               render={
