@@ -1341,7 +1341,10 @@ function RoundResources({
   if (resources.length === 0) return null;
 
   return (
-    <details className="border-border/70 bg-muted/20 mt-4 rounded-lg border px-4 py-3">
+    // Open on arrival: these are links the run already paid to find, and behind
+    // a closed disclosure most readers never learned they were there. Left as a
+    // <details> so it can still be folded away once read.
+    <details open className="border-border/70 bg-muted/20 mt-4 rounded-lg border px-4 py-3">
       <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs font-semibold tracking-wide uppercase">
         Other resources ({resources.length})
       </summary>
