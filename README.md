@@ -144,3 +144,6 @@ Tailwind/shadcn, Postgres via Drizzle, Gemini via the Vercel AI SDK
 (`ai` + `@ai-sdk/google`), Tavily for web research, Stripe for credit packs
 and Inngest for the long-running research job queue (both planned, not yet
 integrated).
+
+Production deployment and launch verification are documented in
+[`docs/deployment.md`](docs/deployment.md).

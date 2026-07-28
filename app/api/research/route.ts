@@ -22,7 +22,7 @@ import { getSessionUser } from "@/lib/session";
 // long maxDuration; it will still hit platform ceilings for big companies,
 // which is exactly why the queue is planned.
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 function sse(data: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);

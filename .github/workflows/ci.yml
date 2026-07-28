@@ -5,8 +5,9 @@ on:
   push:
     branches: [main]
 
-# Vercel's Git integration performs the deploy. This workflow is the quality
-# gate and the migration runner — it must never call `vercel deploy`.
+# Vercel's Git integration performs the deploy and runs production migrations
+# under an advisory lock. This workflow remains the required quality gate and
+# must never call `vercel deploy`.
 
 env:
   NEXT_TELEMETRY_DISABLED: "1"
@@ -97,34 +98,3 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
-
-  migrate:
-    name: Migrate production
-    runs-on: ubuntu-latest
-    needs: [quality, e2e]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    # Two merges landing together must not migrate the same database at once.
-    concurrency:
-      group: production-migrate
-      cancel-in-progress: false
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: pnpm/action-setup@v5
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      # The direct endpoint: drizzle-kit needs a session-level connection.
-      # NOTE: drizzle-kit exits 1 when migrations are already applied (notices from
-      # Postgres). This is not an error - the schema is already up to date.
-      - name: Apply migrations
-        run: pnpm db:migrate || [ $? -eq 1 ]
-        env:
-          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}

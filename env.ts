@@ -21,7 +21,7 @@ export const env = createEnv({
      * session-level connections, which the transaction-mode pooler cannot give.
      * Never used to serve requests.
      */
-    DATABASE_URL_UNPOOLED: z.string().url().optional(),
+    DATABASE_URL_UNPOOLED: req(z.string().url()),
     BETTER_AUTH_SECRET: req(z.string().min(1)),
     BETTER_AUTH_URL: z.string().url().optional(),
     GOOGLE_CLIENT_SECRET: req(z.string().min(1)),
@@ -49,7 +49,7 @@ export const env = createEnv({
     INNGEST_EVENT_KEY: z.string().min(1).optional(),
     INNGEST_SIGNING_KEY: z.string().min(1).optional(),
     /** Injected by Vercel Cron. Guards /api/cron/*, which is otherwise public. */
-    CRON_SECRET: z.string().min(1).optional(),
+    CRON_SECRET: req(z.string().min(16)),
     /** Comma-separated emails allowed into /admin. Unset means no one is admin. */
     ADMIN_EMAILS: z.string().optional(),
   },

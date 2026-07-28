@@ -46,7 +46,10 @@ DB tests need these env vars injected by `vitest.config.mts`: `DATABASE_URL`, `B
 - Drizzle schema: `lib/db/schema.ts`
 - Migrations output: `drizzle/` (auto-generated, eslint-ignored)
 - `drizzle.config.ts` prefers `DATABASE_URL_UNPOOLED` for drizzle-kit (session-level connections)
-- Production migrations run via `pnpm db:migrate` after e2e passes on main
+- Vercel production builds run `pnpm db:migrate:run` before `pnpm build`
+- The runtime migrator requires `DATABASE_URL_UNPOOLED`, holds a PostgreSQL advisory lock, and
+  skips all non-production Vercel environments
+- PR checks (`quality` and `e2e`) must pass before merging to `main`; a Vercel build is not CI
 
 ## Env setup
 
