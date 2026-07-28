@@ -91,12 +91,14 @@ function SignedOutCta({ compact = false }: { compact?: boolean }) {
       aria-label={
         compact
           ? `Start for ${STARTER_PRICE} — sign in to get started`
-          : `Try it for ${STARTER_PRICE} — sign in to get started`
+          : `Start preparing — sign in to get started`
+        // : `Try it for ${STARTER_PRICE} — sign in to get started`
       }
       className={`text-brand-700 font-display ease-out-strong inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-glossy-white)] text-sm font-semibold shadow-[var(--shadow-glossy-white)] transition-[box-shadow,translate,scale] duration-150 hover:bg-[image:var(--gradient-glossy-white-hover)] hover:shadow-[var(--shadow-glossy-white-hover)] active:translate-y-px active:scale-[0.98] active:shadow-[var(--shadow-glossy-white-active)] ${
         compact ? "px-4" : "px-5"
       }`}>
-      {compact ? "Start preparing" : `Try it for ${STARTER_PRICE}`}
+      {compact ? "Start preparing" : `Start preparing`}
+      {/* {compact ? "Start preparing" : `Try it for ${STARTER_PRICE}`} */}
     </Link>
   );
 }
