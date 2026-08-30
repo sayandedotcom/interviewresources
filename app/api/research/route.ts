@@ -19,10 +19,11 @@ import { getSessionUser } from "@/lib/session";
 // The pipeline calls out to Gemini + Tavily and can run for minutes. It runs
 // inline in the route for now (M0/M1) — the Inngest job queue that will take
 // this over is a later milestone (PRD §8.1, M2). On serverless this needs a
-// long maxDuration; it will still hit platform ceilings for big companies,
-// which is exactly why the queue is planned.
+// long maxDuration; 300s is the Hobby plan's ceiling, and big companies will
+// still hit it, which is exactly why the queue is planned. Keep this in step
+// with RUN_INFLIGHT_WINDOW_MS, which expires rows this route abandons.
 export const runtime = "nodejs";
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 function sse(data: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);

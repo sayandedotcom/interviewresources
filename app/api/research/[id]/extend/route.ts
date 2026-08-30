@@ -32,9 +32,10 @@ import {
 } from "@/lib/research/types";
 import { getSessionUser } from "@/lib/session";
 
-// Same constraints as the full run: this calls Gemini + Tavily inline.
+// Same constraints as the full run: this calls Gemini + Tavily inline, and 300s
+// is the Hobby plan's ceiling for a Serverless Function.
 export const runtime = "nodejs";
-export const maxDuration = 800;
+export const maxDuration = 300;
 
 // A round adds questions; a section fills prose the original run declined. An
 // extension may do either or both, so neither list is required on its own — but
