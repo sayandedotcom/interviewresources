@@ -259,6 +259,35 @@ export const productEvents = pgTable(
   ]
 );
 
+/**
+ * Careers applications. Deliberately standalone: an applicant is almost never
+ * a signed-in user, so there is no `users` reference and nothing here cascades
+ * from an account deletion.
+ */
+export const jobApplications = pgTable(
+  "job_applications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** Matches a slug in lib/careers/roles.ts. Stored as text, not an enum, so
+     * closing a role never orphans the applications it already collected. */
+    roleSlug: text("role_slug").notNull(),
+    /** Snapshot of the title as advertised, so a later retitle cannot rewrite
+     * what someone believes they applied for. */
+    roleTitle: text("role_title").notNull(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    message: text("message").notNull(),
+    /** The "I give permission" checkbox. Only ever inserted as true — the
+     * column exists so the consent is on record, not to model a false state. */
+    consent: boolean("consent").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("job_applications_role_slug_created_at_idx").on(table.roleSlug, table.createdAt),
+    index("job_applications_email_idx").on(table.email),
+  ]
+);
+
 export const researchCache = pgTable("research_cache", {
   key: text("key").primaryKey(), // domain + interview_type
   stage: text("stage").notNull(),
