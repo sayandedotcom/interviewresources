@@ -65,6 +65,12 @@ export const publicRoutes = {
     label: "Changelog",
     lastModified: "2026-07-25",
   },
+  "/careers": {
+    priority: 0.5,
+    changeFrequency: "monthly",
+    label: "Careers",
+    lastModified: "2026-09-01",
+  },
   "/contact": {
     priority: 0.5,
     changeFrequency: "yearly",

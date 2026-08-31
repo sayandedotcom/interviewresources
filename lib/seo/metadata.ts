@@ -35,9 +35,16 @@ const ogImages = [
  */
 type CompanyPagePath = `/interview-questions/${string}`;
 
+/**
+ * Role pages, for the same reason: the set is data in `lib/careers/roles.ts`
+ * and changes whenever a role opens or closes, so it cannot live in
+ * `publicRoutes`. `/careers` itself is a registered route.
+ */
+type CareersPagePath = `/careers/${string}`;
+
 type BuildMetadataOptions = {
   /** Must be a registered public route, so canonicals and the sitemap agree. */
-  path: PublicRoute | CompanyPagePath;
+  path: PublicRoute | CompanyPagePath | CareersPagePath;
   /** Fed through the root `%s · Interview Resources` title template. */
   title: string;
   description: string;
